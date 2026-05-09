@@ -1,6 +1,8 @@
 # Circuit Breaker Pattern
 
-Status: Approved | Last Reviewed: 2026-03-02 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @sre-lead
+Catalog ID: RES-002 | Radii
+Tier Applicability: T0, T1, T2
 
 ## Problem Statement
 
@@ -321,22 +323,77 @@ HALF_OPEN (Testing):
 - Critical paths that require real-time data
 - Calls where failure must be immediate
 
-## Metrics to Monitor
+## NFR Acceptance Criteria
 
-```
-Circuit Breaker Metrics:
-  - State: CLOSED, OPEN, HALF_OPEN
-  - Failure rate: % calls that failed
-  - Slow call rate: % calls exceeding duration threshold
-  - Buffered calls: calls in current window
-  - Last call outcome: success/failure
+- **HA**: prevents thread-pool exhaustion → preserves the calling service's availability when a downstream is degraded. A correctly configured CB never holds threads waiting through a timeout cycle on a confirmed-bad downstream.
+- **HP**: state-machine evaluation < 0.1ms P95 in the CLOSED state (negligible). In OPEN state, fail-fast adds 0ms (immediate exception) versus 2s+ that a timeout would cost. Thus CB *improves* P95/P99 during downstream incidents, the opposite of what naïve thinking suggests.
+- **HR**: failure mode is bounded — the CB does not cascade. State-transition observability ([BP-007 Golden Signals](../../best-practices/golden-signals-sre.md)) gives leading indicator of downstream issues. Pair with [RES-006 Timeout Budget](timeout-budget.md) and [RES-003 Retry with Backoff](retry-with-backoff.md) for full coverage.
 
-Alerts:
-  - Circuit opened (notify ops)
-  - State transitions (log for debugging)
-  - High error rate (>50%)
-  - Frequent circuit open/close (flapping)
-```
+## Compliance Mapping
+
+| Layer | Reference | Section/Control | How this satisfies |
+|---|---|---|---|
+| Ring 0 (generic) | Resilience4j `/circuitbreaker` documentation | State-machine spec; config schema | Canonical implementation reference |
+| Ring 0 (generic) | Microsoft Cloud Patterns — Circuit Breaker | "Handle faults that take variable time to fix" | Same pattern; same intent |
+| Ring 0 (generic) | AWS Well-Architected Reliability — Failure mode design | Fault tolerance guidance | CB is the canonical fail-fast implementation |
+| Ring 1 (intl banking) | Basel BCBS 230 — §6 (Continuity, UNOFFICIAL) | Operational resilience requires bounded fault propagation | CB bounds the time-to-fail on a degraded downstream → bounded incident impact |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity | CB prevents single-downstream issues from cascading to T0 services |
+
+## Cost / FinOps Notes
+
+| Item | Driver | Order of magnitude |
+|---|---|---|
+| Runtime overhead (CLOSED) | sliding-window record per call | < 0.1ms; effectively free |
+| Memory for state | per-instance × per-CB | A few KB per CB instance |
+| Tooling | Resilience4j (free, MIT-licensed) | $0 |
+
+**Cost of NOT having CB**: a single slow downstream causes thread-pool exhaustion across all upstream services, manifesting as a cluster-wide hang. Recovery requires manual restart of every affected pod. The differential cost vs an outage is enormous.
+
+## Threat Model Summary
+
+STRIDE: addresses **Denial of Service** primarily — CB defends against slow-downstream-induced thread starvation.
+
+- **Top 3 threats addressed**:
+  1. *Cascading failure from a slow downstream* — CB opens, calls fail fast, threads return immediately.
+  2. *Thread-pool exhaustion DoS* — CB caps the number of in-flight requests against a struggling downstream.
+  3. *Recovery storm on downstream restart* — HALF_OPEN gates the trickle of test traffic, preventing thundering herd.
+- **Top 3 residual threats**:
+  1. *Mis-tuned thresholds* — too sensitive trips on noise; too lenient never opens. Mitigation: review thresholds quarterly against actual outage data; chaos drills verify trip behaviour.
+  2. *Fallback returns wrong/stale data without flagging* — graceful degradation must always surface the degraded state to the caller (e.g., HTTP 503 with `Retry-After`, or response body flag).
+  3. *CB shared across diverse callers* — different callers tolerate different latency/error budgets. Mitigation: separate CB instances per (service, downstream) pair, not per service alone.
+
+## Operational Runbook (stub)
+
+- **Alerts**:
+  - `CB_Opened`: any T0 circuit transitioned to OPEN. Severity: High (PagerDuty).
+  - `CB_FlappingDetected`: > 5 OPEN↔CLOSED transitions in 10 min. Severity: High — usually a borderline downstream needing a separate fix.
+  - `CB_StuckOpen`: a CB has been OPEN for > 30 min with no recovery. Severity: Critical — engages downstream-team escalation.
+- **Dashboards**: Grafana — `circuit-breaker-overview` (state per CB, failure rate, slow-call rate, transitions over time).
+- **On-call playbook**:
+  1. Identify the OPEN circuit and its downstream.
+  2. Check downstream's own health dashboard.
+  3. If downstream is recovering: leave CB to auto-close via HALF_OPEN (default 30–60 s wait).
+  4. If downstream is degraded indefinitely: engage downstream owner; consider feature-flagging the affected flow.
+  5. Document the incident in `governance/decisions/REVIEW-LOG-{date}-incident.md`.
+
+## Test Strategy (stub)
+
+- **Unit**: CB state-machine transitions (CLOSED → OPEN on threshold; OPEN → HALF_OPEN after wait; HALF_OPEN → CLOSED/OPEN on test calls).
+- **Integration**: Testcontainer downstream that simulates failures; verify CB opens, HALF_OPEN gates, recovers.
+- **Chaos** ([BP-005 Chaos Engineering](../../best-practices/chaos-engineering.md)): inject downstream latency/errors during a quarterly drill; verify CB behaviour preserves upstream P95.
+- **Performance**: load test with a downstream simulator that flips between healthy and degraded; verify upstream P99 stays bounded.
+
+## Related Patterns
+
+- [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md) — required for safe retry path
+- [NFR-001 Service Tiering + RTO/RPO](../../nfr/service-tiering-rto-rpo.md) — tier dictates CB sensitivity
+- [NFR-002 Latency Budget Model](../../nfr/latency-budget-model.md) — `slowCallDurationThreshold` derives from tier P95
+- [RES-003 Retry with Backoff](retry-with-backoff.md) — pair with CB; retry inside the CB window
+- [RES-005 Cell-Based Architecture](cell-based-architecture.md) — per-cell CBs prevent cross-cell cascades
+- [RES-006 Timeout Budget](timeout-budget.md) — CB and timeout work together
+- [RES-007 Fallback Strategies](fallback-strategies.md) — what to do when the CB is OPEN
+- [BP-005 Chaos Engineering](../../best-practices/chaos-engineering.md) — drills exercise CB behaviour
+- [BP-007 Golden Signals (SRE)](../../best-practices/golden-signals-sre.md) — CB transitions are an observability signal
 
 ## References
 
