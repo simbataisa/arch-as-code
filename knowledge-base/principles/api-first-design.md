@@ -82,6 +82,93 @@ flowchart LR
    - Document authentication requirements
    - List required scopes/permissions
 
+### OpenAPI 3.2 Additions
+
+OpenAPI 3.2 aligns fully with JSON Schema 2020-12 and adds three capabilities relevant to Techcombank:
+
+**1. Webhooks object** — replaces the informal `x-webhooks` extension previously used in the payment gateway spec. Use for PSD2 open banking callbacks and partner event notifications:
+
+```yaml
+openapi: 3.2.0
+info:
+  title: Payment Gateway API
+  version: 2.3.0
+
+webhooks:
+  paymentStatusCallback:
+    post:
+      summary: Notified when a payment transaction status changes
+      requestBody:
+        required: true
+        content:
+          application/cloudevents+json:
+            schema:
+              $ref: '#/components/schemas/PaymentStatusEvent'
+      responses:
+        '200':
+          description: Webhook received and acknowledged
+        '400':
+          description: Webhook payload rejected
+```
+
+**2. JSON Schema 2020-12 alignment** — removes prior `nullable` and `exclusiveMinimum` inconsistencies. Migrate existing specs:
+
+| OpenAPI 3.0 / 3.1 syntax | OpenAPI 3.2 / JSON Schema 2020-12 |
+|---|---|
+| `nullable: true` on a string field | `type: [string, "null"]` |
+| `exclusiveMinimum: true, minimum: 0` | `exclusiveMinimum: 0` |
+| `type: string` | `type: string` (unchanged — not null by default) |
+
+Migration is relevant for KYC document schemas and payment instruction validation where strict schema validators (OpenSearch, Microcks) expect JSON Schema 2020-12 syntax. New projects: use 3.2 from the start. Existing 3.1 specs: migrate `nullable: true` fields when the spec is next edited — no big-bang migration required.
+
+**3. `pathItem` `$ref`** — reuse path definitions across the internal spec and the partner-facing open banking spec without duplication:
+
+```yaml
+# partner-openbanking-api.yaml
+paths:
+  /payments/{paymentId}:
+    $ref: 'internal-payment-api.yaml#/paths/~1payments~1{paymentId}'
+```
+
+This reduces drift between the internal and partner-facing specs — a single source of truth for the `/payments/{paymentId}` path object, referenced from both specs.
+
+**Techcombank standard error format** — update all existing specs to RFC 9457 format (see [INT-012 Error Code Mapping](../patterns/integration/error-code-mapping.md)):
+
+```yaml
+# In OpenAPI 3.2 spec components:
+components:
+  responses:
+    UnprocessableEntity:
+      description: Business rule violation
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+  schemas:
+    ProblemDetail:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://errors.techcombank.com/ERR-PAY-001"
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errorCode:
+          type: string
+          pattern: "^ERR-[A-Z]+-[0-9]{3}$"
+        traceId:
+          type: string
+```
+
 ## When to Use
 
 - All public APIs (internal or external)
