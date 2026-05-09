@@ -198,37 +198,27 @@ CDC Process (Debezium):
 
 ## Architecture Diagram
 
-```
-┌─────────────────────────────────┐
-│   Service A (Order Service)      │
-├─────────────────────────────────┤
-│  Application Code                │
-│    ↓                             │
-│  BEGIN TRANSACTION               │
-│    INSERT orders (...)           │
-│    INSERT outbox (...)           │
-│  COMMIT                          │
-└──────────────┬────────────────────┘
-               │
-               ↓ (Database WAL/Binlog)
-        ┌──────────────────┐
-        │  Debezium CDC    │
-        │  (Kafka Connect) │
-        └────────┬─────────┘
-                 │
-                 ↓ (Event Stream)
-        ┌──────────────────┐
-        │  Kafka Topic     │
-        │  "Order"         │
-        └────────┬─────────┘
-                 │
-                 ↓
-┌─────────────────────────────────┐
-│   Service B (Inventory Service)  │
-├─────────────────────────────────┤
-│  Kafka Consumer (Idempotent)    │
-│    Processes OrderCreated event │
-└─────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph SvcA["Service A — Order Service"]
+        AppA[Application Code]
+        Tx["BEGIN TRANSACTION<br/>  INSERT orders (...)<br/>  INSERT outbox (...)<br/>COMMIT"]
+        AppA --> Tx
+    end
+    Tx -->|Database WAL / Binlog| Debezium[Debezium CDC<br/>Kafka Connect]
+    Debezium -->|Event stream| Kafka[Kafka Topic<br/>order-events]
+    Kafka --> SvcB
+    subgraph SvcB["Service B — Inventory Service"]
+        Consumer[Kafka Consumer<br/>Idempotent — EIP-024]
+        Process[Processes OrderCreated event]
+        Consumer --> Process
+    end
+    classDef writeSide fill:#e7f0ff,stroke:#2050a0
+    classDef pipeline fill:#fff5d8,stroke:#c08c00
+    classDef readSide fill:#e7f8ee,stroke:#2a8d4f
+    class SvcA,AppA,Tx writeSide
+    class Debezium,Kafka pipeline
+    class SvcB,Consumer,Process readSide
 ```
 
 ## Comparison: Outbox vs Direct Publish

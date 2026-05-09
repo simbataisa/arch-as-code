@@ -12,67 +12,53 @@ Cascading failures occur when a service calls a downstream service that's slow o
 - Cascading outage: failures propagate upstream
 - Slow requests degrade user experience
 
-```
-Service A
-  └─ calls Service B (slow)
-      └─ Service B calls Service C (down)
-          └─ Requests timeout, threads blocked
-              └─ Thread pool exhausted
-                  └─ Service A becomes unresponsive too
+```mermaid
+graph TD
+    A[Service A] -->|calls| B[Service B<br/>slow]
+    B -->|calls| C[Service C<br/>down]
+    C -.->|"Requests timeout<br/>threads blocked"| B
+    B -.->|"Thread pool exhausted"| A
+    A -.-> Cascade[Service A<br/>becomes unresponsive too]
+    classDef bad fill:#fee,stroke:#c00
+    class C,Cascade bad
 ```
 
 ## Solution
 
 Implement a circuit breaker. Monitor call failures; fail fast when service is struggling.
 
-```
-CLOSED (Normal):
-  Requests → Service B ✓
-  Failure count: 0
-
-OPEN (Service down):
-  X Requests blocked immediately (fail fast)
-  Failure count: 10+ or error rate >50%
-
-HALF_OPEN (Testing):
-  1-2 requests → Service B
-  If success: CLOSED
-  If fail: OPEN
+```mermaid
+graph LR
+    subgraph CLOSED["CLOSED (Normal)"]
+        C1[Requests → Service B ✓<br/>Failure count: 0]
+    end
+    subgraph OPEN["OPEN (Service down)"]
+        O1[Requests blocked immediately<br/>fail fast<br/>Failure count: 10+<br/>or error rate &gt; 50%]
+    end
+    subgraph HALF_OPEN["HALF_OPEN (Testing)"]
+        H1[1–2 requests → Service B<br/>success → CLOSED<br/>fail → OPEN]
+    end
+    classDef closedSt fill:#e7f8ee,stroke:#2a8d4f
+    classDef openSt fill:#fee,stroke:#c00
+    classDef halfSt fill:#fff5d8,stroke:#c08c00
+    class CLOSED,C1 closedSt
+    class OPEN,O1 openSt
+    class HALF_OPEN,H1 halfSt
 ```
 
 ## State Diagram
 
-```
-        ┌────────────────────────┐
-        │ CLOSED (Normal)        │
-        │ ✓ Requests pass through│
-        │ ✓ Fast response        │
-        └──────────┬─────────────┘
-                   │
-          Request fails X times or
-          Error rate >50% for N seconds
-                   │
-                   ↓
-        ┌────────────────────────┐
-        │ OPEN (Failing)         │
-        │ ✗ Requests fail fast   │
-        │ ✗ No calls to service  │
-        └──────────┬─────────────┘
-                   │
-          Timeout (reset timeout)
-          usually 30-60 seconds
-                   │
-                   ↓
-        ┌────────────────────────┐
-        │ HALF_OPEN (Testing)    │
-        │ ▲ Allow 1-2 requests   │
-        │ ▲ Test if service OK   │
-        └──────────┬──────────┬───┘
-                   │          │
-                Success      Fail
-                   │          │
-                   ↓          ↓
-              CLOSED        OPEN
+```mermaid
+stateDiagram-v2
+    [*] --> CLOSED
+    CLOSED: CLOSED (Normal)\nRequests pass through\nFast response
+    OPEN: OPEN (Failing)\nRequests fail fast\nNo calls to service
+    HALF_OPEN: HALF_OPEN (Testing)\nAllow 1–2 requests\nTest if service OK
+
+    CLOSED --> OPEN: Request fails X times\nor error rate > 50%\nfor N seconds
+    OPEN --> HALF_OPEN: Wait timeout elapsed\n(usually 30–60 s)
+    HALF_OPEN --> CLOSED: Test calls succeed
+    HALF_OPEN --> OPEN: Test calls fail
 ```
 
 ## Implementation Guidelines

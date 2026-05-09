@@ -17,52 +17,28 @@ Single database model struggles with read/write asymmetry:
 
 Separate read and write models. Commands (write) go to one model; queries (read) from another. Sync via events (eventually consistent).
 
-```
-┌──────────────┐
-│ User Command │
-│ "CreateOrder"│
-└──────┬───────┘
-       │
-       ↓
-┌────────────────────┐
-│ WRITE MODEL        │
-│ (Command Handler)  │
-├────────────────────┤
-│ - Validate command │
-│ - Execute logic    │
-│ - Save to DB       │
-│ - Emit event       │
-└────────┬───────────┘
-         │
-         ↓ Event: OrderCreated
-    ┌─────────────┐
-    │ Event Store │
-    └────────┬────┘
-             │
-             ↓ (async)
-    ┌────────────────────┐
-    │ READ MODEL         │
-    │ (Event Handler)    │
-    ├────────────────────┤
-    │ - Update cache     │
-    │ - Update denorm DB │
-    │ - Update ES index  │
-    └────────────────────┘
+```mermaid
+graph TB
+    Cmd["User Command<br/>'CreateOrder'"]
+    Write["WRITE MODEL — Command Handler<br/>• Validate command<br/>• Execute logic<br/>• Save to DB<br/>• Emit event"]
+    EventStore[(Event Store)]
+    EventHandler["READ MODEL — Event Handler<br/>• Update cache<br/>• Update denormalised DB<br/>• Update ES index"]
 
-┌──────────────┐
-│ User Query   │
-│ "GetOrders"  │
-└──────┬───────┘
-       │
-       ↓
-    ┌────────────────────┐
-    │ READ MODEL         │
-    │ (Denormalized DB)  │
-    ├────────────────────┤
-    │ - Fast queries     │
-    │ - Indexed tables   │
-    │ - Cached data      │
-    └────────────────────┘
+    Cmd --> Write
+    Write -->|"Event: OrderCreated"| EventStore
+    EventStore -->|async| EventHandler
+
+    Qry["User Query<br/>'GetOrders'"]
+    ReadDb["READ MODEL — Denormalised DB<br/>• Fast queries<br/>• Indexed tables<br/>• Cached data"]
+    Qry --> ReadDb
+    EventHandler -.populates.-> ReadDb
+
+    classDef writeSide fill:#e7f0ff,stroke:#2050a0
+    classDef readSide fill:#e7f8ee,stroke:#2a8d4f
+    classDef store fill:#fff5d8,stroke:#c08c00
+    class Cmd,Write writeSide
+    class Qry,ReadDb,EventHandler readSide
+    class EventStore store
 ```
 
 ## Implementation Guidelines
