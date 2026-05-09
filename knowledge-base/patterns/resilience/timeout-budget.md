@@ -77,26 +77,26 @@ resilience4j:
     configs:
       default:
         timeout-duration: 2s
-        cancel-running-future: true     # critical: cancel the thread, don't just return
+        cancel-running-future: true # critical: cancel the thread, don't just return
     instances:
       napas-adapter:
-        timeout-duration: 2000ms        # payment service → NAPAS budget
+        timeout-duration: 2000ms # payment service → NAPAS budget
         cancel-running-future: true
       t24-ofs-bridge:
-        timeout-duration: 5000ms        # T24 OFS is slower — separate budget
+        timeout-duration: 5000ms # T24 OFS is slower — separate budget
         cancel-running-future: true
       swift-gateway:
-        timeout-duration: 8000ms        # SWIFT international — wider budget
+        timeout-duration: 8000ms # SWIFT international — wider budget
         cancel-running-future: true
       account-service:
-        timeout-duration: 500ms         # internal service — tight budget
+        timeout-duration: 500ms # internal service — tight budget
         cancel-running-future: true
 
   circuitbreaker:
     instances:
       napas-adapter:
-        slowCallDurationThreshold: 1800ms   # flag calls > 1.8s as slow (before 2s timeout)
-        slowCallRateThreshold: 20           # open CB if 20% of calls are slow
+        slowCallDurationThreshold: 1800ms # flag calls > 1.8s as slow (before 2s timeout)
+        slowCallRateThreshold: 20 # open CB if 20% of calls are slow
 ```
 
 ```java
@@ -256,13 +256,13 @@ timeout_budgets:
     hops:
       - name: api_gateway_to_payment_service
         budget_ms: 2500
-        headroom_ms: 500        # network + gateway overhead
+        headroom_ms: 500 # network + gateway overhead
       - name: payment_service_to_napas_adapter
         budget_ms: 2000
-        headroom_ms: 500        # payment service processing overhead
+        headroom_ms: 500 # payment service processing overhead
       - name: napas_adapter_to_napas_network
         budget_ms: 1500
-        headroom_ms: 500        # NAPAS adapter overhead
+        headroom_ms: 500 # NAPAS adapter overhead
     notes: >
       Each hop budget = previous budget minus headroom.
       NAPAS network must respond within 1 500 ms for the entire chain
@@ -279,7 +279,7 @@ timeout_budgets:
         headroom_ms: 100
 
   t24_ofs_write_chain:
-    user_sla_ms: 10000          # T24 writes — wider SLA for complex OFS operations
+    user_sla_ms: 10000 # T24 writes — wider SLA for complex OFS operations
     hops:
       - name: payment_service_to_t24_ofs_bridge
         budget_ms: 8000
@@ -313,30 +313,30 @@ public class TimeoutMetricsCollector {
 
 ## Compliance Mapping
 
-| Ring | Regulation | Provision | How this pattern satisfies |
-|------|-----------|-----------|---------------------------|
-| Ring 0 | NIST SP 800-53 | SC-5 Denial of Service Protection | Explicit timeouts prevent resource exhaustion (thread/connection starvation) that constitutes a self-inflicted DoS |
-| Ring 0 | NIST SP 800-53 | SC-6 Resource Availability | Timeout budgets ensure bounded resource hold times, maintaining availability during partial downstream degradation |
-| Ring 0 | AWS WAF | Well-Architected Reliability — Limit retries | Timeouts are the prerequisite for bounded retry loops; without them, retries with backoff cannot be safely configured |
-| Ring 0 | ISO 27001 | A.17.2 Redundancies | Timeout-driven fast failure is a key enabler of service redundancy — a timed-out call can be rerouted to a secondary |
-| Ring 1 | BCBS 230 | Principle 6 (Incident Management) | Bounded timeouts limit the duration of a downstream degradation event, capping the impact window of an incident |
-| Ring 1 | BCBS 230 | Principle 7 — Information and Technology Risk | Cascading failures caused by missing timeouts represent an operational risk; this pattern directly mitigates that risk |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity requirements | Timeout budgets prevent thread-pool exhaustion cascades that would violate the operational continuity obligations of §IV.2 ⚠️ (working summary — pending Legal review) |
-| Ring 2 | SBV Circular 09/2020 §IV.3 | Incident response timeliness | Fast failure via timeouts reduces MTTR by surfacing degradation early; timeout events are logged as incident precursors ⚠️ (working summary — pending Legal review) |
+| Ring   | Regulation                 | Provision                                     | How this pattern satisfies                                                                                                                                             |
+| ------ | -------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ring 0 | NIST SP 800-53             | SC-5 Denial of Service Protection             | Explicit timeouts prevent resource exhaustion (thread/connection starvation) that constitutes a self-inflicted DoS                                                     |
+| Ring 0 | NIST SP 800-53             | SC-6 Resource Availability                    | Timeout budgets ensure bounded resource hold times, maintaining availability during partial downstream degradation                                                     |
+| Ring 0 | AWS WAF                    | Well-Architected Reliability — Limit retries  | Timeouts are the prerequisite for bounded retry loops; without them, retries with backoff cannot be safely configured                                                  |
+| Ring 0 | ISO 27001                  | A.17.2 Redundancies                           | Timeout-driven fast failure is a key enabler of service redundancy — a timed-out call can be rerouted to a secondary                                                   |
+| Ring 1 | BCBS 230                   | Principle 6 (Incident Management)             | Bounded timeouts limit the duration of a downstream degradation event, capping the impact window of an incident                                                        |
+| Ring 1 | BCBS 230                   | Principle 7 — Information and Technology Risk | Cascading failures caused by missing timeouts represent an operational risk; this pattern directly mitigates that risk                                                 |
+| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity requirements           | Timeout budgets prevent thread-pool exhaustion cascades that would violate the operational continuity obligations of §IV.2 ⚠️ (working summary — pending Legal review) |
+| Ring 2 | SBV Circular 09/2020 §IV.3 | Incident response timeliness                  | Fast failure via timeouts reduces MTTR by surfacing degradation early; timeout events are logged as incident precursors ⚠️ (working summary — pending Legal review)    |
 
 ## NFR Acceptance Criteria
 
 ```yaml
 service_name: timeout-budget-pattern
 tier: T0
-rto_minutes: 0          # timeouts are passive controls; their absence causes the outage
+rto_minutes: 0 # timeouts are passive controls; their absence causes the outage
 rpo_seconds: 0
 latency:
-  user_sla_ms: 3000     # T0 payment initiation end-to-end
+  user_sla_ms: 3000 # T0 payment initiation end-to-end
   gateway_to_payment_ms: 2500
   payment_to_napas_ms: 2000
   napas_network_ms: 1500
-  timelimiter_overhead_us: 50    # TimeLimiter evaluation overhead: < 0.1ms
+  timelimiter_overhead_us: 50 # TimeLimiter evaluation overhead: < 0.1ms
 failure_modes:
   - mode: Timeout fires before response received (NAPAS slow)
     impact: Caller receives TimeoutException / HTTP 504; payment status PENDING
@@ -354,12 +354,12 @@ blast_radius:
   scope: Limited to the specific call hop where the timeout fires; does not affect parallel calls
   isolation: Timeout per instance; one downstream timing out does not affect other downstreams
 catalog_references:
-  - RES-002    # Circuit Breaker (timeout and CB compose)
-  - RES-003    # Retry with Backoff (timeout sets per-attempt cap)
-  - PRIN-006   # Idempotency-by-default (makes timed-out mutations safe to retry)
-  - INT-005    # Anti-Corruption Layer (T24 OFS timeout budget defined here)
-  - NFR-002    # Latency Budget Model (timeout budgets derive from tier P95 targets)
-  - PRIN-009   # Observability-First (timeout events are observability signals)
+  - RES-002 # Circuit Breaker (timeout and CB compose)
+  - RES-003 # Retry with Backoff (timeout sets per-attempt cap)
+  - PRIN-006 # Idempotency-by-default (makes timed-out mutations safe to retry)
+  - INT-005 # Anti-Corruption Layer (T24 OFS timeout budget defined here)
+  - NFR-002 # Latency Budget Model (timeout budgets derive from tier P95 targets)
+  - PRIN-009 # Observability-First (timeout events are observability signals)
 ```
 
 ## Cost/FinOps
@@ -430,6 +430,7 @@ Verify the timeout budget registry YAML is consistent with the Resilience4j appl
 ### Chaos Tests
 
 Using [BP-005 Chaos Engineering](../../best-practices/chaos-engineering.md), inject 100ms, 500ms, 1500ms, and 2500ms latency into the NAPAS WireMock during a load test. Verify:
+
 - At 100ms: no timeouts, normal operation.
 - At 1500ms: timeouts begin firing; circuit breaker stays CLOSED (rate below threshold).
 - At 2500ms: timeout rate exceeds CB threshold; CB opens; fallback serves all requests.
