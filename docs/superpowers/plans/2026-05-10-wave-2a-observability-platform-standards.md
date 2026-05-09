@@ -68,7 +68,7 @@ Tier Applicability: T0, T1[, T2[, T3]]
 - Create dir: `knowledge-base/patterns/platform/` (add `.gitkeep` placeholder, removed after Task 7)
 - Modify: `governance/standards/_catalog-inventory.yml`
 
-- [ ] **Step 1: Create new domain directories**
+- [x] **Step 1: Create new domain directories**
 
 ```bash
 mkdir -p knowledge-base/patterns/observability
@@ -77,7 +77,7 @@ touch knowledge-base/patterns/observability/.gitkeep
 touch knowledge-base/patterns/platform/.gitkeep
 ```
 
-- [ ] **Step 2: Add 10 new rows to the catalog inventory**
+- [x] **Step 2: Add 10 new rows to the catalog inventory**
 
 Open `governance/standards/_catalog-inventory.yml`. At the end of the `rows:` list (after the `BP-011` entry), append the following YAML block exactly:
 
@@ -234,7 +234,7 @@ Open `governance/standards/_catalog-inventory.yml`. At the end of the `rows:` li
   target_wave: 2
 ```
 
-- [ ] **Step 3: Verify inventory update**
+- [x] **Step 3: Verify inventory update**
 
 ```bash
 python3 -c "
@@ -251,7 +251,7 @@ print('Total rows:', len(rows))
 ```
 Expected output: `Found: ['INT-010', 'INT-011', 'INT-012', 'OBS-001', 'OBS-002', 'OBS-003', 'OBS-004', 'OBS-005', 'PLT-001', 'PLT-002']`
 
-- [ ] **Step 4: Commit setup**
+- [x] **Step 4: Commit setup**
 
 ```bash
 git add governance/standards/_catalog-inventory.yml \
@@ -268,7 +268,7 @@ git commit -m "feat(catalog): Wave 2a setup — observability/ and platform/ dom
 - Create: `knowledge-base/patterns/observability/otel-instrumentation.md`
 - Delete: `knowledge-base/patterns/observability/.gitkeep`
 
-- [ ] **Step 1: Remove the placeholder and create the document**
+- [x] **Step 1: Remove the placeholder and create the document**
 
 ```bash
 rm knowledge-base/patterns/observability/.gitkeep
@@ -593,14 +593,14 @@ STRIDE focus: **Information Disclosure** and **Elevation of Privilege** via tele
 **Key Takeaway**: Attach the OTEL Java Agent; route through a shared OTEL Collector that fans out to Grafana Tempo, Dynatrace, and OpenSearch. Use `@WithSpan` for business-critical banking events; never hardcode PAN or customer credentials into span attributes.
 ```
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/observability/otel-instrumentation.md
 ```
 Expected: 380–430 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/observability/otel-instrumentation.md \
@@ -615,7 +615,7 @@ git commit -m "feat(catalog): OBS-001 OpenTelemetry Instrumentation — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/observability/distributed-trace-propagation.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/observability/distributed-trace-propagation.md` (target: 400–450 lines) with these mandatory sections and content:
 
@@ -747,14 +747,14 @@ public class KafkaTracingConfig {
 
 **Remaining sections:** NFR Acceptance Criteria, 3-ring Compliance Mapping (BCBS 239 §6, W3C TraceContext spec Ring 0; BCBS 230 Principle 6 ⚠️ Ring 1; SBV Circular 09/2020 §IV.3 ⚠️ Ring 2), Cost/FinOps Notes, Threat Model (STRIDE: Spoofing via injected `traceparent`; mitigation: validate format at gateway), Operational Runbook (alert: `TracePropagationGap` — spans with no parent but not the root service → investigate broken propagation at the boundary), Test Strategy (integration test: 8-hop trace via all 8 protocols; assert single trace ID), Related Patterns, References.
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/observability/distributed-trace-propagation.md
 ```
 Expected: 400–450 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/observability/distributed-trace-propagation.md
@@ -768,7 +768,7 @@ git commit -m "feat(catalog): OBS-002 Distributed Trace Propagation — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/observability/structured-logging-standard.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/observability/structured-logging-standard.md` (target: 370–420 lines).
 
@@ -897,14 +897,14 @@ Note: T2/T3 ILM: hot 3d → warm 14d → delete 90d.
 
 **Remaining sections:** NFR Acceptance Criteria (zero PII in logs verified by regex scan in CI), 3-ring Compliance Mapping (NIST SP 800-92 Ring 0; PCI-DSS §10.3 log integrity Ring 0; BCBS 239 §6 Ring 1; Decree 13/2023 Art. 9 ⚠️ Ring 2; SBV Circular 09/2020 §IV.3 ⚠️ Ring 2), Cost/FinOps Notes (OpenSearch storage cost estimate by tier), Threat Model (PII disclosure via unmasked logs — mitigation: MaskingConverter at emission; DLP scan on OpenSearch indexes), Operational Runbook, Test Strategy (unit: MaskingConverter masks `pan` field; integration: log line JSON validated against mandatory schema; CI: grep for `customerId.*:.*[0-9]{8}` in test logs fails build), Related Patterns (OBS-001, OBS-004, OBS-005), References.
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/observability/structured-logging-standard.md
 ```
 Expected: 370–420 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/observability/structured-logging-standard.md
@@ -918,7 +918,7 @@ git commit -m "feat(catalog): OBS-003 Structured Logging Standard — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/observability/slo-alerting.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/observability/slo-alerting.md` (target: 360–410 lines).
 
@@ -1018,14 +1018,14 @@ Note: Grafana alerting rules reference Prometheus recording rules; Dynatrace SLO
 
 **Remaining sections:** NFR Acceptance Criteria, 3-ring Compliance Mapping (Google SRE Book / Prometheus Ring 0; BCBS 230 Principle 2 ⚠️ Ring 1; SBV Circular 09/2020 §IV.2 ⚠️ Ring 2), Cost/FinOps Notes, Threat Model (alert fatigue leading to SLO violations going unnoticed — mitigation: multi-window burn rate reduces noise), Operational Runbook (error budget depletion playbook: stop non-critical deployments, escalate to service owner, consider feature-flag rollback), Test Strategy (unit: recording rule expression evaluated against mock Prometheus metrics using `promtool test rules`), Related Patterns (OBS-001 for SLI data source, OBS-005 for async SLIs, BP-007), References (Google SRE Workbook ch. 5 — Alerting on SLOs).
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/observability/slo-alerting.md
 ```
 Expected: 360–410 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/observability/slo-alerting.md
@@ -1039,7 +1039,7 @@ git commit -m "feat(catalog): OBS-004 SLO Alerting — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/observability/async-middleware-observability.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/observability/async-middleware-observability.md` (target: 350–400 lines).
 
@@ -1113,14 +1113,14 @@ rules:
 
 **Remaining sections:** NFR Acceptance Criteria (DLQ alert fires within 60s of first message landing; lag alert P99 fires within 10 min of threshold breach), 3-ring Compliance Mapping, Cost/FinOps Notes (JMX scrape overhead < 1% CPU), Threat Model (DLQ as attack surface — attacker poisons DLQ to mask legitimate failures; mitigation: DLQ messages require signed audit trail), Operational Runbook, Test Strategy (integration: publish to Kafka, kill consumer, assert lag alert fires within 10 min; DLQ test: publish malformed message, assert DLQ alert fires within 60s), Related Patterns (EIP-025 Dead Letter Channel, OBS-001, OBS-002, PRIN-002 Event-Driven Architecture), References.
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/observability/async-middleware-observability.md
 ```
 Expected: 350–400 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/observability/async-middleware-observability.md
@@ -1135,7 +1135,7 @@ git commit -m "feat(catalog): OBS-005 Async Middleware Observability — Wave 2a
 - Create: `knowledge-base/patterns/platform/service-mesh-traffic.md`
 - Delete: `knowledge-base/patterns/platform/.gitkeep`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 ```bash
 rm knowledge-base/patterns/platform/.gitkeep
@@ -1273,14 +1273,14 @@ Show `Rollout` resource referencing VirtualService for automated canary promotio
 
 **Remaining sections:** NFR Acceptance Criteria (canary routing overhead < 1ms P99 vs direct pod-to-pod; outlier detection ejects degraded pods within 60s), 3-ring Compliance Mapping (NIST SP 800-204 Ring 0; BCBS 230 Principle 4 ⚠️ Ring 1; SBV Circular 09/2020 §IV.2 ⚠️ Ring 2), Cost/FinOps Notes (Istio control-plane CPU < 0.5 vCPU per 100 pods; sidecar overhead ~ 5ms added latency P99), Threat Model (VirtualService misconfiguration routing 100% to canary — mitigation: Argo Rollouts validates analysis before weight increase; approval gate for T0 services), Operational Runbook (canary stuck at 5%: check Argo Rollouts analysis result; rollback: patch VirtualService weight to 100/0), Test Strategy (integration: deploy canary at 5%; send 1000 requests; assert < 6% hit canary using response header `x-served-by`; fault injection drill: verify circuit breaker opens within 30s), Related Patterns (RES-002 Circuit Breaker, BP-005 Chaos Engineering, SEC-001 Zero-Trust, PLT-002 CNCF Stack Selection, OBS-001 OTEL), References (Istio docs, Argo Rollouts docs, NIST SP 800-204).
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/platform/service-mesh-traffic.md
 ```
 Expected: 400–450 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/platform/service-mesh-traffic.md \
@@ -1295,7 +1295,7 @@ git commit -m "feat(catalog): PLT-001 Service Mesh Traffic Management — Wave 2
 **Files:**
 - Create: `knowledge-base/patterns/platform/cncf-stack-selection.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/platform/cncf-stack-selection.md` (target: 340–390 lines).
 
@@ -1341,14 +1341,14 @@ Tier Applicability: T0, T1, T2, T3
 
 **Remaining sections:** NFR Acceptance Criteria (graduated status verified in CI via CNCF landscape JSON API; sandbox adoption triggers automated ADR creation in governance/decisions/), 3-ring Compliance Mapping (NIST SP 800-53 SA-4 "Acquisition Process" Ring 0; BCBS 230 Principle 7 ICT and Cyber Security ⚠️ Ring 1; SBV Circular 09/2020 §III technology risk management ⚠️ Ring 2), Cost/FinOps Notes (enumerate license costs: Grafana OSS = $0, Grafana Cloud/Enterprise varies; Dynatrace APM = licensed; OPA = $0; Istio = $0), Threat Model (supply chain risk from abandoned CNCF sandbox projects — mitigation: graduation requirement; SBOM generated for all governed tools), Operational Runbook (new tool adoption: PR to PLT-002 updating table → EA-Board review → Technology Radar update → ADR committed to `governance/decisions/`), Test Strategy (CI check: parse `governance/standards/_catalog-inventory.yml` and verify every `platform` category entry has a PLT-002-governed tool; automated CNCF landscape check quarterly), Related Patterns (PLT-001 Service Mesh, OBS-001 OTEL, SEC-001 Zero-Trust), References (CNCF Landscape, CNCF Graduation Criteria, Technology Radar — Thoughtworks).
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/platform/cncf-stack-selection.md
 ```
 Expected: 340–390 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/platform/cncf-stack-selection.md
@@ -1362,7 +1362,7 @@ git commit -m "feat(catalog): PLT-002 CNCF Stack Selection — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/integration/asyncapi-specification.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/integration/asyncapi-specification.md` (target: 420–470 lines).
 
@@ -1521,14 +1521,14 @@ class PaymentTransactionEventContractTest {
 
 **Remaining sections:** NFR Acceptance Criteria (AsyncAPI spec linted in CI via `asyncapi validate`; breaking changes detected by `asyncapi diff` against previous version; fail build on breaking change without `MAJOR` version bump), 3-ring Compliance Mapping (AsyncAPI 3.0 Spec Ring 0; BCBS 239 §6 Ring 1; SWIFT CSP 2024 §5 Ring 1; SBV Circular 09/2020 §IV.2 ⚠️ Ring 2), Cost/FinOps Notes (asyncapi-generator OSS; Microcks community edition free; Schema Registry licensing if Confluent), Threat Model (schema injection via schema registry — mitigation: schema registry ACL; signed schemas), Operational Runbook (consumer breaking: check `asyncapi diff` output in PR; roll back producer to previous topic version), Test Strategy (CI: `asyncapi validate`; `asyncapi diff` breaking check; Microcks contract test in integration suite), Related Patterns (INT-011 CloudEvents, INT-001 SAGA for multi-step flows, PRIN-002 Event-Driven Architecture, OBS-005 Async Middleware Observability), References (AsyncAPI 3.0 spec, asyncapi-generator, Microcks).
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/integration/asyncapi-specification.md
 ```
 Expected: 420–470 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/integration/asyncapi-specification.md
@@ -1542,7 +1542,7 @@ git commit -m "feat(catalog): INT-010 AsyncAPI Specification — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/integration/cloudevents-envelope.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/integration/cloudevents-envelope.md` (target: 370–420 lines).
 
@@ -1658,14 +1658,14 @@ public void handleTransactionCreated(CloudEvent event) {
 
 **Remaining sections:** NFR Acceptance Criteria (CloudEvents schema validated at producer — zero malformed events in Kafka; `id` must be UUID v4 — verified by regex in consumer interceptor), 3-ring Compliance Mapping (CloudEvents 1.0 spec Ring 0; BCBS 239 §6 Ring 1; SBV Circular 09/2020 §IV.2 ⚠️ Ring 2), Cost/FinOps Notes (CloudEvents Java SDK OSS; no licensing cost; minor serialisation overhead < 0.5ms P99), Threat Model (event spoofing via forged `source` — mitigation: consumers validate `source` against allowlist; mTLS on Kafka ensures only authorised producers can publish), Operational Runbook (malformed event in DLQ: inspect `content-type` header; check producer SDK version), Test Strategy (unit: `CloudEventBuilder` produces valid event — assert all mandatory fields present; assert `id` is UUID; integration: consumer deserialises event correctly via CloudEvents SDK), Related Patterns (INT-010 AsyncAPI, OBS-005 Async Middleware Observability, PRIN-002 Event-Driven Architecture, EIP-025 Dead Letter Channel), References (CloudEvents 1.0 spec, CloudEvents Java SDK, CNCF Serverless WG).
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/integration/cloudevents-envelope.md
 ```
 Expected: 370–420 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/integration/cloudevents-envelope.md
@@ -1679,7 +1679,7 @@ git commit -m "feat(catalog): INT-011 CloudEvents Envelope Standard — Wave 2a"
 **Files:**
 - Create: `knowledge-base/patterns/integration/error-code-mapping.md`
 
-- [ ] **Step 1: Write the document**
+- [x] **Step 1: Write the document**
 
 Write `knowledge-base/patterns/integration/error-code-mapping.md` (target: 400–450 lines).
 
@@ -1843,14 +1843,14 @@ public class DomainErrorInterceptor implements ServerInterceptor {
 
 **Remaining sections:** NFR Acceptance Criteria (zero raw T24 OFS strings in HTTP responses — verified by integration test asserting response body never contains `OVERDUE.FUNDS`, `INVALID.ACCOUNT` etc.; `ERR-*` codes present in 100% of error responses), 3-ring Compliance Mapping (RFC 9457 Ring 0; OWASP Error Handling (A05) Ring 0; PCI-DSS §6.5 Ring 1; BCBS 239 §6 Ring 1; SBV Circular 09/2020 §IV.3 ⚠️ Ring 2), Cost/FinOps Notes (zero licensing cost; Spring 6 `ProblemDetail` built-in), Threat Model (error detail leak — stack traces, internal host names in `detail` field; mitigation: `detail` reviewed in code review; integration test asserts no stack trace in 4xx/5xx responses; INFO log for client errors, ERROR for server errors), Operational Runbook (unknown OFS error code → `ERR-SYS-001` returned + WARN log with raw code → on-call adds mapping in next sprint), Test Strategy (unit: `T24OfsErrorTranslator` — assert each known OFS code maps to correct domain error; integration: send HTTP request that triggers OFS error; assert RFC 9457 body; assert no raw OFS string; contract: mobile SDK integration test asserts `ERR-*` codes are parseable), Related Patterns (INT-001 SAGA for multi-step error compensation, OBS-002 trace propagation — `traceId` in error body, OBS-003 structured logging, PRIN-003 Zero-Trust — errors must not reveal internal auth details), References (RFC 9457 Problem Details for HTTP APIs, gRPC Status Codes, OWASP Error Handling Cheat Sheet).
 
-- [ ] **Step 2: Verify line count**
+- [x] **Step 2: Verify line count**
 
 ```bash
 wc -l knowledge-base/patterns/integration/error-code-mapping.md
 ```
 Expected: 400–450 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/patterns/integration/error-code-mapping.md
@@ -1864,11 +1864,11 @@ git commit -m "feat(catalog): INT-012 Error Code Mapping and Propagation — Wav
 **Files:**
 - Modify: `knowledge-base/principles/api-first-design.md`
 
-- [ ] **Step 1: Read the current file to locate insertion point**
+- [x] **Step 1: Read the current file to locate insertion point**
 
 Read `knowledge-base/principles/api-first-design.md`. Find the `## Implementation Guidelines` section. The new subsection goes immediately before the `## When to Use` section (or at the end of Implementation Guidelines, whichever comes last in the current file structure).
 
-- [ ] **Step 2: Add the OpenAPI 3.2 subsection**
+- [x] **Step 2: Add the OpenAPI 3.2 subsection**
 
 Locate the end of `## Implementation Guidelines` (look for the last numbered list item before the next `##` heading). Insert the following block immediately before that next `##` heading:
 
@@ -1922,7 +1922,7 @@ paths:
 **Migration note:** OpenAPI 3.2 is backward-compatible with 3.1 for most fields. New projects: use 3.2 from the start. Existing 3.1 specs: migrate `nullable: true` fields when the spec is next edited (not a big-bang migration).
 ```
 
-- [ ] **Step 3: Verify the section was added correctly**
+- [x] **Step 3: Verify the section was added correctly**
 
 ```bash
 grep -n "OpenAPI 3.2\|webhooks\|JSON Schema 2020-12\|pathItem" \
@@ -1930,7 +1930,7 @@ grep -n "OpenAPI 3.2\|webhooks\|JSON Schema 2020-12\|pathItem" \
 ```
 Expected: lines referencing all three topics appear in the file.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add knowledge-base/principles/api-first-design.md
@@ -1945,7 +1945,7 @@ git commit -m "feat(catalog): PRIN-001 enhance api-first-design with OpenAPI 3.2
 - Run: `scripts/check-compliance-rows.py`
 - Read: all 10 new documents (spot-check)
 
-- [ ] **Step 1: Run the compliance check script**
+- [x] **Step 1: Run the compliance check script**
 
 ```bash
 python3 scripts/check-compliance-rows.py
@@ -1953,7 +1953,7 @@ python3 scripts/check-compliance-rows.py
 
 Expected output: all 10 new docs pass (have `## Compliance Mapping` section with Ring 0, Ring 1, Ring 2 rows). Any failures indicate a missing compliance section — fix the specific file before proceeding.
 
-- [ ] **Step 2: Verify all 10 new files exist**
+- [x] **Step 2: Verify all 10 new files exist**
 
 ```bash
 for f in \
@@ -1972,7 +1972,7 @@ done
 ```
 Expected: all 10 lines say `OK`.
 
-- [ ] **Step 3: Verify line counts are within range**
+- [x] **Step 3: Verify line counts are within range**
 
 ```bash
 wc -l \
@@ -1989,7 +1989,7 @@ wc -l \
 ```
 Expected: each file 340–470 lines (none under 300, none over 500).
 
-- [ ] **Step 4: Verify catalog inventory has all 10 new IDs**
+- [x] **Step 4: Verify catalog inventory has all 10 new IDs**
 
 ```bash
 python3 -c "
@@ -2009,14 +2009,14 @@ else:
 ```
 Expected: `All 10 catalog entries present. Total rows: 151`
 
-- [ ] **Step 5: Final commit**
+- [x] **Step 5: Final commit**
 
 ```bash
 git add -A
 git commit -m "chore(catalog): Wave 2a — final verification pass complete"
 ```
 
-- [ ] **Step 6: Report**
+- [x] **Step 6: Report**
 
 Print a summary in this format:
 
