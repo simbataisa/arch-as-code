@@ -42,17 +42,24 @@ Document and test disaster recovery procedures. Define RTO/RPO. Practice regular
 ### 1. Active-Passive (Cold Standby)
 
 **Setup**:
-```
-Primary Region (Active)
-├─ Database (master)
-├─ Cache
-├─ Service instances
-└─ Traffic: 100%
 
-Standby Region (Cold, offline)
-├─ Database (offline, replicated nightly)
-├─ No running services
-└─ Traffic: 0%
+```mermaid
+graph LR
+    subgraph Primary["Primary Region — Active"]
+        P_DB[(Database<br/>master)]
+        P_Cache[Cache]
+        P_Svc[Service instances]
+        P_Traffic[Traffic: 100%]
+    end
+    subgraph Standby["Standby Region — Cold / offline"]
+        S_DB[(Database<br/>offline, replicated nightly)]
+        S_NoSvc[No running services]
+        S_Traffic[Traffic: 0%]
+    end
+    classDef active fill:#e7f8ee,stroke:#2a8d4f
+    classDef cold fill:#eee,stroke:#666
+    class Primary,P_DB,P_Cache,P_Svc,P_Traffic active
+    class Standby,S_DB,S_NoSvc,S_Traffic cold
 ```
 
 **Failover Process**:
@@ -68,18 +75,24 @@ Standby Region (Cold, offline)
 ### 2. Active-Active (Hot Standby)
 
 **Setup**:
-```
-Region A (Active)
-├─ Database (master)
-├─ Cache (replicated)
-├─ Service instances
-└─ Traffic: 50%
 
-Region B (Active)
-├─ Database (slave, promoted to master on failover)
-├─ Cache (replicated)
-├─ Service instances
-└─ Traffic: 50%
+```mermaid
+graph LR
+    subgraph RegionA["Region A — Active"]
+        A_DB[(Database<br/>master)]
+        A_Cache[Cache<br/>replicated]
+        A_Svc[Service instances]
+        A_Traffic[Traffic: 50%]
+    end
+    subgraph RegionB["Region B — Active"]
+        B_DB[(Database<br/>slave; promoted on failover)]
+        B_Cache[Cache<br/>replicated]
+        B_Svc[Service instances]
+        B_Traffic[Traffic: 50%]
+    end
+    A_DB <-->|replication| B_DB
+    classDef active fill:#e7f8ee,stroke:#2a8d4f
+    class RegionA,A_DB,A_Cache,A_Svc,A_Traffic,RegionB,B_DB,B_Cache,B_Svc,B_Traffic active
 ```
 
 **Failover Process**:
@@ -94,15 +107,23 @@ Region B (Active)
 ### 3. Pilot Light
 
 **Setup**:
-```
-Primary Region (Active)
-├─ Full production infrastructure
-└─ Traffic: 100%
 
-Standby Region (Minimal)
-├─ Database (replicated, read-only)
-├─ Core services only (minimal instances)
-└─ Traffic: 0%
+```mermaid
+graph LR
+    subgraph Primary["Primary Region — Active"]
+        P_All[Full production infrastructure]
+        P_Traffic[Traffic: 100%]
+    end
+    subgraph Standby["Standby Region — Minimal (Pilot Light)"]
+        S_DB[(Database<br/>replicated, read-only)]
+        S_Core[Core services only<br/>minimal instances]
+        S_Traffic[Traffic: 0%]
+    end
+    P_All -.->|replicate| S_DB
+    classDef active fill:#e7f8ee,stroke:#2a8d4f
+    classDef pilot fill:#fff5d8,stroke:#c08c00
+    class Primary,P_All,P_Traffic active
+    class Standby,S_DB,S_Core,S_Traffic pilot
 ```
 
 **Failover Process**:

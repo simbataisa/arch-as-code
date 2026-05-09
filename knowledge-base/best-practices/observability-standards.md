@@ -184,24 +184,25 @@ public class OrderService {
 
 **Purpose**: Follow a request through multiple services.
 
-**Example Trace**:
-```
-Request: POST /api/v1/orders
-├─ [Order Service] 0ms → 234ms
-│  ├─ [Validate Order] 0ms → 10ms
-│  ├─ [Save Order] 10ms → 50ms
-│  └─ [Call Payment Service] 50ms → 200ms
-│     ├─ [Payment Service] 50ms → 200ms
-│     │  ├─ [Validate Payment] 50ms → 60ms
-│     │  ├─ [Charge Card] 60ms → 180ms
-│     │  └─ [Save Transaction] 180ms → 200ms
-│     └─ [Return] 200ms
-│
-└─ [Call Inventory Service] 200ms → 234ms
-   ├─ [Inventory Service] 200ms → 234ms
-   │  ├─ [Reserve Items] 200ms → 220ms
-   │  └─ [Update Stock] 220ms → 234ms
-   └─ [Return] 234ms
+**Example trace** for `POST /api/v1/orders`:
+
+```mermaid
+gantt
+    title Distributed trace — POST /api/v1/orders (total 234 ms)
+    dateFormat X
+    axisFormat %L
+    section Order Service
+    Validate Order        :0, 10
+    Save Order            :10, 50
+    Call Payment Service  :50, 200
+    Call Inventory Service:200, 234
+    section Payment Service
+    Validate Payment      :50, 60
+    Charge Card           :60, 180
+    Save Transaction      :180, 200
+    section Inventory Service
+    Reserve Items         :200, 220
+    Update Stock          :220, 234
 ```
 
 **Java Implementation** (Spring Cloud Sleuth + Jaeger):

@@ -18,31 +18,19 @@ Managing secrets (passwords, API keys, certificates) is error-prone:
 
 Use HashiCorp Vault for centralized secret management. Single source of truth with access control, audit logging, and automatic rotation.
 
-```
-┌──────────────┐
-│ Application  │
-├──────────────┤
-│ Requests DB  │
-│ Credentials  │
-└────────┬─────┘
-         │
-         ↓ (mTLS)
-    ┌─────────────────────┐
-    │ HashiCorp Vault     │
-    ├─────────────────────┤
-    │ ✓ Encrypt secrets   │
-    │ ✓ Audit access      │
-    │ ✓ Rotate credentials│
-    │ ✓ Generate tokens   │
-    └─────────────────────┘
-         │
-         ↓ (Dynamic secret generation)
-    ┌─────────────────┐
-    │ PostgreSQL      │
-    │ (temporary user │
-    │  created by     │
-    │  Vault)         │
-    └─────────────────┘
+```mermaid
+graph TB
+    App["Application<br/>Requests DB credentials"]
+    Vault["HashiCorp Vault<br/>• Encrypt secrets<br/>• Audit access<br/>• Rotate credentials<br/>• Generate tokens"]
+    PG["PostgreSQL<br/>temporary user<br/>created by Vault"]
+    App -->|mTLS| Vault
+    Vault -->|Dynamic secret generation| PG
+    classDef app fill:#e7f0ff,stroke:#2050a0
+    classDef vault fill:#fff5d8,stroke:#c08c00
+    classDef db fill:#e7f8ee,stroke:#2a8d4f
+    class App app
+    class Vault vault
+    class PG db
 ```
 
 ## Implementation Guidelines

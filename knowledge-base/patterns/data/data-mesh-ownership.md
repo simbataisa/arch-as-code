@@ -18,51 +18,36 @@ Centralized data teams become bottlenecks:
 
 Distribute data ownership to domain teams. Each team owns its data as a product. Domains build data pipelines and expose data through APIs and data products.
 
-```
-Before (Centralized):
-  ┌─────────────┐
-  │Domain Teams │
-  └──────┬──────┘
-         │
-         ↓ ETL requests
-  ┌──────────────────┐
-  │Data Team (Bottleneck)
-  │ - Data Warehouse│
-  │ - BI Tools      │
-  └──────┬───────────┘
-         │
-         ↓ Dashboards
-  ┌─────────────┐
-  │Analytics    │
-  │Teams        │
-  └─────────────┘
+**Before — Centralised**:
 
-After (Data Mesh):
-  ┌──────────────────────┐
-  │ Domain A (Payments)  │
-  │ ├─ Payment Events   │
-  │ ├─ Data API         │
-  │ └─ Quality Metrics  │
-  └──────────┬───────────┘
-             │
-  ┌──────────────────────┐
-  │ Domain B (Orders)    │
-  │ ├─ Order Events     │
-  │ ├─ Data API         │
-  │ └─ Quality Metrics  │
-  └──────────┬───────────┘
-             │
-  ┌──────────────────────┐
-  │ Data Mesh Platform   │
-  │ ├─ Data Catalog    │
-  │ ├─ Discovery       │
-  │ ├─ Governance      │
-  │ └─ Quality Checks  │
-  └──────────┬───────────┘
-             │
-  ┌────────────────────┐
-  │Analytics (Self-serve)
-  └────────────────────┘
+```mermaid
+graph TD
+    Domains[Domain Teams]
+    DataTeam["Data Team (Bottleneck)<br/>• Data Warehouse<br/>• BI Tools"]
+    Analytics[Analytics Teams]
+    Domains -->|ETL requests| DataTeam
+    DataTeam -->|Dashboards| Analytics
+    classDef bottleneck fill:#fee,stroke:#c00
+    class DataTeam bottleneck
+```
+
+**After — Data Mesh**:
+
+```mermaid
+graph TD
+    DomA["Domain A — Payments<br/>• Payment Events<br/>• Data API<br/>• Quality Metrics"]
+    DomB["Domain B — Orders<br/>• Order Events<br/>• Data API<br/>• Quality Metrics"]
+    Mesh["Data Mesh Platform<br/>• Data Catalog<br/>• Discovery<br/>• Governance<br/>• Quality Checks"]
+    Analytics[Analytics — self-serve]
+    DomA --> Mesh
+    DomB --> Mesh
+    Mesh --> Analytics
+    classDef domain fill:#e7f0ff,stroke:#2050a0
+    classDef platform fill:#fff5d8,stroke:#c08c00
+    classDef consumer fill:#e7f8ee,stroke:#2a8d4f
+    class DomA,DomB domain
+    class Mesh platform
+    class Analytics consumer
 ```
 
 ## Four Principles of Data Mesh

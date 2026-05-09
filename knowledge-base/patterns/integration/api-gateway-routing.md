@@ -17,18 +17,22 @@ Multiple microservices create operational challenges for clients:
 
 Implement a single entry point (API Gateway) that handles routing, auth, rate limiting, and protocol conversion.
 
-```
-┌─────────┐  ┌──────────────┐  ┌──────────────┐
-│ Client  │──│ API Gateway  │──│ Order Service│
-└─────────┘  │              │  └──────────────┘
-             │ - Auth       │
-             │ - Rate limit │  ┌──────────────┐
-             │ - Routing    │──│Payment Service
-             │ - Logging    │  └──────────────┘
-             │ - Caching    │
-             └──────────────┘  ┌──────────────┐
-                               │Inventory Svc │
-                               └──────────────┘
+```mermaid
+graph LR
+    Client[Client]
+    Gateway["API Gateway<br/>• Auth<br/>• Rate limit<br/>• Routing<br/>• Logging<br/>• Caching"]
+    Order[Order Service]
+    Payment[Payment Service]
+    Inventory[Inventory Service]
+
+    Client --> Gateway
+    Gateway --> Order
+    Gateway --> Payment
+    Gateway --> Inventory
+    classDef gw fill:#fff5d8,stroke:#c08c00
+    classDef svc fill:#e7f0ff,stroke:#2050a0
+    class Gateway gw
+    class Order,Payment,Inventory svc
 ```
 
 ## Implementation Guidelines

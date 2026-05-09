@@ -12,32 +12,41 @@ Shared resources create failure dependencies:
 - One service consuming all connections starves others
 - One API endpoint's failure blocks unrelated endpoints
 
-```
-Without Bulkhead:
-  Shared Thread Pool (10 threads)
-  ├─ 7 threads: Slow API call (Payment Service down)
-  ├─ 2 threads: Fast API call (Inventory Service) — BLOCKED
-  └─ 1 thread: Database query — BLOCKED
-
-  Result: All services degraded due to one failure
+```mermaid
+graph TD
+    subgraph Shared["Shared Thread Pool — 10 threads (Without Bulkhead)"]
+        T1["7 threads<br/>Slow API call<br/>(Payment Service down)"]
+        T2["2 threads<br/>Fast API call<br/>(Inventory Service)<br/>BLOCKED"]
+        T3["1 thread<br/>Database query<br/>BLOCKED"]
+    end
+    Outcome[Result: ALL services degraded<br/>due to ONE failure]
+    Shared --> Outcome
+    classDef bad fill:#fee,stroke:#c00
+    class T1,T2,T3,Outcome bad
 ```
 
 ## Solution
 
 Isolate resources per consumer/domain. If one service consumes all resources, others are unaffected.
 
-```
-With Bulkhead:
-  Payment Service Pool (5 threads)
-  ├─ 4 threads: Slow call (service down)
-  └─ 1 thread: Queued request
-
-  Inventory Service Pool (5 threads)
-  ├─ 2 threads: Requests (responsive)
-  ├─ 2 threads: Requests (responsive)
-  └─ 1 thread: Ready
-
-  Result: Inventory continues working; Payment Service degrades gracefully
+```mermaid
+graph TD
+    subgraph PayPool["Payment Service Pool — 5 threads"]
+        P1["4 threads<br/>Slow call<br/>(service down)"]
+        P2["1 thread<br/>Queued request"]
+    end
+    subgraph InvPool["Inventory Service Pool — 5 threads"]
+        I1["2 threads<br/>Requests (responsive)"]
+        I2["2 threads<br/>Requests (responsive)"]
+        I3["1 thread<br/>Ready"]
+    end
+    Outcome["Result: Inventory continues working;<br/>Payment Service degrades gracefully"]
+    PayPool --> Outcome
+    InvPool --> Outcome
+    classDef bad fill:#fee,stroke:#c00
+    classDef ok fill:#e7f8ee,stroke:#2a8d4f
+    class PayPool,P1,P2 bad
+    class InvPool,I1,I2,I3,Outcome ok
 ```
 
 ## Implementation Guidelines

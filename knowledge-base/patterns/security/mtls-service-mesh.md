@@ -17,15 +17,15 @@ Service-to-service communication lacks authentication:
 
 Implement mutual TLS (mTLS) via service mesh (Istio). Automatic certificate issuance, rotation, and enforcement at network boundary.
 
-```
-Service A                Service B
-   ↓                       ↑
-Envoy Proxy         Envoy Proxy
-   (Client mTLS)      (Server mTLS)
-   ├─ Certificate    ├─ Certificate
-   ├─ Private Key    ├─ Private Key
-   └─ Validate B's   └─ Validate A's
-      certificate        certificate
+```mermaid
+graph LR
+    SvcA[Service A] --> EnvoyA[Envoy Proxy<br/>Client-side mTLS<br/>• Certificate<br/>• Private Key<br/>• Validate B's certificate]
+    EnvoyA -->|"mTLS<br/>(both sides authenticate)"| EnvoyB[Envoy Proxy<br/>Server-side mTLS<br/>• Certificate<br/>• Private Key<br/>• Validate A's certificate]
+    EnvoyB --> SvcB[Service B]
+    classDef svc fill:#e7f0ff,stroke:#2050a0
+    classDef proxy fill:#fff5d8,stroke:#c08c00
+    class SvcA,SvcB svc
+    class EnvoyA,EnvoyB proxy
 ```
 
 ## Implementation Guidelines

@@ -23,32 +23,34 @@ Decompose monolith into microservices. Each service owns its domain, data, and d
 
 **Bounded Contexts**: Core organizational principle for service boundaries.
 
-```
-Bounded Contexts (Natural Service Boundaries):
+Bounded Contexts (natural service boundaries):
 
-Payment Domain:
-  ├─ Commands: ProcessPayment, RefundPayment
-  ├─ Entities: Transaction, PaymentMethod
-  ├─ Value Objects: Amount, CurrencyCode
-  └─ Service: PaymentProcessor
-
-Order Domain:
-  ├─ Commands: CreateOrder, CancelOrder
-  ├─ Entities: Order, OrderItem, Customer
-  ├─ Value Objects: OrderId, OrderStatus
-  └─ Service: OrderProcessor
-
-Inventory Domain:
-  ├─ Commands: ReserveItems, ReleaseItems
-  ├─ Entities: Product, Stock
-  ├─ Value Objects: Quantity, Sku
-  └─ Service: InventoryProcessor
-
-Shipping Domain:
-  ├─ Commands: ShipOrder, TrackShipment
-  ├─ Entities: Shipment, Address
-  ├─ Value Objects: TrackingNumber, Location
-  └─ Service: ShippingProcessor
+```mermaid
+graph TB
+    subgraph Payment["Payment Domain"]
+        P_C["Commands<br/>ProcessPayment, RefundPayment"]
+        P_E["Entities<br/>Transaction, PaymentMethod"]
+        P_V["Value Objects<br/>Amount, CurrencyCode"]
+        P_S["Service<br/>PaymentProcessor"]
+    end
+    subgraph Order["Order Domain"]
+        O_C["Commands<br/>CreateOrder, CancelOrder"]
+        O_E["Entities<br/>Order, OrderItem, Customer"]
+        O_V["Value Objects<br/>OrderId, OrderStatus"]
+        O_S["Service<br/>OrderProcessor"]
+    end
+    subgraph Inventory["Inventory Domain"]
+        I_C["Commands<br/>ReserveItems, ReleaseItems"]
+        I_E["Entities<br/>Product, Stock"]
+        I_V["Value Objects<br/>Quantity, Sku"]
+        I_S["Service<br/>InventoryProcessor"]
+    end
+    subgraph Shipping["Shipping Domain"]
+        S_C["Commands<br/>ShipOrder, TrackShipment"]
+        S_E["Entities<br/>Shipment, Address"]
+        S_V["Value Objects<br/>TrackingNumber, Location"]
+        S_S["Service<br/>ShippingProcessor"]
+    end
 ```
 
 **Identifying Bounded Contexts**:
@@ -70,88 +72,92 @@ Shipping Domain:
 
 ### 3. Strangler Fig Pattern** (Gradual Migration)
 
-Phase 1: **Analysis**
-```
-Monolith
-├─ Order module
-├─ Payment module
-├─ Inventory module
-└─ Shipping module
-
-Identify: Order module is easiest to extract (low coupling)
-```
+Phase 1: **Analysis** — Monolith contains Order, Payment, Inventory, Shipping modules. Identify the lowest-coupled module (typically Order) as the first extraction candidate.
 
 Phase 2: **Parallel Implementation**
-```
-Monolith (still in production)
-│
-├─ Order module (original)
-│
-└─ API Facade (new)
-     └─ Order Service (extracting)
-         └─ New database (starting fresh)
+
+```mermaid
+graph TB
+    Mono["Monolith (still in production)"]
+    OrderModule["Order module (original)"]
+    Facade["API Facade (new)"]
+    NewSvc["Order Service (extracting)"]
+    NewDB[(New database<br/>starting fresh)]
+    Mono --> OrderModule
+    Mono --> Facade
+    Facade --> NewSvc
+    NewSvc --> NewDB
+    classDef old fill:#eee,stroke:#666
+    classDef new fill:#e7f8ee,stroke:#2a8d4f
+    class Mono,OrderModule old
+    class Facade,NewSvc,NewDB new
 ```
 
 Phase 3: **Intercept Requests**
-```
-Request for Order:
-  1. Check: exists in new Order Service?
-  2. If yes: route to Order Service
-  3. If no: route to Monolith (fallback)
 
-Dual writes:
-  1. Write to new Order Service
-  2. Write to Monolith (eventually stops)
-```
+For each Order request:
+
+1. Check: does the order exist in the new Order Service?
+2. If yes: route to the Order Service.
+3. If no: route to the Monolith (fallback).
+
+Dual writes during the cutover window:
+
+1. Write to the new Order Service.
+2. Write to the Monolith (this leg eventually stops).
 
 Phase 4: **Data Sync**
-```
-Monolith orders table (source of truth)
-  │
-  ├─ CDC captures changes
-  │
-  └─ Order Service database (replicates)
-      └─ After verification: becomes source of truth
+
+```mermaid
+graph LR
+    MonoDB[(Monolith orders table<br/>source of truth)]
+    CDC[CDC captures changes<br/>Debezium]
+    NewDB[(Order Service database<br/>replicates → eventually SoT)]
+    MonoDB --> CDC --> NewDB
 ```
 
-Phase 5: **Switch Over**
-```
-All traffic now routed to Order Service
-Monolith order code can be retired
-```
+Phase 5: **Switch Over** — all traffic routed to the Order Service; Monolith order code can be retired.
 
 ### 4. Database Decomposition
 
-**Before** (Shared database):
+**Before** (shared database — services tightly coupled through `customers`):
+
+```mermaid
+graph TB
+    OrderSvc[Order Service]
+    InvSvc[Inventory Service]
+    PaySvc[Payment Service]
+    SharedDB[(Shared Database<br/>customers + shared ref data)]
+    OrderSvc -->|"orders, order_items,<br/>customers"| SharedDB
+    InvSvc -->|"products, stock_levels,<br/>customers ⚠ SHARED"| SharedDB
+    PaySvc -->|"transactions, payment_methods,<br/>customers ⚠ SHARED"| SharedDB
+    classDef bad fill:#fee,stroke:#c00
+    class SharedDB bad
 ```
-Monolith
-├─ Order Service
-│  └─ Uses: orders, order_items, customers
-├─ Inventory Service
-│  └─ Uses: products, stock_levels, customers  ← SHARED
-├─ Payment Service
-│  └─ Uses: transactions, payment_methods, customers  ← SHARED
-└─ Shared Database (customers, shared ref data)
-```
 
-**After** (Database per service):
-```
-Order Service
-├─ PostgreSQL
-└─ Tables: orders, order_items, customers_snapshot
+**After** (database per service + replicated reference data):
 
-Inventory Service
-├─ PostgreSQL
-└─ Tables: products, stock_levels, sku_reference
-
-Payment Service
-├─ PostgreSQL
-└─ Tables: transactions, payment_methods
-
-Shared Reference Data (read-only, replicated):
-├─ currency (replicated to all services)
-├─ country (replicated to all services)
-└─ tax_rate (replicated to all services)
+```mermaid
+graph TB
+    OrderSvc[Order Service]
+    OrderDB[(PostgreSQL<br/>orders, order_items,<br/>customers_snapshot)]
+    InvSvc[Inventory Service]
+    InvDB[(PostgreSQL<br/>products, stock_levels,<br/>sku_reference)]
+    PaySvc[Payment Service]
+    PayDB[(PostgreSQL<br/>transactions,<br/>payment_methods)]
+    RefData[(Shared Reference Data<br/>read-only, replicated:<br/>currency, country, tax_rate)]
+    OrderSvc --- OrderDB
+    InvSvc --- InvDB
+    PaySvc --- PayDB
+    RefData -.replicate.-> OrderSvc
+    RefData -.replicate.-> InvSvc
+    RefData -.replicate.-> PaySvc
+    classDef svc fill:#e7f0ff,stroke:#2050a0
+    classDef db fill:#fff5d8,stroke:#c08c00
+    classDef ref fill:#e7f8ee,stroke:#2a8d4f
+    class OrderSvc,InvSvc,PaySvc svc
+    class OrderDB,InvDB,PayDB db
+    class RefData ref
 ```
 
 **Implementation Steps**:
@@ -247,15 +253,14 @@ One endpoint per service (overhead outweighs benefits)
 
 ## Metrics to Track
 
-```
-Decomposition Health:
-  - Deployment frequency (should increase per service)
-  - Lead time for changes (should decrease)
-  - Mean time to recovery (MTTR)
-  - Change failure rate
-  - Inter-service call latency
-  - Data consistency gaps (CDC lag)
-```
+Decomposition health metrics:
+
+- **Deployment frequency** (should increase per service)
+- **Lead time for changes** (should decrease)
+- **Mean time to recovery (MTTR)**
+- **Change failure rate**
+- **Inter-service call latency**
+- **Data consistency gaps** (CDC lag)
 
 ## Timeline Expectations
 
@@ -267,23 +272,11 @@ Decomposition Health:
 
 ## Team Structure Post-Decomposition
 
-```
-Squad Model:
-  Order Squad:
-    ├─ 1 Backend Engineer
-    ├─ 1 Frontend Engineer
-    └─ 1 Product Manager
+Squad model:
 
-  Payment Squad:
-    ├─ 2 Backend Engineers (payment complex)
-    └─ 1 Product Manager
-
-  Platform Squad (Cross-cutting):
-    ├─ Infrastructure engineer
-    ├─ Security engineer
-    ├─ Data engineer
-    └─ DBA
-```
+- **Order Squad**: 1 Backend Engineer · 1 Frontend Engineer · 1 Product Manager
+- **Payment Squad**: 2 Backend Engineers (payment is complex) · 1 Product Manager
+- **Platform Squad** (cross-cutting): Infrastructure engineer · Security engineer · Data engineer · DBA
 
 ## Common Pitfalls
 

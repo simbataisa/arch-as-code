@@ -18,36 +18,20 @@ Traditional username/password authentication has issues:
 
 Use OAuth2 for authorization and OpenID Connect (OIDC) for authentication. Delegate to centralized identity provider.
 
-```
-┌──────────┐        ┌─────────────────────┐       ┌──────────┐
-│ Resource │        │ Authorization       │       │ Resource │
-│ Owner    │        │ Server              │       │ Server   │
-│(User)    │        │(Keycloak/Okta)      │       │(API)     │
-└────┬─────┘        └──────────┬──────────┘       └────┬─────┘
-     │                         │                      │
-     │ 1. Login                │                      │
-     ├────────────────────────>│                      │
-     │                         │                      │
-     │ 2. Authorization Code   │                      │
-     │<────────────────────────┤                      │
-     │                         │                      │
-     │           3. Exchange Code + Secret with Authorization Server
-     ├────────────────────────────────────────────────────────────>│
-     │                         │                      │
-     │                         │  4. Access Token    │
-     │<──────────────────────────────────────────────────────────┤
-     │                         │                      │
-     │     5. Call API with Access Token              │
-     ├─────────────────────────────────────────────────────────────>│
-     │                         │                      │
-     │                         │  6. Validate Token  │
-     │                         │<─────────────────────┤
-     │                         │                      │
-     │                         │  7. Token Valid     │
-     │                         ├─────────────────────>│
-     │                         │                      │
-     │                   8. Protected Resource      │
-     │<───────────────────────────────────────────────┤
+```mermaid
+sequenceDiagram
+    participant User as Resource Owner<br/>(User)
+    participant AS as Authorization Server<br/>(Keycloak / Okta)
+    participant RS as Resource Server<br/>(API)
+
+    User->>AS: 1. Login
+    AS-->>User: 2. Authorization Code
+    User->>AS: 3. Exchange Code + Secret
+    AS-->>User: 4. Access Token
+    User->>RS: 5. Call API with Access Token
+    RS->>AS: 6. Validate Token
+    AS-->>RS: 7. Token Valid
+    RS-->>User: 8. Protected Resource
 ```
 
 ## Implementation Guidelines
