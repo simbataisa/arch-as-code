@@ -7,6 +7,7 @@ Tier Applicability: T0, T1, T2, T3
 ## Problem Statement
 
 Without observability, production issues are invisible:
+
 - "System is slow" — where? payment? orders? database?
 - Can't find root cause of failures
 - Debugging production is guesswork
@@ -24,6 +25,7 @@ Implement Three Pillars of Observability: Logs, Metrics, Traces. Combined, they 
 **Purpose**: Detailed record of what happened.
 
 **Example Log Entry**:
+
 ```json
 {
   "timestamp": "2026-03-08T10:30:15.123Z",
@@ -37,13 +39,14 @@ Implement Three Pillars of Observability: Logs, Metrics, Traces. Combined, they 
   "environment": "production",
   "userId": "user_456",
   "orderId": "ord_789",
-  "amount": 50000.00,
+  "amount": 50000.0,
   "currency": "VND",
   "duration_ms": 234
 }
 ```
 
 **Best Practices**:
+
 - Structured JSON (machine-readable)
 - Include: timestamp, level, service, traceId, spanId, userId, context
 - Log at appropriate levels:
@@ -85,6 +88,7 @@ public class OrderService {
 ```
 
 **Log Storage**:
+
 - ELK Stack (Elasticsearch, Logstash, Kibana)
 - Splunk
 - CloudWatch (AWS)
@@ -96,6 +100,7 @@ public class OrderService {
 **Purpose**: Quantifiable measurements aggregated over time.
 
 **Example Metrics**:
+
 ```
 # Request latency
 order_service_request_duration_seconds{service="order-service",endpoint="/api/v1/orders",method="POST"} 0.234
@@ -111,6 +116,7 @@ orders_amount_total{service="order-service",currency="VND"} 1250000000
 ```
 
 **Prometheus Format** (Standard):
+
 ```
 # HELP request_duration_seconds HTTP request latency
 # TYPE request_duration_seconds histogram
@@ -123,6 +129,7 @@ request_duration_seconds_count 1000
 ```
 
 **Java Implementation**:
+
 ```java
 @Configuration
 public class MetricsConfig {
@@ -165,6 +172,7 @@ public class OrderService {
 ```
 
 **Key Metrics to Track**:
+
 - Request latency (p50, p95, p99)
 - Error rate (5xx, timeouts)
 - Throughput (requests/sec)
@@ -175,6 +183,7 @@ public class OrderService {
 - Queue depth
 
 **Tools**:
+
 - Prometheus (scrapes metrics)
 - Grafana (visualization)
 - CloudWatch (AWS)
@@ -206,6 +215,7 @@ gantt
 ```
 
 **Java Implementation** (Spring Cloud Sleuth + Jaeger):
+
 ```java
 // Spring auto-injects traceId and spanId
 @Service
@@ -252,6 +262,7 @@ public class OrderService {
 ```
 
 **Tools**:
+
 - Jaeger (open-source)
 - Zipkin (open-source)
 - DataDog (SaaS)
@@ -323,7 +334,7 @@ spring:
       enabled: true
       propagation-keys: traceId,spanId,customerId
       sampler:
-        probability: 0.1  # Sample 10% (reduce overhead)
+        probability: 0.1 # Sample 10% (reduce overhead)
         # Always sample these:
         rules:
           - { path: /api/v1/payments.*, probability: 1.0 }
