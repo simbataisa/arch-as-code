@@ -1,6 +1,8 @@
 # Change Data Capture (CDC) with Outbox Pattern
 
-Status: Approved | Last Reviewed: 2026-02-12 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
+Catalog ID: INT-002 | Radii (upgraded to ops-runbook depth in Wave 3b)
+Tier Applicability: T0, T1
 
 ## Problem Statement
 
@@ -262,6 +264,74 @@ CDC Process (Debezium):
 | **Kafka Connect** | Extensible connectors for many sources |
 | **Outbox Poller** | Simple polling without external CDC tool |
 
+## NFR Acceptance Criteria
+
+- **HA**: outbox table is on the service's own Aurora cluster (REF-001 multi-region for T0). Debezium connector itself is HA via Kafka Connect cluster with 3+ workers; failover is automatic.
+- **HP**: outbox-poller adds 5–20ms P95 between commit and publish (acceptable for async event publishing; not in the request hot path). Per-event publish overhead < 5ms in Kafka.
+- **HR**: dual-write inconsistency eliminated; CDC connector restart resumes from last-committed offset; pair with [EIP-024 Idempotent Receiver](../eip/idempotent-receiver.md) downstream for full at-least-once → effectively exactly-once.
+
+## Compliance Mapping
+
+| Layer | Reference | Section/Control | How this satisfies |
+|---|---|---|---|
+| Ring 0 | Microservices.io — Transactional Outbox | Canonical pattern | Implementation reference |
+| Ring 0 | Debezium documentation | CDC implementation | Tooling reference |
+| Ring 1 | Basel BCBS 239 §6 (Accuracy) | "Aggregation must avoid double-counting; no message loss" | Outbox guarantees the event reflects committed data; CDC guarantees no event loss |
+| Ring 1 | ISO 20022 settlement-message integrity | Settlement events must mirror the underlying ledger commit | Outbox eliminates the dual-write race that would otherwise produce out-of-order or lost settlement messages |
+| Ring 2 | SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity | Outbox + CDC ensures downstream services receive every committed event |
+
+## Cost / FinOps Notes
+
+| Item | Cost driver | Order of magnitude |
+|---|---|---|
+| Outbox table storage | Event volume × retention (typically 7d after CDC capture) | ~10 GB at 10M events/day; trivial |
+| Debezium / Kafka Connect cluster | Worker count × throughput | ~$300–800/month for typical T0 |
+| Outbox-purge job | DELETE on expired rows | Negligible |
+| Cross-region CDC replication | Egress + dual broker cost | Same as REF-001 baseline |
+
+**Cost of NOT using Outbox**: dual-write race produces missing or duplicated events; downstream reconciliation costs / regulatory exposure / engineering time-to-debug far exceed Debezium's cost.
+
+## Threat Model Summary
+
+STRIDE: addresses **Tampering** (consistency) and **Repudiation** (no message loss).
+
+- **Top 3 threats addressed**:
+  1. *Dual-write inconsistency* — eliminated by single-transaction outbox insert.
+  2. *Event loss on broker outage* — events stay in outbox table until CDC catches up.
+  3. *Out-of-order events* — CDC preserves commit order from the database log.
+- **Top 3 residual threats**:
+  1. *Outbox bloat* if purger fails — alerts on table size growth; nightly purge job monitored.
+  2. *Schema-evolution incompatibility* — outbox events should use versioned schemas (Confluent Schema Registry); breaking changes require dual-publish window.
+  3. *Sensitive data in outbox table* — events may carry PII; same data-protection rules as the source table apply (Decree 13/2023, [PRIN-007](../../principles/data-residency.md), [SEC-008 Data Masking](../security/data-masking.md)).
+
+## Operational Runbook (stub)
+
+- **Alerts**:
+  - `Outbox_LagSeconds_T0`: time between commit and CDC publish > 5 s sustained over 5 min. Severity: High (suggests Debezium issue).
+  - `Outbox_TableSize`: outbox table > 2× expected steady-state size. Severity: Warning (purger may have stopped).
+  - `Debezium_ConnectorState`: connector not in RUNNING state. Severity: Critical.
+- **Dashboards**: Grafana — `outbox-cdc-overview` (table size, publish lag, connector health, throughput).
+- **Recovery**:
+  - Connector failure: Kafka Connect auto-restarts; if not, manual restart per runbook.
+  - Stuck publish: identify the offending row; investigate why Debezium can't process it (often a binlog format issue); skip or replay per runbook.
+
+## Test Strategy (stub)
+
+- **Unit**: outbox-write transaction test (verify atomicity of business-row + outbox-row insert).
+- **Integration**: Debezium Testcontainer + Kafka; verify event appears in topic after commit.
+- **Chaos**: kill Debezium connector mid-publish; verify recovery from same offset; no duplicates downstream (paired with EIP-024).
+- **Performance**: high-throughput write load; verify publish lag stays within tier budget.
+
+## Related Patterns
+
+- [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md) — outbox publish is idempotent by design
+- [EIP-023 Guaranteed Delivery](../eip/guaranteed-delivery.md) — outbox is one of the canonical implementations
+- [EIP-024 Idempotent Receiver](../eip/idempotent-receiver.md) — required downstream for at-most-once effective semantics
+- [EIP-025 Dead Letter Channel](../eip/dead-letter-channel.md) — required for handling permanent downstream failures
+- [INT-001 Saga Orchestration](saga-orchestration.md) — saga step events published via outbox
+- [INT-004 Event Sourcing](event-sourcing.md) — outbox is a lightweight alternative to full event sourcing
+- [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md) — outbox + MirrorMaker = cross-region event continuity
+
 ## References
 
 - [Debezium Documentation](https://debezium.io/)
@@ -270,4 +340,4 @@ CDC Process (Debezium):
 
 ---
 
-**Key Takeaway**: Use Outbox Pattern to ensure events are reliably published with business data. Debezium automatically captures and streams changes. Consumers must be idempotent.
+**Key Takeaway**: Write business row + outbox row in one DB transaction. CDC (Debezium) publishes outbox rows to Kafka. Downstream consumers are idempotent (EIP-024). This eliminates the dual-write race that would otherwise produce lost or duplicated events.

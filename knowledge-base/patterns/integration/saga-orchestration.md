@@ -1,6 +1,8 @@
 # SAGA Orchestration Pattern
 
-Status: Approved | Last Reviewed: 2026-02-10 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
+Catalog ID: INT-001 | Radii (upgraded to ops-runbook depth in Wave 3b)
+Tier Applicability: T0, T1
 
 ## Problem Statement
 
@@ -231,6 +233,77 @@ FAILURE PATH (Payment fails):
 | **Axon Framework** | Event sourcing with SAGA support |
 | **Custom Spring Service** | Simple SAGAs, full control |
 
+## NFR Acceptance Criteria
+
+- **HA**: orchestrator state persisted in HA store (Temporal cluster, or Aurora-backed Spring State Machine). Cross-region replication per [REF-001](../../reference-architectures/multi-region-active-active.md) for T0 sagas.
+- **HP**: per-step latency ≈ network RTT + downstream service time; total saga latency = sum of step latencies. T0 payment sagas typically complete in 1–3 s end-to-end. Customer flow uses async-ack with [RES-011 Queue-Based Load Levelling](../resilience/queue-based-load-levelling.md) so the customer doesn't wait synchronously.
+- **HR**: every step is idempotent ([PRIN-006](../../principles/idempotency-by-default.md), [EIP-024](../eip/idempotent-receiver.md)); every step has a documented compensation; state durability survives orchestrator crash; orchestrator replay-safe.
+
+## Compliance Mapping
+
+| Layer | Reference | Section/Control | How this satisfies |
+|---|---|---|---|
+| Ring 0 | Microservices.io — Saga | Canonical pattern definition | Implementation reference |
+| Ring 0 | Microsoft Cloud Patterns — Saga | "Manage data consistency across microservices" | Same pattern; same intent |
+| Ring 1 | Basel BCBS 239 §6 (Accuracy) | "Aggregation must avoid double-counting" | Saga + idempotent steps + compensations preserve accounting accuracy across distributed transactions |
+| Ring 1 | ISO 20022 multi-leg payment flows | Multi-step settlement (e.g., pacs.008 → pacs.002 → pacs.004 reversal) | Saga is the canonical orchestration for ISO 20022 multi-leg flows |
+| Ring 2 | SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity | Compensations preserve consistency under partial failure during EOD windows |
+
+## Cost / FinOps Notes
+
+| Item | Cost driver | Order of magnitude |
+|---|---|---|
+| Temporal cluster (recommended) | Worker count × visibility-DB size | $500–2000/month for typical T0 throughput |
+| Aurora-backed state (Spring State Machine alt) | DB storage + replicas | $200–500/month |
+| Per-saga overhead | Step persistence + transition writes | ~$0.0001 per saga at high volume |
+| Failed/long-running sagas | Manual triage labour | Bounded by good design |
+
+**Cost of NOT using Saga**: 2PC across services is unreliable in cloud-native deployments; ad-hoc multi-step coordination produces inconsistency bugs that compound and become reconciliation tickets — far higher cost than the orchestrator infra.
+
+## Threat Model Summary
+
+STRIDE: addresses **Tampering** (consistency) and **Repudiation** (every step audited).
+
+- **Top 3 threats addressed**:
+  1. *Partial-success inconsistency* — payment debited but inventory not reserved. Compensation reverses the debit.
+  2. *Replay corruption* — idempotent steps make replay safe.
+  3. *Crash in the middle* — durable state lets the orchestrator resume.
+- **Top 3 residual threats**:
+  1. *Buggy compensation* — compensation that doesn't fully reverse leaves residual state. Mitigation: pair every step with a tested compensation in the same PR; chaos drills exercise compensations.
+  2. *Compensation that itself fails* — recursive compensation problem. Mitigation: at-least-N-attempts then DLT escalation to human triage.
+  3. *Orchestrator-as-bottleneck* — single Temporal cluster failure halts all sagas. Mitigation: REF-001 multi-region; cell-aware Temporal namespaces.
+
+## Operational Runbook (stub)
+
+- **Alerts**:
+  - `Saga_StuckCount`: number of sagas in non-terminal state for > tier-budget. Severity: tier-dependent.
+  - `Saga_CompensationFailureRate`: % of compensations that themselves fail. Severity: High (suggests buggy compensation logic).
+  - `Saga_DLT_Depth`: sagas escalated to manual triage. Severity: warning, escalating.
+- **Dashboards**: Grafana — `saga-overview` (start rate, completion rate, compensation rate, P95 duration, stuck count).
+- **Stuck-saga procedure**:
+  1. Identify saga ID and current step.
+  2. Check the step's downstream health.
+  3. If downstream recoverable: let saga retry per its policy.
+  4. If downstream permanently failed: trigger compensation manually via runbook.
+  5. Document in postmortem if pattern repeats.
+
+## Test Strategy (stub)
+
+- **Unit**: each step's forward and compensation actions independently.
+- **Integration**: full saga happy path; partial-failure path triggering compensation; idempotent re-execution.
+- **Chaos**: kill orchestrator mid-saga; verify resumption. Inject compensation failures; verify escalation.
+- **Property-based**: random step-failure permutations should always converge to a consistent end state (success or fully compensated).
+
+## Related Patterns
+
+- [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md) — every saga step must be idempotent
+- [EIP-024 Idempotent Receiver](../eip/idempotent-receiver.md) — message-driven saga steps
+- [EIP-017 Process Manager](../eip/process-manager.md) — Saga is a banking-specific specialisation of Process Manager
+- [INT-002 Transactional Outbox + CDC](cdc-outbox-pattern.md) — saga step events are published via outbox
+- [INT-004 Event Sourcing](event-sourcing.md) — saga state can itself be event-sourced
+- [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md) — T0 sagas inherit the topology
+- [REF-002 Real-Time Payments NAPAS](../../reference-architectures/real-time-payments-napas.md) — primary saga consumer
+
 ## References
 
 - [Apache Temporal](https://temporal.io/)
@@ -240,4 +313,4 @@ FAILURE PATH (Payment fails):
 
 ---
 
-**Key Takeaway**: Use SAGA Orchestration for distributed transactions. Each step is a local transaction; failures trigger compensation. Use Temporal for production systems.
+**Key Takeaway**: Saga = sequence of local transactions, each compensable, durably orchestrated. Pair every step with idempotency (PRIN-006 + EIP-024) and a tested compensation. Use Temporal for production T0 systems.

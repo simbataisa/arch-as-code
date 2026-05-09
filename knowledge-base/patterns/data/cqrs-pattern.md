@@ -1,6 +1,8 @@
 # CQRS (Command Query Responsibility Segregation) Pattern
 
-Status: Approved | Last Reviewed: 2026-02-25 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
+Catalog ID: DATA-001 | Radii (upgraded to ops-runbook depth in Wave 3b)
+Tier Applicability: T1, T2 (rarely applied to T0 — would add latency in the write path)
 
 ## Problem Statement
 
@@ -318,6 +320,68 @@ CQRS accepts eventual consistency for benefits:
    - Solution: Monitor lag, alert if > threshold
    - Consumer lag metrics via Kafka
 
+## NFR Acceptance Criteria
+
+- **HA**: write side and read side independently HA. Read side can be re-built from event stream on disaster, allowing T1 RPO ≈ 0 for reads even with full read-store loss.
+- **HP**: read latency improved (denormalised, indexed for query patterns). Write latency essentially unchanged. Read lag SLO typically ≤ 1 s for T1; ≤ 5 s for T2 acceptable.
+- **HR**: divergence between write and read state is the primary risk. Mitigation: monitored lag SLO; periodic reconciliation; rebuild-from-events procedure documented.
+
+## Compliance Mapping
+
+| Layer | Reference | Section/Control | How this satisfies |
+|---|---|---|---|
+| Ring 0 | Microservices.io — CQRS | Canonical pattern | Implementation reference |
+| Ring 0 | Microsoft Cloud Patterns — CQRS | "Separate operations that read data from those that update data" | Same intent |
+| Ring 1 | Basel BCBS 239 §3 (Timeliness) | "Risk data must be aggregated and reported on a timely basis" | Read models pre-aggregate for timely reporting |
+| Ring 2 | (no direct mapping) | — | CQRS is a generic pattern; specific Vietnamese controls applied via the read/write models themselves (e.g., audit trail) |
+
+## Cost / FinOps Notes
+
+| Item | Cost driver | Order of magnitude |
+|---|---|---|
+| Read store | Volume × N read models | Often more storage than write side |
+| Event-stream consumer (read-model builder) | Throughput | Modest compute |
+| Reconciliation jobs | Periodic full scans | Off-peak runs; trivial |
+
+**Cost of NOT using CQRS** when applicable: read queries on the normalised write model lock contention, hurt write performance, drive over-provisioning of the write DB. CQRS often pays for itself in DB cost reduction.
+
+## Threat Model Summary
+
+STRIDE: addresses **Tampering** (separation of concerns) and **Information Disclosure** (read store can be access-controlled separately).
+
+- **Top 3 threats addressed**:
+  1. *Read query saturating the write DB* — separated read store removes contention.
+  2. *Sensitive-field exposure via wide read queries* — read model can omit / mask fields.
+  3. *Rebuild-from-scratch resilience* — read model can be rebuilt from event log if corrupted.
+- **Top 3 residual threats**:
+  1. *Stale read returned to a customer* — application UX must communicate "as of" timestamps where staleness matters; alerts on lag > SLO.
+  2. *Event-loss between write and read side* — eliminated by [INT-002 Outbox + CDC](../integration/cdc-outbox-pattern.md) + [EIP-024 Idempotent Receiver](../eip/idempotent-receiver.md).
+  3. *Read-side bugs* producing inconsistent display — periodic reconciliation against the write store catches these.
+
+## Operational Runbook (stub)
+
+- **Alerts**:
+  - `CQRS_ReadLag_<service>`: read lag > tier SLO. Severity: tier-dependent.
+  - `CQRS_RebuildInProgress`: read-model rebuild active (informational; mute downstream alerts during rebuild).
+  - `CQRS_ReconciliationDrift`: periodic-reconciliation job found > N rows differing between write and read. Severity: High.
+- **Dashboards**: Grafana — `cqrs-overview` (per service: write rate, read rate, lag, reconciliation drift).
+- **Rebuild procedure**: stop read consumer; truncate read store; replay events from earliest offset; verify lag returns to baseline.
+
+## Test Strategy (stub)
+
+- **Unit**: command handler tests; read-model projection tests.
+- **Integration**: write a command → assert event published → read-side projection updated → query returns expected.
+- **Chaos**: kill read-model builder; verify rebuild procedure works.
+- **Property**: random sequence of commands → eventual consistency between write and read states.
+
+## Related Patterns
+
+- [INT-002 Transactional Outbox + CDC](../integration/cdc-outbox-pattern.md) — preferred event-publishing path
+- [INT-004 Event Sourcing](../integration/event-sourcing.md) — frequent companion (write side as event log)
+- [EIP-024 Idempotent Receiver](../eip/idempotent-receiver.md) — read-model builder must be idempotent
+- [DATA-002 Data Mesh Ownership](data-mesh-ownership.md) — CQRS read models are common data products
+- [PRIN-004 Database-Per-Service](../../principles/database-per-service.md) — CQRS lives within one service's bounded context
+
 ## References
 
 - [CQRS Pattern](https://www.martinfowler.com/bliki/CQRS.html)
@@ -326,4 +390,4 @@ CQRS accepts eventual consistency for benefits:
 
 ---
 
-**Key Takeaway**: Separate read and write models. Commands update normalized write DB and emit events. Events update denormalized read models. Enables independent scaling and optimization.
+**Key Takeaway**: Separate read and write models. Commands update normalised write DB and emit events via outbox+CDC (INT-002). Idempotent consumers (EIP-024) build denormalised read models. Monitor lag; reconcile periodically.
