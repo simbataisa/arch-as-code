@@ -1,0 +1,1931 @@
+# Master inventory of catalog rows.
+# The markdown table in §4 of enterprise-architecture-catalog.md is REGENERATED
+# from this YAML by scripts/render-catalog-table.py. Do not hand-edit §4.
+#
+# Schema:
+#   - id: CATEGORY-NNN
+#     title: Human readable
+#     category: principles | data | integration | resilience | security | eip |
+#               frontend | mobile | banking-solutions | reference-architectures |
+#               nfr | compliance | templates | best-practices
+#     status: Approved | Draft | Proposed | Deprecated
+#     owner: role-name (resolved via registry/catalog-reviewers.yml)
+#     path: relative path from repo root
+#     tiers: [T0, T1, T2, T3]
+#     spine_or_radii: spine | radii | n/a
+#     compliance_refs:
+#       ring0: ["..."]
+#       ring1: ["..."]
+#       ring2: ["..."]
+#     last_reviewed: YYYY-MM-DD
+#     notes: "..."
+#     target_wave: 0 | 1 | 2 | 3
+
+version: 1
+last_updated: 2026-05-09
+
+rows:
+
+  # === Principles ===
+  - id: PRIN-001
+    title: API-First Design
+    category: principles
+    status: Approved
+    owner: ea-board
+    path: knowledge-base/principles/api-first-design.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only in Phase 4"
+    target_wave: 0
+
+  - id: PRIN-002
+    title: Event-Driven Architecture
+    category: principles
+    status: Approved
+    owner: ea-board
+    path: knowledge-base/principles/event-driven-architecture.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: PRIN-003
+    title: Zero-Trust Security
+    category: principles
+    status: Approved
+    owner: ciso-delegate
+    path: knowledge-base/principles/zero-trust-security.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-207"], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: PRIN-004
+    title: Database-Per-Service
+    category: principles
+    status: Approved
+    owner: ea-board
+    path: knowledge-base/principles/database-per-service.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: PRIN-005
+    title: Cloud-Native-First
+    category: principles
+    status: Approved
+    owner: ea-board
+    path: knowledge-base/principles/cloud-native-first.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: PRIN-006
+    title: Idempotency-by-default
+    category: principles
+    status: Draft
+    owner: ea-board
+    path: knowledge-base/principles/idempotency-by-default.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: spine
+    compliance_refs:
+      ring0: ["NIST SP 800-53 SC-23"]
+      ring1: ["BCBS 239 §6 (accuracy)"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Spine — Wave 0 starter set #1"
+    target_wave: 0
+
+  - id: PRIN-007
+    title: Data Residency
+    category: principles
+    status: Draft
+    owner: head-of-compliance
+    path: knowledge-base/principles/data-residency.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["ISO 27017", "ISO 27018"]
+      ring1: ["GDPR Art. 44–49"]
+      ring2: ["Decree 53/2022 (UNOFFICIAL)", "Decree 13/2023 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3c starter set"
+    target_wave: 0
+
+  - id: PRIN-008
+    title: Defense-in-Depth
+    category: principles
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/principles/defense-in-depth.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["NIST SP 800-53"]
+      ring1: ["PCI-DSS 4.0 multi-layer controls"]
+      ring2: ["SBV Circ. 09 §II (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: PRIN-009
+    title: Observability-First
+    category: principles
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/principles/observability-first.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["OpenTelemetry standards"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: PRIN-010
+    title: Fail-Safe Defaults
+    category: principles
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/principles/fail-safe-defaults.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-160"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: PRIN-011
+    title: Least-Privilege
+    category: principles
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/principles/least-privilege.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-53 AC-6"], ring1: ["PCI-DSS §7"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: PRIN-012
+    title: Async-by-default
+    category: principles
+    status: Proposed
+    owner: ea-board
+    path: knowledge-base/principles/async-by-default.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: PRIN-013
+    title: Modular Monolith Preference
+    category: principles
+    status: Proposed
+    owner: ea-board
+    path: knowledge-base/principles/modular-monolith-preference.md
+    tiers: [T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1; counterbalance to PRIN-005"
+    target_wave: 1
+
+  # === Patterns / data ===
+  - id: DATA-001
+    title: CQRS Pattern
+    category: data
+    status: Approved
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/data/cqrs-pattern.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["microservices.io CQRS"], ring1: ["BCBS 239 §3 timeliness"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Existing — UPGRADED in Wave 3b to full ops-runbook depth"
+    target_wave: 0
+
+  - id: DATA-002
+    title: Data Mesh Ownership
+    category: data
+    status: Approved
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/data-mesh-ownership.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: DATA-003
+    title: Temporal Tables
+    category: data
+    status: Approved
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/data/temporal-tables.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §6"], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: DATA-004
+    title: Data Vault 2.0
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/data-vault-2.md
+    tiers: [T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §3 lineage"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-005
+    title: Slowly Changing Dimensions
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/slowly-changing-dimensions.md
+    tiers: [T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-006
+    title: Lambda Architecture
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/lambda-architecture.md
+    tiers: [T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-007
+    title: Kappa Architecture
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/kappa-architecture.md
+    tiers: [T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-008
+    title: Change Data Capture (general)
+    category: data
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/data/change-data-capture.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §3"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; complements existing INT-002 outbox+CDC"
+    target_wave: 2
+
+  - id: DATA-009
+    title: Data Lineage
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/data-lineage.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §3"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-010
+    title: Time-Series Modelling
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/time-series-modelling.md
+    tiers: [T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-011
+    title: Data Quality Rules
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/data-quality-rules.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §4"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-012
+    title: Data Virtualization
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/data-virtualization.md
+    tiers: [T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: DATA-013
+    title: Reference Data Master
+    category: data
+    status: Proposed
+    owner: data-platform-domain-owner
+    path: knowledge-base/patterns/data/reference-data-master.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §6"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  # === Patterns / integration ===
+  - id: INT-001
+    title: Saga Orchestration
+    category: integration
+    status: Approved
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/saga-orchestration.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["microservices.io Saga"]
+      ring1: ["BCBS 239 §6", "ISO 20022 message-flow"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Existing — UPGRADED in Wave 3b to full ops-runbook depth"
+    target_wave: 0
+
+  - id: INT-002
+    title: Transactional Outbox + CDC
+    category: integration
+    status: Approved
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/cdc-outbox-pattern.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["microservices.io Outbox"]
+      ring1: ["BCBS 239 §6"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Existing — UPGRADED in Wave 3b"
+    target_wave: 0
+
+  - id: INT-003
+    title: API Gateway Routing
+    category: integration
+    status: Approved
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/api-gateway-routing.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: INT-004
+    title: Event Sourcing
+    category: integration
+    status: Approved
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/event-sourcing.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §6"], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only (could be upgraded in Wave 1)"
+    target_wave: 0
+
+  - id: INT-005
+    title: Anti-Corruption Layer
+    category: integration
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/anti-corruption-layer.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["DDD Tactical"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; critical for T24 modernisation"
+    target_wave: 2
+
+  - id: INT-006
+    title: Strangler Fig
+    category: integration
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/strangler-fig.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Pattern"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; critical for T24 modernisation"
+    target_wave: 2
+
+  - id: INT-007
+    title: Sidecar / Ambassador
+    category: integration
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/integration/sidecar-ambassador.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Sidecar"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: INT-008
+    title: Backend-for-Frontend Routing
+    category: integration
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/backend-for-frontend-routing.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud BFF"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; pairs with SEC-005 BFF + token-binding"
+    target_wave: 2
+
+  - id: INT-009
+    title: Content-Based Router
+    category: integration
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/integration/content-based-router.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §4"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  # === Patterns / resilience ===
+  - id: RES-001
+    title: Bulkhead Isolation
+    category: resilience
+    status: Approved
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/bulkhead-isolation.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Bulkhead"], ring1: ["BCBS 230 §6 (UNOFFICIAL)"], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only; extended by RES-005 cell-based"
+    target_wave: 0
+
+  - id: RES-002
+    title: Circuit Breaker
+    category: resilience
+    status: Approved
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/circuit-breaker.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["Resilience4j /circuitbreaker"]
+      ring1: ["BCBS 230 §6 (UNOFFICIAL)"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Existing — UPGRADED in Wave 3a"
+    target_wave: 0
+
+  - id: RES-003
+    title: Retry with Backoff
+    category: resilience
+    status: Approved
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/retry-with-backoff.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Resilience4j Retry"], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: RES-005
+    title: Cell-Based Architecture
+    category: resilience
+    status: Draft
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/cell-based-architecture.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["AWS Operational Excellence — bulkhead"]
+      ring1: ["BCBS 230 §27 impact tolerance (UNOFFICIAL)"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3a starter set; extends RES-001 bulkhead"
+    target_wave: 0
+
+  - id: RES-006
+    title: Timeout Budget
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/timeout-budget.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Resilience4j TimeLimiter"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: RES-007
+    title: Fallback Strategies
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/fallback-strategies.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: RES-008
+    title: Throttling / Rate Limiting
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/throttling-rate-limiting.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Throttling"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: RES-009
+    title: Load Shedding
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/load-shedding.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: RES-010
+    title: Leader Election
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/leader-election.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Leader Election"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: RES-011
+    title: Queue-Based Load Levelling
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/queue-based-load-levelling.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Queue-Based Load Leveling"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: RES-012
+    title: Health Check Aggregation
+    category: resilience
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/patterns/resilience/health-check-aggregation.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["MS Cloud Health Endpoint Monitoring"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  # === Patterns / security ===
+  - id: SEC-001
+    title: mTLS Service Mesh
+    category: security
+    status: Approved
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/mtls-service-mesh.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-207"], ring1: ["PCI-DSS §4"], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: SEC-002
+    title: OAuth2 Authorization
+    category: security
+    status: Approved
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/oauth2-authorization.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["RFC 6749"], ring1: ["PCI-DSS §8"], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: SEC-003
+    title: Vault Secret Management
+    category: security
+    status: Approved
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/vault-secret-management.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-57"], ring1: ["PCI-DSS §3.6"], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: SEC-004
+    title: Tokenization + HSM Key Management
+    category: security
+    status: Draft
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/tokenization-hsm.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["NIST SP 800-57"]
+      ring1: ["PCI-DSS 4.0 §3.5", "PCI-DSS 4.0 §3.6", "PCI-DSS 4.0 §3.7"]
+      ring2: ["Decree 13/2023 (UNOFFICIAL)", "SBV Circ. 09 §III (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3b starter set"
+    target_wave: 0
+
+  - id: SEC-005
+    title: BFF + Token-Binding (web + iOS + Android)
+    category: security
+    status: Draft
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/bff-token-binding.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["OWASP ASVS", "NIST SP 800-63"]
+      ring1: ["PCI-DSS 4.0 §8", "FAPI 2.0"]
+      ring2: ["SBV Circ. 09 §III (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3b starter set; web + native iOS/Android"
+    target_wave: 0
+
+  - id: SEC-006
+    title: JWT Best Practices
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/jwt-best-practices.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["RFC 8725"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-007
+    title: Secrets Rotation
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/secrets-rotation.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-57"], ring1: ["PCI-DSS §3.6"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-008
+    title: Data Masking
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/data-masking.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PCI-DSS §3.4"], ring2: ["Decree 13/2023 (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-009
+    title: Fraud Signal Collection
+    category: security
+    status: Proposed
+    owner: risk-management-domain-owner
+    path: knowledge-base/patterns/security/fraud-signal-collection.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-010
+    title: Attribute-Based Access Control
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/attribute-based-access-control.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-162"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-011
+    title: Session Revocation
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/session-revocation.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PCI-DSS §8"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-012
+    title: Tamper-Evident Audit Logging
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/audit-logging-tamper-evident.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PCI-DSS §10"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: SEC-013
+    title: PII Tokenization (Format-Preserving)
+    category: security
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/patterns/security/pii-tokenization-format-preserving.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-38G"], ring1: [], ring2: ["Decree 13/2023 (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  # === Patterns / EIP (banking-relevant subset, 25) ===
+  - id: EIP-001
+    title: Message Channel
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/message-channel.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §3"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-002
+    title: Point-to-Point Channel
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/point-to-point-channel.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §3"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-003
+    title: Publish-Subscribe Channel
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/publish-subscribe-channel.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §3"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-004
+    title: Message Router
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/message-router.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §4"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-005
+    title: Content-Based Router
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/content-based-router.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §4"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-006
+    title: Message Translator
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/message-translator.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §8"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-007
+    title: Content Enricher
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/content-enricher.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §8"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-008
+    title: Content Filter
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/content-filter.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §8"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-009
+    title: Claim Check
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/claim-check.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §8"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-010
+    title: Normalizer
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/normalizer.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §8"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-011
+    title: Aggregator
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/aggregator.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-012
+    title: Splitter
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/splitter.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-013
+    title: Resequencer
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/resequencer.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-014
+    title: Composed Message Processor
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/composed-message-processor.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-015
+    title: Scatter-Gather
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/scatter-gather.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-016
+    title: Routing Slip
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/routing-slip.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-017
+    title: Process Manager
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/process-manager.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §7"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1; relates to INT-001 Saga"
+    target_wave: 1
+
+  - id: EIP-018
+    title: Message Store
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/message-store.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §11"], ring1: ["BCBS 239 §6"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-019
+    title: Smart Proxy
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/smart-proxy.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §11"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-020
+    title: Test Message
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/test-message.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §11"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-021
+    title: Channel Purger
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/channel-purger.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §11"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-022
+    title: Durable Subscriber
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/durable-subscriber.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §10"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-023
+    title: Guaranteed Delivery
+    category: eip
+    status: Proposed
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/guaranteed-delivery.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["EIP §3"], ring1: ["BCBS 239 §6"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: EIP-024
+    title: Idempotent Receiver
+    category: eip
+    status: Draft
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/idempotent-receiver.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["EIP §10.1"]
+      ring1: ["BCBS 239 §6 (accuracy)"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3a starter set"
+    target_wave: 0
+
+  - id: EIP-025
+    title: Dead Letter Channel
+    category: eip
+    status: Draft
+    owner: tech-lead-backend
+    path: knowledge-base/patterns/eip/dead-letter-channel.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["EIP §10.5"]
+      ring1: ["BCBS 239 §6"]
+      ring2: ["SBV Circ. 09 §IV.3 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3a starter set"
+    target_wave: 0
+
+  # === Patterns / frontend ===
+  - id: FE-001
+    title: Web Performance Budgets
+    category: frontend
+    status: Proposed
+    owner: tech-lead-web
+    path: knowledge-base/patterns/frontend/web-performance-budgets.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Core Web Vitals"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: FE-002
+    title: Web Resilience / Offline-First
+    category: frontend
+    status: Proposed
+    owner: tech-lead-web
+    path: knowledge-base/patterns/frontend/web-resilience-offline-first.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: FE-003
+    title: Web CSP Hardening
+    category: frontend
+    status: Proposed
+    owner: tech-lead-web
+    path: knowledge-base/patterns/frontend/web-csp-hardening.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["OWASP ASVS"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: FE-004
+    title: Web Feature Flags
+    category: frontend
+    status: Proposed
+    owner: tech-lead-web
+    path: knowledge-base/patterns/frontend/web-feature-flags.md
+    tiers: [T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: FE-005
+    title: Web Error Boundary
+    category: frontend
+    status: Proposed
+    owner: tech-lead-web
+    path: knowledge-base/patterns/frontend/web-error-boundary.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: FE-006
+    title: Web i18n / RTL
+    category: frontend
+    status: Proposed
+    owner: tech-lead-web
+    path: knowledge-base/patterns/frontend/web-i18n-rtl.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  # === Patterns / mobile ===
+  - id: MOB-001
+    title: Mobile Offline Queue
+    category: mobile
+    status: Proposed
+    owner: tech-lead-mobile
+    path: knowledge-base/patterns/mobile/mobile-offline-queue.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: MOB-002
+    title: Mobile Secure Storage
+    category: mobile
+    status: Proposed
+    owner: tech-lead-mobile
+    path: knowledge-base/patterns/mobile/mobile-secure-storage.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PCI-DSS §3"], ring2: ["SBV Circ. 09 §III (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: MOB-003
+    title: Mobile Biometric Auth
+    category: mobile
+    status: Proposed
+    owner: tech-lead-mobile
+    path: knowledge-base/patterns/mobile/mobile-biometric-auth.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["NIST SP 800-63B"], ring1: ["PCI-DSS §8"], ring2: ["SBV Circ. 09 §III (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: MOB-004
+    title: Mobile Push Notification (Secure)
+    category: mobile
+    status: Proposed
+    owner: tech-lead-mobile
+    path: knowledge-base/patterns/mobile/mobile-push-notification-secure.md
+    tiers: [T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: ["Decree 13/2023 (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: MOB-005
+    title: Mobile Deep Link Attestation
+    category: mobile
+    status: Proposed
+    owner: tech-lead-mobile
+    path: knowledge-base/patterns/mobile/mobile-deep-link-attestation.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Apple App Site Association", "Android Asset Links"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: MOB-006
+    title: Mobile Force-Upgrade
+    category: mobile
+    status: Proposed
+    owner: tech-lead-mobile
+    path: knowledge-base/patterns/mobile/mobile-force-upgrade.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  # === Patterns / banking-solutions ===
+  - id: BSP-001
+    title: Double-Entry Ledger
+    category: banking-solutions
+    status: Proposed
+    owner: payments-domain-owner
+    path: knowledge-base/patterns/banking-solutions/double-entry-ledger.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239 §6", "IFRS 9"], ring2: ["SBV Circ. 09 §IV (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; foundational for ledger flows"
+    target_wave: 2
+
+  - id: BSP-002
+    title: Idempotent Payment Key
+    category: banking-solutions
+    status: Proposed
+    owner: payments-domain-owner
+    path: knowledge-base/patterns/banking-solutions/idempotent-payment-key.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["ISO 20022 EndToEndId"], ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; pairs with PRIN-006"
+    target_wave: 2
+
+  - id: BSP-003
+    title: Sanction Screening Pipeline
+    category: banking-solutions
+    status: Proposed
+    owner: risk-management-domain-owner
+    path: knowledge-base/patterns/banking-solutions/sanction-screening-pipeline.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["FATF Rec. 6"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: BSP-004
+    title: End-of-Day Batch Window
+    category: banking-solutions
+    status: Proposed
+    owner: core-banking-domain-owner
+    path: knowledge-base/patterns/banking-solutions/end-of-day-batch-window.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: BSP-005
+    title: Reversal and Chargeback
+    category: banking-solutions
+    status: Proposed
+    owner: payments-domain-owner
+    path: knowledge-base/patterns/banking-solutions/reversal-and-chargeback.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["Card-scheme rules", "ISO 20022 pacs.007"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  # === Reference Architectures ===
+  - id: REF-001
+    title: Multi-Region Active-Active
+    category: reference-architectures
+    status: Draft
+    owner: ea-board
+    path: knowledge-base/reference-architectures/multi-region-active-active.md
+    tiers: [T0, T1]
+    spine_or_radii: spine
+    compliance_refs:
+      ring0: ["AWS Well-Architected Reliability §3"]
+      ring1: ["BCBS 230 §6 (UNOFFICIAL)", "BCBS 239 §3"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Spine — Wave 0 starter set #6"
+    target_wave: 0
+
+  - id: REF-002
+    title: Real-Time Payments — NAPAS / Instant
+    category: reference-architectures
+    status: Draft
+    owner: payments-domain-owner
+    path: knowledge-base/reference-architectures/real-time-payments-napas.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["AWS Reliability"]
+      ring1: ["ISO 20022 pacs.008/.002", "PCI-DSS 4.0"]
+      ring2: ["SBV Circ. 09 §IV (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3c starter set"
+    target_wave: 0
+
+  - id: REF-003
+    title: KYC / AML Onboarding
+    category: reference-architectures
+    status: Draft
+    owner: risk-management-domain-owner
+    path: knowledge-base/reference-architectures/kyc-aml-onboarding.md
+    tiers: [T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["NIST SP 800-63A"]
+      ring1: ["FATF Rec. 10–12", "GDPR Art. 9"]
+      ring2: ["SBV Circ. 09 (UNOFFICIAL)", "Decree 13/2023 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3c starter set"
+    target_wave: 0
+
+  - id: REF-004
+    title: Card Authorization (3DS2)
+    category: reference-architectures
+    status: Draft
+    owner: payments-domain-owner
+    path: knowledge-base/reference-architectures/card-authorization-3ds2.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["EMVCo 3DS 2.3"]
+      ring1: ["PCI-DSS 4.0 §6, §8", "PSD2 SCA"]
+      ring2: ["SBV Circ. 09 §III (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3c starter set"
+    target_wave: 0
+
+  - id: REF-005
+    title: SWIFT MT/MX Wire Transfer
+    category: reference-architectures
+    status: Proposed
+    owner: payments-domain-owner
+    path: knowledge-base/reference-architectures/swift-mt-mx-wire-transfer.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["SWIFT CSP", "ISO 20022 pacs"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: REF-006
+    title: Loan Origination
+    category: reference-architectures
+    status: Proposed
+    owner: lending-domain-owner
+    path: knowledge-base/reference-architectures/loan-origination.md
+    tiers: [T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["IFRS 9"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: REF-007
+    title: Fraud Screening Platform
+    category: reference-architectures
+    status: Proposed
+    owner: risk-management-domain-owner
+    path: knowledge-base/reference-architectures/fraud-screening-platform.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PSD2", "FATF"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: REF-008
+    title: Regulatory Reporting
+    category: reference-architectures
+    status: Proposed
+    owner: head-of-compliance
+    path: knowledge-base/reference-architectures/regulatory-reporting.md
+    tiers: [T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239"], ring2: ["SBV Reporting (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: REF-009
+    title: Account Opening (Omnichannel)
+    category: reference-architectures
+    status: Proposed
+    owner: digital-channels-domain-owner
+    path: knowledge-base/reference-architectures/account-opening-omnichannel.md
+    tiers: [T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["FATF Rec. 10"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2; aligns with existing core-banking/dab/2026/account-opening-v2"
+    target_wave: 2
+
+  - id: REF-010
+    title: Ledger Posting Engine
+    category: reference-architectures
+    status: Proposed
+    owner: core-banking-domain-owner
+    path: knowledge-base/reference-architectures/ledger-posting-engine.md
+    tiers: [T0]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["IFRS 9", "BCBS 239"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: REF-011
+    title: Open Banking (PSD2)
+    category: reference-architectures
+    status: Proposed
+    owner: digital-channels-domain-owner
+    path: knowledge-base/reference-architectures/open-banking-psd2.md
+    tiers: [T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PSD2 RTS", "FAPI 2.0"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  - id: REF-012
+    title: Dispute Management
+    category: reference-architectures
+    status: Proposed
+    owner: payments-domain-owner
+    path: knowledge-base/reference-architectures/dispute-management.md
+    tiers: [T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["Card-scheme rules"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 2"
+    target_wave: 2
+
+  # === NFR ===
+  - id: NFR-001
+    title: Service Tiering + RTO/RPO Matrix
+    category: nfr
+    status: Draft
+    owner: sre-lead
+    path: knowledge-base/nfr/service-tiering-rto-rpo.md
+    tiers: []
+    spine_or_radii: spine
+    compliance_refs:
+      ring0: ["AWS Well-Architected Reliability"]
+      ring1: ["BCBS 230 §6 (UNOFFICIAL)", "BCBS 239 §3"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Spine — Wave 0 starter set; defines T0–T3 service classes"
+    target_wave: 0
+
+  - id: NFR-002
+    title: Latency Budget Model
+    category: nfr
+    status: Draft
+    owner: sre-lead
+    path: knowledge-base/nfr/latency-budget-model.md
+    tiers: []
+    spine_or_radii: spine
+    compliance_refs:
+      ring0: ["Azure WAF Performance Efficiency"]
+      ring1: ["BCBS 239 §3 timeliness", "ISO 20022 RTPS"]
+      ring2: []
+    last_reviewed: 2026-05-09
+    notes: "Spine — Wave 0 starter set; defines per-tier P50/P95/P99"
+    target_wave: 0
+
+  - id: NFR-003
+    title: Capacity Planning Model
+    category: nfr
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/nfr/capacity-planning-model.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: NFR-004
+    title: Throughput Model
+    category: nfr
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/nfr/throughput-model.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: NFR-005
+    title: Error Budget Policy
+    category: nfr
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/nfr/error-budget-policy.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Google SRE Book"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  # === Compliance ===
+  - id: COMP-001
+    title: Compliance Mapping Matrix (master)
+    category: compliance
+    status: Draft
+    owner: head-of-compliance
+    path: knowledge-base/compliance/compliance-mapping-matrix.md
+    tiers: []
+    spine_or_radii: spine
+    compliance_refs:
+      ring0: ["ISO 27001"]
+      ring1: ["ALL Ring-1 sources"]
+      ring2: ["ALL Ring-2 sources"]
+    last_reviewed: 2026-05-09
+    notes: "Spine — Wave 0 starter set; master cross-reference matrix"
+    target_wave: 0
+
+  - id: COMP-002
+    title: SBV Circular 09/2020/TT-NHNN — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: head-of-compliance
+    path: knowledge-base/compliance/sbv-circular-09-2020.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: ["SBV Circ. 09/2020 (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  - id: COMP-003
+    title: Decree 13/2023 (Personal Data) — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: head-of-compliance
+    path: knowledge-base/compliance/decree-13-2023-personal-data.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: ["Decree 13/2023 (UNOFFICIAL)"] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  - id: COMP-004
+    title: PCI-DSS 4.0 — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/compliance/pci-dss-4-0.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["PCI-DSS 4.0"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  - id: COMP-005
+    title: Basel BCBS 239 — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: head-of-compliance
+    path: knowledge-base/compliance/basel-bcbs-239.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 239"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  - id: COMP-006
+    title: Basel BCBS 230 (Operational Resilience) — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/compliance/basel-bcbs-230.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["BCBS 230 (UNOFFICIAL)"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  - id: COMP-007
+    title: ISO 20022 Messaging — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: payments-domain-owner
+    path: knowledge-base/compliance/iso-20022-messaging.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["ISO 20022"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  - id: COMP-008
+    title: SWIFT CSP v2024 — Deep Dive
+    category: compliance
+    status: Proposed
+    owner: ciso-delegate
+    path: knowledge-base/compliance/swift-csp-2024.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: ["SWIFT CSP v2024"], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 3"
+    target_wave: 3
+
+  # === Templates ===
+  - id: TPL-001
+    title: NFR Acceptance Criteria — DAB Submission Template
+    category: templates
+    status: Draft
+    owner: dab-chair
+    path: knowledge-base/templates/nfr-acceptance-criteria-dab.md
+    tiers: []
+    spine_or_radii: spine
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Spine — Wave 0 starter set"
+    target_wave: 0
+
+  - id: TPL-002
+    title: Pattern Doc Template
+    category: templates
+    status: Proposed
+    owner: ea-board
+    path: knowledge-base/templates/pattern-doc-template.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: TPL-003
+    title: Stub Doc Template
+    category: templates
+    status: Proposed
+    owner: ea-board
+    path: knowledge-base/templates/stub-doc-template.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: TPL-004
+    title: Reference Architecture Doc Template
+    category: templates
+    status: Proposed
+    owner: ea-board
+    path: knowledge-base/templates/ref-arch-doc-template.md
+    tiers: []
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  # === Best Practices ===
+  - id: BP-001
+    title: CI/CD Pipeline Design
+    category: best-practices
+    status: Approved
+    owner: sre-lead
+    path: knowledge-base/best-practices/ci-cd-pipeline-design.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: BP-002
+    title: Disaster Recovery Playbook
+    category: best-practices
+    status: Approved
+    owner: sre-lead
+    path: knowledge-base/best-practices/disaster-recovery-playbook.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: BP-003
+    title: Microservice Decomposition
+    category: best-practices
+    status: Approved
+    owner: ea-board
+    path: knowledge-base/best-practices/microservice-decomposition.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: BP-004
+    title: Observability Standards
+    category: best-practices
+    status: Approved
+    owner: sre-lead
+    path: knowledge-base/best-practices/observability-standards.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-03-08
+    notes: "Existing — cross-link only"
+    target_wave: 0
+
+  - id: BP-005
+    title: Chaos Engineering
+    category: best-practices
+    status: Draft
+    owner: sre-lead
+    path: knowledge-base/best-practices/chaos-engineering.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs:
+      ring0: ["Principles of Chaos Engineering"]
+      ring1: ["BCBS 230 §6 (UNOFFICIAL)"]
+      ring2: ["SBV Circ. 09 §IV.2 (UNOFFICIAL)"]
+    last_reviewed: 2026-05-09
+    notes: "Wave 3a starter set"
+    target_wave: 0
+
+  - id: BP-006
+    title: Capacity Planning
+    category: best-practices
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/best-practices/capacity-planning.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: BP-007
+    title: Golden Signals (SRE)
+    category: best-practices
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/best-practices/golden-signals-sre.md
+    tiers: [T0, T1, T2]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Google SRE Book"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: BP-008
+    title: Error Budgets
+    category: best-practices
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/best-practices/error-budgets.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Google SRE Book"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: BP-009
+    title: Runbook Authoring
+    category: best-practices
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/best-practices/runbook-authoring.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: BP-010
+    title: Incident Postmortem
+    category: best-practices
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/best-practices/incident-postmortem.md
+    tiers: [T0, T1]
+    spine_or_radii: radii
+    compliance_refs: { ring0: ["Google SRE Book"], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
+
+  - id: BP-011
+    title: Blameless Culture
+    category: best-practices
+    status: Proposed
+    owner: sre-lead
+    path: knowledge-base/best-practices/blameless-culture.md
+    tiers: [T0, T1, T2, T3]
+    spine_or_radii: radii
+    compliance_refs: { ring0: [], ring1: [], ring2: [] }
+    last_reviewed: 2026-05-09
+    notes: "Stub — Wave 1"
+    target_wave: 1
