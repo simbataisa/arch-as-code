@@ -6,7 +6,7 @@ This directory contains the official governance framework for Techcombank's arch
 
 **Owned by:** Enterprise Architecture Technology (EAT) Team
 
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-05-09
 
 ---
 
@@ -25,6 +25,7 @@ The DAB is Techcombank's primary mechanism for reviewing and approving significa
 ### Standards & Conventions
 Technical standards that apply across all DAB submissions and architecture documentation.
 
+- **[Enterprise Architecture Catalog](./standards/enterprise-architecture-catalog.md)** — **Master architecture catalog** (≈141 rows: principles, patterns, EIP, NFRs, reference architectures, compliance mappings). Every DAB submission must cite ≥3 catalog rows by ID. Source-of-truth: `_catalog-inventory.yml`
 - **[Naming Conventions](./standards/naming-conventions.md)** — Branch, file, folder, tag, and MR naming rules
 - **[Diagram Standards](./standards/diagram-standards.md)** — Mermaid and PlantUML conventions, color schemes
 - **[API Standards](./standards/api-standards.md)** — OpenAPI 3.0+ conventions and naming patterns
@@ -37,6 +38,7 @@ Significant decisions made by the Architecture team that establish precedent and
 - **[ADR-001: Adopt Architecture-As-Code](./decisions/ADR-001-adopt-architecture-as-code.md)** — GitLab + Markdown approach
 - **[ADR-002: MermaidJS/PlantUML over Drawio](./decisions/ADR-002-mermaid-over-drawio.md)** — Text-based diagram strategy
 - **[ADR-003: SAGA Pattern Standard](./decisions/ADR-003-saga-pattern-standard.md)** — Distributed transaction handling
+- **[ADR-004: Enterprise Architecture Catalog](./decisions/ADR-004-enterprise-architecture-catalog.md)** — Wave-0 master catalog adoption
 
 ---
 
