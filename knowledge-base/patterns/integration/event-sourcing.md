@@ -18,21 +18,23 @@ Traditional CRUD applications lose historical context:
 
 Store events (immutable log of state changes) as the source of truth. Derive current state by replaying events.
 
-```
-Traditional CRUD:
-  Account Table:
-    id | balance | updated_at
-    1  | 50000   | 2026-03-08
+```mermaid
+graph LR
+    subgraph CRUD["❌ Traditional CRUD — history lost"]
+        direction TB
+        Cmd1[Write Command] --> AccTable[(Account Table\nid=1, balance=50 000\nupdated_at=2026-03-08)]
+        AccTable --> Read1[Read: current state only]
+    end
 
-Event Sourcing:
-  Account Events:
-    id | event_type      | payload                | timestamp
-    1  | AccountCreated  | {balance: 100000}      | 2026-03-01
-    2  | MoneyDeposited  | {amount: 50000}        | 2026-03-02
-    3  | MoneyWithdrawn  | {amount: 100000}       | 2026-03-03
-    4  | InterestAdded   | {amount: 5000}         | 2026-03-08
+    subgraph ES["✅ Event Sourcing — full history preserved"]
+        direction TB
+        Cmd2[Write Command] --> EventStore[(Append-Only Event Log\nAccountCreated +100 000\nMoneyDeposited +50 000\nMoneyWithdrawn −100 000\nInterestAdded +5 000)]
+        EventStore -->|replay all events| Proj[Read Model: balance = 55 000]
+        EventStore -->|replay up to date X| Hist[Time-travel: state at any point]
+    end
 
-Current Balance = Replay events: 100000 + 50000 - 100000 + 5000 = 55000
+    classDef store fill:#e7f0ff,stroke:#2050a0
+    class AccTable,EventStore store
 ```
 
 ## Implementation Guidelines

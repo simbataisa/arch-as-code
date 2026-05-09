@@ -16,20 +16,24 @@ Transient failures (network hiccup, temporary service unavailability) often reso
 
 Retry with exponential backoff and jitter. Initial failure waits 100ms, next 200ms, then 400ms, etc. Jitter randomizes to prevent thundering herd.
 
-```
-Request to Service A:
-  Attempt 1: Fail (0ms elapsed) → Wait 100ms
-  Attempt 2: Fail (100ms elapsed) → Wait 200ms
-  Attempt 3: Fail (300ms elapsed) → Wait 400ms
-  Attempt 4: Success (700ms elapsed) ✓
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Service A
 
-Without Backoff (Thundering Herd):
-  10,000 clients all retry after 1 second
-  Service receives 10,000 × 1 = 10,000 req/s spike → Collapses again
+    C->>S: Attempt 1 (t=0ms)
+    S-->>C: FAIL (transient error)
+    note right of C: Wait 100ms (initial backoff)
+    C->>S: Attempt 2 (t=100ms)
+    S-->>C: FAIL (transient error)
+    note right of C: Wait 200ms (2× backoff + jitter)
+    C->>S: Attempt 3 (t=300ms)
+    S-->>C: FAIL (transient error)
+    note right of C: Wait 400ms (4× backoff + jitter)
+    C->>S: Attempt 4 (t=700ms)
+    S-->>C: SUCCESS ✓
 
-With Exponential Backoff + Jitter:
-  Clients retry at: 100ms, 200ms, 350ms, 810ms, 1500ms, ...
-  Service receives: 100-200 req/s → Can handle → Recovers
+    note over C,S: Without jitter — 10,000 clients retry<br/>simultaneously → thundering herd → collapse.<br/>With jitter — spread over window → service recovers.
 ```
 
 ## Implementation Guidelines

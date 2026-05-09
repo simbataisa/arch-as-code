@@ -17,6 +17,23 @@ Teams often design service implementations first, then craft APIs as an aftertho
 
 Design the API contract before implementation. Treat the API as the primary interface to your service—a contract between producer and consumer.
 
+```mermaid
+flowchart LR
+    Spec[OpenAPI / AsyncAPI\nSpecification] --> CT[Contract Tests\nPact · Spring Cloud Contract]
+    Spec --> Mock[Mock Server\nParallel frontend dev]
+    CT --> Impl[Service Implementation\nJava / Spring Boot 3.x]
+    Impl -->|auto-generate| Docs[Published Docs\nSwagger UI · ReDoc]
+    Consumer[Mobile / Web Client] -->|honours contract| CT
+    Impl -->|deployed| Prod([Production API])
+
+    classDef spec fill:#fff5d8,stroke:#c08c00
+    classDef impl fill:#e7f0ff,stroke:#2050a0
+    classDef consumer fill:#e7f8ee,stroke:#2a8d4f
+    class Spec spec
+    class Impl,Docs impl
+    class Consumer,Mock consumer
+```
+
 ### Key Principles
 
 1. **Specification First**: Define OpenAPI/AsyncAPI specs before writing service code

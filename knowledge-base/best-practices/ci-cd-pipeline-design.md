@@ -19,30 +19,23 @@ Implement automated CI/CD pipelines. Every commit is built, tested, and security
 
 ## Pipeline Stages
 
-```
-Source Code (Git)
-  ↓
-[1. LINT] - Code style, formatting
-  ↓
-[2. BUILD] - Compile, resolve dependencies
-  ↓
-[3. TEST] - Unit tests, integration tests
-  ↓
-[4. SECURITY SCAN] - SAST, dependency check, container scan
-  ↓
-[5. CODE COVERAGE] - Ensure >80% coverage
-  ↓
-[6. BUILD ARTIFACT] - Docker image, package
-  ↓
-[7. PUSH ARTIFACT] - Push to registry
-  ↓
-[8. DEPLOY DEV] - Automated deploy to dev
-  ↓
-[9. DEPLOY STAGING] - Manual trigger or automatic
-  ↓
-[10. DEPLOY PROD] - Manual approval required
-  ↓
-Deployed Service (Running in Production)
+```mermaid
+flowchart LR
+    Git([Git Push / MR]) --> Lint[1 Lint\ncheckstyle · PMD · SpotBugs]
+    Lint --> Build[2 Build\nmvn clean package]
+    Build --> Test[3 Tests\nunit + integration]
+    Test --> Sec[4 Security Scan\nSAST · DAST · dependency-check\ncontainer scan]
+    Sec --> Cov[5 Coverage Gate\n≥ 80% required]
+    Cov --> Artifact[6 Build + Push Artifact\nDocker → registry.techcombank.com]
+    Artifact --> Dev[7 Deploy Dev\nautomatic]
+    Dev --> Stg[8 Deploy Staging\nauto or manual gate]
+    Stg --> Prod[9 Deploy Prod\nmanual approval required]
+    Prod --> Live([Service Live in Production])
+
+    style Git fill:#2050a0,color:#fff
+    style Live fill:#2a8d4f,color:#fff
+    style Sec fill:#fee,stroke:#c00
+    style Prod fill:#fff5d8,stroke:#c08c00
 ```
 
 ## GitLab CI/CD Implementation

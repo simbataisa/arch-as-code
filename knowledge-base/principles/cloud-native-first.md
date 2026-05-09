@@ -18,6 +18,20 @@ Systems designed for on-premises data centers don't scale efficiently in cloud:
 
 Design for cloud from day one. Build stateless, containerized applications that auto-scale and self-heal using infrastructure as code.
 
+```mermaid
+graph TD
+    CN[Cloud-Native Service] --> C[Containerised\nDocker · Kubernetes]
+    CN --> SL[Stateless\nState externalised to Redis / RDS / S3]
+    CN --> IaC[Infrastructure as Code\nTerraform · Helm]
+    CN --> AS[Auto-Scaling\nCPU / memory triggers]
+    CN --> Obs[Observable\nLogs → stdout · Metrics → Prometheus]
+    CN --> MS[Managed Services\nRDS · ElastiCache · SQS / Pub-Sub]
+    CN --> FR[Fault-Tolerant\nHealth checks · self-heal · multi-AZ]
+
+    classDef pillar fill:#e7f0ff,stroke:#2050a0
+    class C,SL,IaC,AS,Obs,MS,FR pillar
+```
+
 ### Cloud-Native Principles
 
 1. **Containerized**: Docker containers, immutable images

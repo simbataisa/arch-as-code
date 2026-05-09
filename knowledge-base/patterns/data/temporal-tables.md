@@ -17,22 +17,24 @@ Audit trails are critical but manually maintained in application code:
 
 Use database-level temporal tables (system-versioned tables). Database automatically maintains history; queries can access any point in time.
 
-```
-Application creates Order:
-  INSERT INTO orders (customer_id, amount, status)
-  VALUES (123, 50000, 'CREATED')
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant DB as Database Engine
+    participant Active as orders (active table)
+    participant Hist as orders_history
 
-Database automatically:
-  1. Inserts into active table
-  2. Records valid_from timestamp
-  3. Maintains history in temporal table
+    App->>DB: INSERT INTO orders (status='CREATED', amount=50 000)
+    DB->>Active: Write row (valid_from=NOW(), valid_to=∞)
 
-Query current state:
-  SELECT * FROM orders WHERE customer_id = 123
+    App->>DB: UPDATE orders SET status='PAID' WHERE id=1
+    DB->>Hist: Archive old row (valid_to=NOW())
+    DB->>Active: Write updated row (valid_from=NOW(), valid_to=∞)
 
-Query historical state (as of 2026-01-15):
-  SELECT * FROM orders FOR SYSTEM_TIME AS OF '2026-01-15'
-  WHERE customer_id = 123
+    App->>DB: SELECT * FROM orders\nFOR SYSTEM_TIME AS OF '2026-01-15'
+    DB-->>App: Returns row as it existed on 2026-01-15\n(status='CREATED', amount=50 000)
+
+    note over DB,Hist: Database manages history automatically —\nno application code required for audit trail
 ```
 
 ## Implementation Guidelines

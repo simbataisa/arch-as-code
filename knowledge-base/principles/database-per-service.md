@@ -19,6 +19,28 @@ Shared databases create tight coupling between microservices:
 
 Each microservice owns its data store. Services exchange data via APIs and events, not shared tables.
 
+```mermaid
+graph LR
+    OS[Order Service] --> OSDB[(Orders DB\nPostgreSQL)]
+    IS[Inventory Service] --> ISDB[(Inventory DB\nPostgreSQL)]
+    PS[Payment Service] --> PSDB[(Payments DB\nPostgreSQL)]
+    NS[Notification Service] --> NSDB[(Events DB\nRedis)]
+
+    OSDB -->|CDC Debezium| Kafka[Kafka]
+    ISDB -->|CDC Debezium| Kafka
+    PSDB -->|CDC Debezium| Kafka
+    Kafka --> DW[(Data Warehouse\nAnalytics)]
+    Kafka --> IS
+    Kafka --> NS
+
+    classDef svc fill:#e7f0ff,stroke:#2050a0
+    classDef db fill:#e7f8ee,stroke:#2a8d4f
+    classDef bus fill:#fff5d8,stroke:#c08c00
+    class OS,IS,PS,NS svc
+    class OSDB,ISDB,PSDB,NSDB,DW db
+    class Kafka bus
+```
+
 ### Key Principles
 
 1. **Data Ownership**: Each service owns its schema and database
@@ -71,10 +93,7 @@ Each microservice owns its data store. Services exchange data via APIs and event
 ## Exceptions to Database-Per-Service
 
 1. **Read Replicas for Reporting**
-   ```
-   Order Service DB → CDC → Data Warehouse → Analytics Team
-   ```
-   Okay: reading replicated data for analytics/BI
+   — `Order Service DB → CDC (Debezium) → Data Warehouse → Analytics Team` — reading replicated data for analytics/BI is acceptable.
 
 2. **Shared Reference Data**
    - Example: Currency, Country, Tax Rate tables

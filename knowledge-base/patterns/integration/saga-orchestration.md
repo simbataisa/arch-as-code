@@ -16,29 +16,24 @@ Microservices struggle with distributed transactions across multiple databases:
 
 Use a central orchestrator to coordinate a sequence of local transactions. Each step executes a compensating transaction on failure.
 
-```
-                      SAGA ORCHESTRATOR
-                      ================
-                           |
-                           |
-         |------- Command -------|
-         |                       |
-    Order Service          Payment Service
-    ============           ==============
-    1. ReserveOrder       1. ProcessPayment
-       (local tx)            (local tx)
-    2. OrderReserved      2. PaymentProcessed
-       (emit event)          (emit event)
-         |                       |
-         +----------- Orchestrator listens to events ----------+
-                              |
-                              |
-                        Inventory Service
-                        ================
-                        1. ReserveInventory
-                           (local tx)
-                        2. InventoryReserved
-                           (emit event)
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Orch as SAGA Orchestrator
+    participant OS as Order Service
+    participant PS as Payment Service
+    participant IS as Inventory Service
+
+    Client->>Orch: initiateOrderSaga(order)
+    Orch->>OS: ReserveOrder()
+    OS-->>Orch: OrderReserved ✓ (local tx committed)
+    Orch->>PS: ProcessPayment()
+    PS-->>Orch: PaymentProcessed ✓ (local tx committed)
+    Orch->>IS: ReserveInventory()
+    IS-->>Orch: InventoryReserved ✓ (local tx committed)
+    Orch-->>Client: SAGA_COMPLETED
+
+    note over Orch: On PaymentFailure → compensate OS<br/>On InventoryFailure → compensate PS + OS
 ```
 
 ## Implementation Guidelines
@@ -188,26 +183,20 @@ Use a central orchestrator to coordinate a sequence of local transactions. Each 
 
 ## Happy Path vs Compensation
 
-```
-HAPPY PATH:
-  Order Service: ReserveOrder() → Success
-       ↓
-  Payment Service: ProcessPayment() → Success
-       ↓
-  Inventory Service: ReserveInventory() → Success
-       ↓
-  SAGA COMPLETED
+```mermaid
+flowchart TD
+    Start([Saga Start]) --> S1[Order Service\nReserveOrder]
+    S1 -->|Success| S2[Payment Service\nProcessPayment]
+    S1 -->|Failure| C1([Nothing to compensate\nSaga rolled back])
+    S2 -->|Success| S3[Inventory Service\nReserveInventory]
+    S2 -->|Failure| C2[Compensate:\nCancelOrder\nSaga rolled back]
+    S3 -->|Success| Done([SAGA COMPLETED])
+    S3 -->|Failure| C3[Compensate:\nRefundPayment + CancelOrder\nSaga rolled back]
 
-FAILURE PATH (Payment fails):
-  Order Service: ReserveOrder() → Success
-       ↓
-  Payment Service: ProcessPayment() → FAILURE
-       ↓
-  Inventory Service: SKIPPED
-       ↓
-  Compensation Step 1: CancelOrder()
-       ↓
-  SAGA ROLLED BACK
+    style Done fill:#2a8d4f,color:#fff
+    style C1 fill:#c00,color:#fff
+    style C2 fill:#c00,color:#fff
+    style C3 fill:#c00,color:#fff
 ```
 
 ## When to Use

@@ -17,6 +17,23 @@ Synchronous, request-response communication creates tight coupling:
 
 Decouple services using asynchronous events. Services publish events when state changes; interested subscribers react independently.
 
+```mermaid
+graph LR
+    OS[Order Service\nPublisher] -->|OrderCreated| Kafka[Event Bus\nKafka / Pub-Sub]
+    PS[Payment Service\nPublisher] -->|PaymentProcessed| Kafka
+    Kafka -->|subscribe| IS[Inventory Service]
+    Kafka -->|subscribe| NS[Notification Service]
+    Kafka -->|subscribe| Audit[Audit / Compliance]
+    Kafka -->|subscribe| Analytics[Analytics Pipeline]
+
+    classDef pub fill:#e7f0ff,stroke:#2050a0
+    classDef sub fill:#e7f8ee,stroke:#2a8d4f
+    classDef bus fill:#fff5d8,stroke:#c08c00
+    class OS,PS pub
+    class IS,NS,Audit,Analytics sub
+    class Kafka bus
+```
+
 ### Key Principles
 
 1. **Loose Coupling**: Services don't know about each other; only about events

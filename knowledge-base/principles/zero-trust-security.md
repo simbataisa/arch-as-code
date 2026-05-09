@@ -17,6 +17,26 @@ Legacy perimeter-based security assumes internal network is safe:
 
 Verify every request, every connection, every time—regardless of source or network location.
 
+```mermaid
+graph TD
+    Client[Client\nBrowser / Mobile App] -->|OAuth2 JWT| APIGW[API Gateway\nToken validation at entry]
+    APIGW -->|mTLS + forwarded JWT| SvcA[Service A]
+    SvcA -->|mTLS + scoped token| SvcB[Service B]
+    SvcB -->|mTLS| SvcC[Service C]
+    SvcA -->|dynamic secret lease| Vault[(HashiCorp Vault\nSEC-003)]
+    SvcB -->|dynamic secret lease| Vault
+    SvcC -->|dynamic secret lease| Vault
+    APIGW -->|every request verified| IAM[(OIDC / IAM)]
+    SvcA -.->|audit log| SIEM[SIEM / Splunk]
+    SvcB -.->|audit log| SIEM
+    SvcC -.->|audit log| SIEM
+
+    classDef verified fill:#e7f8ee,stroke:#2a8d4f
+    classDef critical fill:#fee,stroke:#c00
+    class Vault,IAM critical
+    class APIGW,SvcA,SvcB,SvcC verified
+```
+
 ### Core Principles
 
 1. **Assume Breach**: Any endpoint could be compromised; verify everything
