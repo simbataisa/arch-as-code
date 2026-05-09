@@ -1,6 +1,8 @@
 # Disaster Recovery Playbook Best Practice
 
 Status: Approved | Last Reviewed: 2026-03-08 | Owner: @ea-board
+Catalog ID: BP-002 | Radii
+Tier Applicability: T0, T1
 
 ## Problem Statement
 

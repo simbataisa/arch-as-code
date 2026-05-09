@@ -1,6 +1,8 @@
 # Zero-Trust Security
 
 Status: Approved | Last Reviewed: 2026-02-01 | Owner: @ea-board
+Catalog ID: PRIN-003 | Radii
+Tier Applicability: T0, T1, T2, T3
 
 ## Problem Statement
 

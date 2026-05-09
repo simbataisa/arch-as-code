@@ -1,6 +1,8 @@
 # Event Sourcing Pattern
 
 Status: Approved | Last Reviewed: 2026-02-15 | Owner: @ea-board
+Catalog ID: INT-004 | Radii
+Tier Applicability: T0, T1
 
 ## Problem Statement
 

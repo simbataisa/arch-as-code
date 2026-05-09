@@ -1,6 +1,8 @@
 # HashiCorp Vault for Secrets Management Pattern
 
 Status: Approved | Last Reviewed: 2026-02-22 | Owner: @ea-board
+Catalog ID: SEC-003 | Radii
+Tier Applicability: T0, T1, T2
 
 ## Problem Statement
 

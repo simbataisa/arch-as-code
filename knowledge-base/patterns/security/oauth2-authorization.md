@@ -1,6 +1,8 @@
 # OAuth2 & OIDC Authorization Pattern
 
 Status: Approved | Last Reviewed: 2026-02-18 | Owner: @ea-board
+Catalog ID: SEC-002 | Radii
+Tier Applicability: T0, T1, T2
 
 ## Problem Statement
 

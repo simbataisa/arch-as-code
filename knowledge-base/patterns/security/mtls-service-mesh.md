@@ -1,6 +1,8 @@
 # mTLS via Service Mesh (Istio) Pattern
 
 Status: Approved | Last Reviewed: 2026-02-20 | Owner: @ea-board
+Catalog ID: SEC-001 | Radii
+Tier Applicability: T0, T1, T2
 
 ## Problem Statement
 

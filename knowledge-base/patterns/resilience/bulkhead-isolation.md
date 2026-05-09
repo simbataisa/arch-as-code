@@ -1,6 +1,8 @@
 # Bulkhead Isolation Pattern
 
 Status: Approved | Last Reviewed: 2026-03-03 | Owner: @ea-board
+Catalog ID: RES-001 | Radii
+Tier Applicability: T0, T1, T2
 
 ## Problem Statement
 

@@ -1,6 +1,8 @@
 # API-First Design
 
 Status: Approved | Last Reviewed: 2026-01-15 | Owner: @ea-board
+Catalog ID: PRIN-001 | Radii
+Tier Applicability: T0, T1, T2, T3
 
 ## Problem Statement
 

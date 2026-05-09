@@ -1,6 +1,8 @@
 # Observability Standards Best Practice
 
 Status: Approved | Last Reviewed: 2026-03-06 | Owner: @ea-board
+Catalog ID: BP-004 | Radii
+Tier Applicability: T0, T1, T2, T3
 
 ## Problem Statement
 

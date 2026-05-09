@@ -1,6 +1,8 @@
 # Database-Per-Service
 
 Status: Approved | Last Reviewed: 2026-01-25 | Owner: @ea-board
+Catalog ID: PRIN-004 | Radii
+Tier Applicability: T0, T1, T2, T3
 
 ## Problem Statement
 

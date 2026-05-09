@@ -1,6 +1,8 @@
 # Retry with Exponential Backoff Pattern
 
 Status: Approved | Last Reviewed: 2026-03-04 | Owner: @ea-board
+Catalog ID: RES-003 | Radii
+Tier Applicability: T0, T1, T2
 
 ## Problem Statement
 

@@ -1,6 +1,8 @@
 # Data Mesh Pattern
 
 Status: Approved | Last Reviewed: 2026-03-01 | Owner: @ea-board
+Catalog ID: DATA-002 | Radii
+Tier Applicability: T1, T2
 
 ## Problem Statement
 

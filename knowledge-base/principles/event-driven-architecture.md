@@ -1,6 +1,8 @@
 # Event-Driven Architecture
 
 Status: Approved | Last Reviewed: 2026-01-20 | Owner: @ea-board
+Catalog ID: PRIN-002 | Radii
+Tier Applicability: T0, T1, T2, T3
 
 ## Problem Statement
 

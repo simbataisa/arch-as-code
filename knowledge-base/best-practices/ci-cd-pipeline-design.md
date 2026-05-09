@@ -1,6 +1,8 @@
 # CI/CD Pipeline Design Best Practice
 
 Status: Approved | Last Reviewed: 2026-03-07 | Owner: @ea-board
+Catalog ID: BP-001 | Radii
+Tier Applicability: T0, T1, T2, T3
 
 ## Problem Statement
 

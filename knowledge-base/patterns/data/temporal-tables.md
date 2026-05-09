@@ -1,6 +1,8 @@
 # Temporal Tables (Versioned Tables) Pattern
 
 Status: Approved | Last Reviewed: 2026-02-28 | Owner: @ea-board
+Catalog ID: DATA-003 | Radii
+Tier Applicability: T1, T2
 
 ## Problem Statement
 
