@@ -173,6 +173,7 @@ def render_table(mapping: dict, regs: list[dict]) -> str:
 | Ring 0 | NIST 800-160 | Requirements traceability | Matrix traces each regulatory requirement to ≥ 1 implementing pattern |
 | Ring 1 | BCBS 239 — Principles 1, 2 (governance) | "Banks shall have an effective risk-data infrastructure" | Matrix is part of the risk-data infrastructure governance |
 | Ring 1 | Basel BCBS 230 — Principle 1 (governance) | Operational resilience requires explicit ownership | Matrix is the cross-system governance artifact for op-resilience |
+| Ring 2 | SBV Circular 09/2020 §I (UNOFFICIAL TRANSLATION pending Legal review) | Documentation requirements | Master matrix is the documented, regulator-reviewable artifact mapping every Approved pattern to its Vietnam-specific controls |
 
 ## Cost / FinOps Notes
 
