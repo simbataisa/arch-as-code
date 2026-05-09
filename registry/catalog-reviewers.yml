@@ -1,0 +1,55 @@
+# Catalog reviewer registry — maps role aliases used in catalog rows to actual humans.
+# Update this file when personnel changes; do NOT hardcode names in catalog/*.md.
+version: 1
+last_updated: 2026-05-09
+
+roles:
+  ea-board:
+    primary: TBD-FILL-IN  # Director of Solution Architecture, EA-Board chair
+    backup: TBD-FILL-IN
+  dab-chair:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  ciso-delegate:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  sre-lead:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  head-of-compliance:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  payments-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  core-banking-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  digital-channels-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  risk-management-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  lending-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  wealth-management-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  data-platform-domain-owner:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  legal-vietnam:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+    notes: "Source for SBV Circular 09/2020 and Decree 13/2023 official translations"
+  tech-lead-backend:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  tech-lead-mobile:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
+  tech-lead-web:
+    primary: TBD-FILL-IN
+    backup: TBD-FILL-IN
