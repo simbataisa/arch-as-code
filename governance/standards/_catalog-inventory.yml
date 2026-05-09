@@ -187,7 +187,7 @@ rows:
 - id: PRIN-010
   title: Fail-Safe Defaults
   category: principles
-  status: Proposed
+  status: Draft
   owner: ciso-delegate
   path: knowledge-base/principles/fail-safe-defaults.md
   tiers:
@@ -201,7 +201,7 @@ rows:
     - NIST SP 800-160
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: PRIN-011
@@ -228,7 +228,7 @@ rows:
 - id: PRIN-012
   title: Async-by-default
   category: principles
-  status: Proposed
+  status: Draft
   owner: ea-board
   path: knowledge-base/principles/async-by-default.md
   tiers:
@@ -240,13 +240,13 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: PRIN-013
   title: Modular Monolith Preference
   category: principles
-  status: Proposed
+  status: Draft
   owner: ea-board
   path: knowledge-base/principles/modular-monolith-preference.md
   tiers:
@@ -258,7 +258,7 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1; counterbalance to PRIN-005
   target_wave: 1
 - id: DATA-001
@@ -761,7 +761,7 @@ rows:
 - id: RES-007
   title: Fallback Strategies
   category: resilience
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/patterns/resilience/fallback-strategies.md
   tiers:
@@ -772,7 +772,7 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: RES-008
@@ -797,7 +797,7 @@ rows:
 - id: RES-009
   title: Load Shedding
   category: resilience
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/patterns/resilience/load-shedding.md
   tiers:
@@ -808,13 +808,13 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: RES-010
   title: Leader Election
   category: resilience
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/patterns/resilience/leader-election.md
   tiers:
@@ -827,7 +827,7 @@ rows:
     - MS Cloud Leader Election
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: RES-011
@@ -852,7 +852,7 @@ rows:
 - id: RES-012
   title: Health Check Aggregation
   category: resilience
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/patterns/resilience/health-check-aggregation.md
   tiers:
@@ -866,7 +866,7 @@ rows:
     - MS Cloud Health Endpoint Monitoring
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: SEC-001
@@ -2157,7 +2157,7 @@ rows:
 - id: NFR-003
   title: Capacity Planning Model
   category: nfr
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/nfr/capacity-planning-model.md
   tiers: []
@@ -2166,13 +2166,13 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: NFR-004
   title: Throughput Model
   category: nfr
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/nfr/throughput-model.md
   tiers: []
@@ -2181,7 +2181,7 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: NFR-005
@@ -2348,7 +2348,7 @@ rows:
 - id: TPL-002
   title: Pattern Doc Template
   category: templates
-  status: Proposed
+  status: Draft
   owner: ea-board
   path: knowledge-base/templates/pattern-doc-template.md
   tiers: []
@@ -2357,13 +2357,13 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: TPL-003
   title: Stub Doc Template
   category: templates
-  status: Proposed
+  status: Draft
   owner: ea-board
   path: knowledge-base/templates/stub-doc-template.md
   tiers: []
@@ -2372,13 +2372,13 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: TPL-004
   title: Reference Architecture Doc Template
   category: templates
-  status: Proposed
+  status: Draft
   owner: ea-board
   path: knowledge-base/templates/ref-arch-doc-template.md
   tiers: []
@@ -2387,7 +2387,7 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: BP-001
@@ -2487,7 +2487,7 @@ rows:
 - id: BP-006
   title: Capacity Planning
   category: best-practices
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/best-practices/capacity-planning.md
   tiers:
@@ -2498,7 +2498,7 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: BP-007
@@ -2541,7 +2541,7 @@ rows:
 - id: BP-009
   title: Runbook Authoring
   category: best-practices
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/best-practices/runbook-authoring.md
   tiers:
@@ -2554,13 +2554,13 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: BP-010
   title: Incident Postmortem
   category: best-practices
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/best-practices/incident-postmortem.md
   tiers:
@@ -2572,13 +2572,13 @@ rows:
     - Google SRE Book
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: BP-011
   title: Blameless Culture
   category: best-practices
-  status: Proposed
+  status: Draft
   owner: sre-lead
   path: knowledge-base/best-practices/blameless-culture.md
   tiers:
@@ -2591,6 +2591,6 @@ rows:
     ring0: []
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1

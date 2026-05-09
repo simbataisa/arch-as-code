@@ -1,47 +1,55 @@
-# Stub Doc Template
+# [PLACEHOLDER: Document Title]
 
-Status: Proposed | Target Wave: 1 | Owner: @ea-board
-Catalog ID: TPL-003
-Tier Applicability: TBD
+Status: Draft | Last Reviewed: 2026-05-09 | Owner: [@owner]
+Catalog ID: [XXX-NNN]
+Tier Applicability: [T0 | T1 | T2 | T3 | N/A]
 
-> **STUB** — full content authored in Wave 1.
-> Catalog: ../../governance/standards/enterprise-architecture-catalog.md
+> **STUB** — full content to be authored per the wave plan.
+> Catalog reference: `governance/standards/enterprise-architecture-catalog.md`
 
 ## Problem Statement
 
-TBD — populate during Wave authoring per Procedure A.2 of the implementation plan.
+TBD — describe the concrete pain points this document addresses.
 
 ## Sketch of Solution
 
-- TBD — to be authored in Wave 1
+- TBD — outline the approach at one level of abstraction above implementation.
 
 ## Compliance Hooks
 
-- Ring 0: TBD
-- Ring 1: TBD
-- Ring 2: TBD
+- Ring 0 (generic): TBD
+- Ring 1 (international banking): TBD
+- Ring 2 (Vietnam / SBV): TBD
 
 ## NFR Hooks
 
-- HA: TBD
-- HP: TBD
-- HR: TBD
-
-## Authoring Checklist (DoD for moving Status → Approved)
-
-- [ ] Mermaid solution diagram
-- [ ] Java/Spring code sample
-- [ ] Legacy / frontend / mobile notes (if applicable)
-- [ ] Compliance Mapping table populated (3 rings)
-- [ ] NFR Acceptance Criteria block (HA/HP/HR with concrete numbers)
-- [ ] Cost/FinOps notes
-- [ ] Threat Model summary
-- [ ] Operational Runbook stub
-- [ ] Test Strategy stub
-- [ ] EA-Board review
-- [ ] Domain-owner review
+- Availability (HA): TBD
+- Performance (HP): TBD
+- Resilience (HR): TBD
 
 ## References
 
-- Catalog reference: `governance/standards/enterprise-architecture-catalog.md`
+- Catalog: `governance/standards/enterprise-architecture-catalog.md`
 - Research notes: `knowledge-base/_research-notes.md`
+
+---
+
+## Authoring Checklist (Definition of Done — Status: Draft → Approved)
+
+> This checklist lives here and only here. Copy it into your PR description when submitting for EA-Board review. Do not duplicate it in the authored document.
+
+- [ ] Problem Statement: 5–7 concrete bullets specific to Techcombank context
+- [ ] Solution diagram: Mermaid diagram present and renders without error
+- [ ] Implementation Guidelines: Java/Spring code sample + at least one of frontend / mobile / infra YAML
+- [ ] Compliance Mapping table: 3-ring table fully populated; Ring 2 cells end with `⚠️ (working summary — pending Legal review)`; BCBS 230 cells end with `⚠️ (working summary — pending PDF fetch)`
+- [ ] NFR Acceptance Criteria: YAML block with IDs; concrete measurable numbers (no "TBD")
+- [ ] Cost / FinOps notes: quantified where possible
+- [ ] Threat Model summary: STRIDE applied; top 3 threats addressed + top 3 residual
+- [ ] Operational Runbook stub: alert names + first-response steps
+- [ ] Test Strategy stub: unit / integration / performance / chaos bullets
+- [ ] Related Patterns: 4–6 links with relative paths
+- [ ] Line count: NFR docs 250–350 lines; Pattern docs 200–350 lines; Ref-Arch docs 250–400 lines; Template docs 150–250 lines
+- [ ] No `[PLACEHOLDER]` text remaining in the authored document
+- [ ] No Authoring Checklist section in the authored document (checklist lives in this stub only)
+- [ ] Domain-owner review: sign-off recorded in PR comments
+- [ ] EA-Board review: sign-off recorded in PR comments
