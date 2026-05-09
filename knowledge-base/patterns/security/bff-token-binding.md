@@ -299,7 +299,7 @@ export async function bffPost<T>(path: string, body: unknown): Promise<T> {
 | Ring 0 | RFC 9449 (DPoP) | Demonstrating Proof-of-Possession at the Application Layer | Direct implementation |
 | Ring 1 | PCI-DSS 4.0 §8 (Authentication) | "Strong cryptographic-based authentication for non-console access" | DPoP + cookies + TLS satisfy |
 | Ring 1 | FAPI 2.0 (Financial-grade API) | Token-binding requirements for financial APIs | DPoP is the FAPI-2 sender-constrained token mechanism |
-| Ring 2 | SBV Circular 09/2020 §III (UNOFFICIAL TRANSLATION pending Legal) | Multi-factor authentication for banking | Biometric + device key + cookie/DPoP satisfies multi-factor expectations |
+| Ring 2 | SBV Circular 09/2020 §III ⚠️ (working summary — pending Legal review) | Multi-factor authentication for banking | Biometric + device key + cookie/DPoP satisfies multi-factor expectations |
 
 ## Cost / FinOps Notes
 

@@ -19,7 +19,7 @@ TBD — populate during Wave authoring per Procedure A.2 of the implementation p
 
 - Ring 0: TBD
 - Ring 1: PCI-DSS §3
-- Ring 2: SBV Circ. 09 §III (UNOFFICIAL)
+- Ring 2: SBV Circ. 09 §III ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

@@ -23,7 +23,7 @@ Different message types or different message contents need different processing.
 
 - Ring 0: EIP §4 Message Routing
 - Ring 1: ISO 20022 message-type-driven routing; BCBS 239 (consistent routing prevents data drops)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

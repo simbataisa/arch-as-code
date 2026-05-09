@@ -166,8 +166,8 @@ Clients carry minimal PII (only what's needed for the current screen, decrypted 
 | Ring 0 | ISO 27017 (Cloud Security) | 6.1.5 Data localisation considerations | Per-data-class residency mapping is the implementation |
 | Ring 0 | ISO 27018 (PII in Cloud) | A.7 Data residency / disclosure | PII stays in Vietnam by default |
 | Ring 1 | GDPR Art. 44–49 (Cross-border transfers) | "Adequacy decision" or "appropriate safeguards" | Where Techcombank handles EU-resident customer data, strict-cross-border carries SCCs / BCRs |
-| Ring 2 | Decree 53/2022 (UNOFFICIAL TRANSLATION pending Legal) | Articles 26–28 — data localisation for banks | Default-Vietnam enforced; cross-border requires basis |
-| Ring 2 | Decree 13/2023 (UNOFFICIAL TRANSLATION pending Legal) | Articles 11–13 (cross-border PII transfer) | Tokenisation + consent gates cross-border for non-strict data |
+| Ring 2 | Decree 53/2022 ⚠️ (working summary — pending Legal review) | Articles 26–28 — data localisation for banks | Default-Vietnam enforced; cross-border requires basis |
+| Ring 2 | Decree 13/2023 ⚠️ (working summary — pending Legal review) | Articles 11–13 (cross-border PII transfer) | Tokenisation + consent gates cross-border for non-strict data |
 
 ## Cost / FinOps Notes
 
@@ -225,8 +225,8 @@ STRIDE: residency primarily addresses **Information Disclosure** (jurisdictional
 
 ## References
 
-- Decree 53/2022/NĐ-CP (UNOFFICIAL TRANSLATION pending Legal)
-- Decree 13/2023/NĐ-CP (UNOFFICIAL TRANSLATION pending Legal)
+- Decree 53/2022/NĐ-CP ⚠️ (working summary — pending Legal review)
+- Decree 13/2023/NĐ-CP ⚠️ (working summary — pending Legal review)
 - ISO 27017 / 27018
 - GDPR Articles 44–49
 - `_research-notes.md`

@@ -23,7 +23,7 @@ A service that cannot be observed cannot be operated, debugged, or scaled. Banki
 
 - Ring 0: OpenTelemetry standards; Google SRE Book Chapter 6
 - Ring 1: BCBS 239 §3 (timeliness); §11 (consistency of reporting)
-- Ring 2: SBV Circular 09/2020 §IV.3 incident logging (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.3 incident logging ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

@@ -24,7 +24,7 @@ Multi-step business processes (e.g., loan origination — credit check → risk 
 
 - Ring 0: EIP §7 Message Routing — Process Manager
 - Ring 1: BCBS 239 §6 (auditable risk-data flow); ISO 20022 process-flow representations
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

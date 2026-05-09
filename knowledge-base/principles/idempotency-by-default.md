@@ -274,7 +274,7 @@ class PaymentClient(private val client: OkHttpClient) {
 | Ring 0 (generic) | EIP §10.1 (Hohpe/Woolf) — Idempotent Receiver | Pattern catalog defining idempotent message handling | EIP-024 is the messaging-side implementation of this principle |
 | Ring 1 (international banking) | Basel BCBS 239 — Principle 3 (Accuracy) | Risk data must be accurate; aggregation must avoid double-counting | Idempotent posting prevents duplicate ledger entries → accurate risk-data aggregation |
 | Ring 1 (international banking) | ISO 20022 — `EndToEndId` | Each message carries a unique end-to-end identifier | Used as the natural key for Strategy B (server-derived) |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal review) | Required behaviour for retried transactions during EOD batch and network instability |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Required behaviour for retried transactions during EOD batch and network instability |
 
 ## Cost / FinOps Notes
 

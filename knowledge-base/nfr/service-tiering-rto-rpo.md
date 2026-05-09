@@ -19,7 +19,7 @@ Reach for this doc whenever:
 
 ## Solution
 
-Four-tier classification anchored to two regulatory pegs (BCBS 230 §6 operational continuity; SBV Circular 09 §IV.2). Recovery topology and replication strategy are inherited from the tier — services don't re-derive them.
+Four-tier classification anchored to two regulatory pegs (BCBS 230 Principle 6 (Incident Management) operational continuity; SBV Circular 09 §IV.2). Recovery topology and replication strategy are inherited from the tier — services don't re-derive them.
 
 ### Tier hierarchy
 
@@ -153,9 +153,9 @@ Defines the targets that other NFR-AC blocks reference. Self-validation:
 | Layer | Reference | Section/Control | How this satisfies |
 |---|---|---|---|
 | Ring 0 (generic) | AWS Well-Architected Reliability Pillar | "Recovery Time Objective" definition; 4-pattern recovery matrix (Backup&Restore, Pilot Light, Warm Standby, Active-Active) | Tier table directly inherits the AWS-canonical patterns and applies them per Techcombank service class |
-| Ring 1 (international banking) | Basel BCBS 230 (Operational Resilience) — §6 (Continuity) | Impact tolerance must be defined per critical operation (UNOFFICIAL — full d516 PDF pending fetch) | T0/T1 tier definitions ARE the Techcombank impact-tolerance statements |
+| Ring 1 (international banking) | Basel BCBS 230 (Operational Resilience) — Principle 6 (Incident Management) | Impact tolerance must be defined per critical operation ⚠️ (working summary — pending PDF fetch + Legal review) | T0/T1 tier definitions ARE the Techcombank impact-tolerance statements |
 | Ring 1 (international banking) | Basel BCBS 239 — §3 (Timeliness) | Risk-data aggregation must be timely | T0 tier sets P95 < 200ms (see NFR-002), well within BCBS 239 timeliness expectations |
-| Ring 2 (Vietnam) | SBV Circular 09/2020/TT-NHNN — §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal review) | T0/T1 multi-region topology + ≥99.95% availability targets satisfy SBV continuity expectations for Tier-1 banks |
+| Ring 2 (Vietnam) | SBV Circular 09/2020/TT-NHNN — §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | T0/T1 multi-region topology + ≥99.95% availability targets satisfy SBV continuity expectations for Tier-1 banks |
 
 ## Cost / FinOps Notes
 

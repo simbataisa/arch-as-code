@@ -19,7 +19,7 @@ TBD — populate during Wave authoring per Procedure A.2 of the implementation p
 
 - Ring 0: NIST SP 800-63B
 - Ring 1: PCI-DSS §8
-- Ring 2: SBV Circ. 09 §III (UNOFFICIAL)
+- Ring 2: SBV Circ. 09 §III ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

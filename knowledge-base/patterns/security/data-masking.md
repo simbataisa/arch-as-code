@@ -23,7 +23,7 @@ Display, log, and lower-environment usage of customer data must not expose PII o
 
 - Ring 0: OWASP ASVS V8 (Data Protection)
 - Ring 1: PCI-DSS 4.0 §3.4 (PAN display masking)
-- Ring 2: Decree 13/2023 personal-data minimisation (UNOFFICIAL TRANSLATION pending Legal); SBV Circular 09 (UNOFFICIAL)
+- Ring 2: Decree 13/2023 personal-data minimisation ⚠️ (working summary — pending Legal review); SBV Circular 09 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

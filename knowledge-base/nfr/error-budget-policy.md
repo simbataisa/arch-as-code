@@ -25,8 +25,8 @@ A 99.99% T0 SLO grants ~52 minutes of "allowable downtime" per year — the *err
 ## Compliance Hooks
 
 - Ring 0: Google SRE Book Chapter 4 (SLO / Error Budgets)
-- Ring 1: BCBS 230 (operational resilience — explicit reliability commitments, UNOFFICIAL); BCBS 239 §3 (timeliness)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 1: BCBS 230 (operational resilience — explicit reliability commitments, ⚠️ working summary); BCBS 239 §3 (timeliness)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

@@ -267,9 +267,9 @@ nfr_acceptance_criteria:
 | Ring 1 | FATF Recommendation 11 (Record-keeping) | 5-year retention of CDD records | Tokenised audit log (SEC-012) retains for 7 years |
 | Ring 1 | FATF Recommendation 12 (PEPs) | Politically Exposed Persons screening | PEP list integrated into BSP-003 |
 | Ring 1 | GDPR Art. 9 (Special category) | Biometric data lawfully processed | Explicit consent banner; minimised retention; lawful basis: contract |
-| Ring 2 | SBV Circular 09/2020 §III (UNOFFICIAL TRANSLATION pending Legal) | Multi-factor + identity verification | Biometric + government ID + OTP satisfies multi-factor |
-| Ring 2 | Decree 13/2023 (UNOFFICIAL TRANSLATION) | Personal-data protection — biometric special category | Explicit consent + minimised retention + Vietnamese vault |
-| Ring 2 | Decree 53/2022 (UNOFFICIAL TRANSLATION) | Data localisation | All PII stays in Vietnam-resident vault and core banking |
+| Ring 2 | SBV Circular 09/2020 §III ⚠️ (working summary — pending Legal review) | Multi-factor + identity verification | Biometric + government ID + OTP satisfies multi-factor |
+| Ring 2 | Decree 13/2023 ⚠️ (working summary — pending Legal review) | Personal-data protection — biometric special category | Explicit consent + minimised retention + Vietnamese vault |
+| Ring 2 | Decree 53/2022 ⚠️ (working summary — pending Legal review) | Data localisation | All PII stays in Vietnam-resident vault and core banking |
 
 ## Cost / FinOps Notes
 
@@ -340,8 +340,8 @@ STRIDE: primarily **Spoofing** (deepfakes, stolen IDs) and **Information Disclos
 
 - FATF Recommendations 10–12
 - GDPR Article 9 (Special category)
-- SBV Circular 09/2020 (UNOFFICIAL pending Legal)
-- Decree 13/2023, Decree 53/2022 (UNOFFICIAL pending Legal)
+- SBV Circular 09/2020 ⚠️ (working summary — pending Legal review)
+- Decree 13/2023, Decree 53/2022 ⚠️ (working summary — pending Legal review)
 - NIST SP 800-63A (Identity Proofing)
 - Apple Vision / VisionKit, Android ML Kit
 - `_research-notes.md`

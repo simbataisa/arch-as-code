@@ -23,7 +23,7 @@ Some downstream systems (legacy T24, partners' fixed-format files, regulatory re
 
 - Ring 0: NIST SP 800-38G (FF1, FF3-1 mode specifications)
 - Ring 1: PCI-DSS 4.0 §3 (PAN protection); GDPR Art. 32 (encryption)
-- Ring 2: Decree 13/2023 personal-data protection (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: Decree 13/2023 personal-data protection ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

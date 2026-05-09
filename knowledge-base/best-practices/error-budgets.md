@@ -22,8 +22,8 @@ The complement of [NFR-005 Error Budget Policy](../nfr/error-budget-policy.md) �
 ## Compliance Hooks
 
 - Ring 0: Google SRE Book and SRE Workbook
-- Ring 1: BCBS 230 (operational resilience accountability, UNOFFICIAL)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 1: BCBS 230 (operational resilience accountability, ⚠️ working summary)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

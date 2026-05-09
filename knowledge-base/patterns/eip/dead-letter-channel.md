@@ -131,7 +131,7 @@ T24 OFS calls that fail with permanent errors (account closed, insufficient fund
 | Ring 0 | EIP §10.5 (Hohpe/Woolf) | Messaging Channels — Dead Letter Channel | Canonical pattern |
 | Ring 0 | Microsoft Cloud Patterns — Publisher-Subscriber | Reliable async messaging | Underlying reliability assumption |
 | Ring 1 | Basel BCBS 239 — Principle 6 (Accuracy) | "All material risk exposures must be captured" | DLT prevents silent message loss → accuracy preserved |
-| Ring 2 | SBV Circular 09/2020 §IV.3 (UNOFFICIAL TRANSLATION pending Legal) | Incident logging requirement | DLT entries are observable incident records |
+| Ring 2 | SBV Circular 09/2020 §IV.3 ⚠️ (working summary — pending Legal review) | Incident logging requirement | DLT entries are observable incident records |
 
 ## Cost / FinOps Notes
 

@@ -200,8 +200,8 @@ Clients never log PANs. iOS Apple Pay / Android Google Pay deliver network-level
 | Ring 1 | PCI-DSS 4.0 §3.6 | "Cryptographic keys managed throughout their lifecycle" | Quarterly data-key rotation, annual master rotation, audited key access |
 | Ring 1 | PCI-DSS 4.0 §3.7 | "Key management policies and procedures formally defined" | Documented in this pattern + linked runbook |
 | Ring 1 | GDPR Article 32 (security of processing) | Encryption recommended for personal data | Tokenisation is a "pseudonymisation" measure under GDPR |
-| Ring 2 | Decree 13/2023 (UNOFFICIAL TRANSLATION) | Personal-data protection — biometric and sensitive data | National-ID (CCCD) tokenised end-to-end |
-| Ring 2 | SBV Circular 09/2020 §III (UNOFFICIAL TRANSLATION pending Legal) | Cryptographic controls | HSM-based key management satisfies cryptographic-control expectations |
+| Ring 2 | Decree 13/2023 ⚠️ (working summary — pending Legal review) | Personal-data protection — biometric and sensitive data | National-ID (CCCD) tokenised end-to-end |
+| Ring 2 | SBV Circular 09/2020 §III ⚠️ (working summary — pending Legal review) | Cryptographic controls | HSM-based key management satisfies cryptographic-control expectations |
 
 ## Cost / FinOps Notes
 

@@ -322,8 +322,8 @@ stateDiagram-v2
 | Ring 0 (generic) | Resilience4j `/circuitbreaker` documentation | State-machine spec; config schema | Canonical implementation reference |
 | Ring 0 (generic) | Microsoft Cloud Patterns — Circuit Breaker | "Handle faults that take variable time to fix" | Same pattern; same intent |
 | Ring 0 (generic) | AWS Well-Architected Reliability — Failure mode design | Fault tolerance guidance | CB is the canonical fail-fast implementation |
-| Ring 1 (intl banking) | Basel BCBS 230 — §6 (Continuity, UNOFFICIAL) | Operational resilience requires bounded fault propagation | CB bounds the time-to-fail on a degraded downstream → bounded incident impact |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity | CB prevents single-downstream issues from cascading to T0 services |
+| Ring 1 (intl banking) | Basel BCBS 230 Principle 6 (Incident Management) ⚠️ (working summary) | Operational resilience requires bounded fault propagation | CB bounds the time-to-fail on a degraded downstream → bounded incident impact |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Operational continuity | CB prevents single-downstream issues from cascading to T0 services |
 
 ## Cost / FinOps Notes
 

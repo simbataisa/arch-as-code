@@ -22,8 +22,8 @@ Without explicit per-call timeouts, slow downstreams silently exhaust upstream t
 ## Compliance Hooks
 
 - Ring 0: Resilience4j `TimeLimiter` module; AWS Well-Architected Reliability
-- Ring 1: BCBS 230 §6 (continuity — preventing cascading failure, UNOFFICIAL)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 1: BCBS 230 Principle 6 (Incident Management) ⚠️ (working summary — preventing cascading failure)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

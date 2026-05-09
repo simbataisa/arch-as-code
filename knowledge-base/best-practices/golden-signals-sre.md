@@ -24,7 +24,7 @@ A service can be observed in many dimensions; many teams over-instrument and mis
 
 - Ring 0: Google SRE Book Chapter 6 (Monitoring)
 - Ring 1: BCBS 239 §3 (timeliness — golden signals are the "is it timely" metric)
-- Ring 2: SBV Circular 09/2020 §IV.3 incident logging (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.3 incident logging ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

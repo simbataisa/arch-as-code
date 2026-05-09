@@ -23,7 +23,7 @@ Over-granted permissions are the most common attack-surface enabler in banking p
 
 - Ring 0: NIST SP 800-53 AC-6 (Least Privilege)
 - Ring 1: PCI-DSS 4.0 §7 (Restrict access by need-to-know); SOC 2 CC6.1
-- Ring 2: SBV Circular 09/2020 §II / §III (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §II / §III ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

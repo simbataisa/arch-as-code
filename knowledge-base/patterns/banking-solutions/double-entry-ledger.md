@@ -25,7 +25,7 @@ Every banking system rests on the double-entry-bookkeeping invariant: every valu
 
 - Ring 0: Accounting fundamentals (double-entry bookkeeping; Pacioli 1494)
 - Ring 1: IFRS 9; BCBS 239 §3 (timeliness), §6 (accuracy); ISO 20022 reconciliation
-- Ring 2: Vietnam Accounting Standards (VAS); SBV Circular 09 §IV (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: Vietnam Accounting Standards (VAS); SBV Circular 09 §IV ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

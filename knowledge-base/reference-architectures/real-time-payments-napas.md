@@ -347,8 +347,8 @@ nfr_acceptance_criteria:
 | Ring 1 | ISO 20022 — pacs.008 / pacs.002 / pacs.004 / pacs.007 | Payment-clearing message set | NAPAS gateway adapter speaks the canonical message types |
 | Ring 1 | Basel BCBS 239 §3 (Timeliness), §6 (Accuracy) | Risk-data aggregation requirements | Idempotent ledger + outbox + sync replication preserve timeliness and accuracy |
 | Ring 1 | PCI-DSS 4.0 (where card-funded) | §3 PAN protection; §8 Authentication | SEC-004 tokenisation; SEC-005 BFF auth |
-| Ring 2 | SBV Circular 09/2020 §IV (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity for payments | T0 multi-region active-active + cell-based blast radius |
-| Ring 2 | Decree 53/2022 (UNOFFICIAL) | Data localisation | Both regions in Vietnam; tokens not customer data per [PRIN-007](../principles/data-residency.md) |
+| Ring 2 | SBV Circular 09/2020 §IV ⚠️ (working summary — pending Legal review) | Operational continuity for payments | T0 multi-region active-active + cell-based blast radius |
+| Ring 2 | Decree 53/2022 ⚠️ (working summary — pending Legal review) | Data localisation | Both regions in Vietnam; tokens not customer data per [PRIN-007](../principles/data-residency.md) |
 
 ## Cost / FinOps Notes
 

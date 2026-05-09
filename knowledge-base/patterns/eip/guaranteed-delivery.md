@@ -23,7 +23,7 @@ Banking flows cannot lose messages. A payment event missed during a broker hiccu
 
 - Ring 0: EIP §3 Messaging Channels — Guaranteed Delivery
 - Ring 1: BCBS 239 §6 (no message loss); ISO 20022 (settlement message integrity)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

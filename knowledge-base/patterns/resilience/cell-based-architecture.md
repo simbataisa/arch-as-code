@@ -6,7 +6,7 @@ Tier Applicability: T0 (mandatory), T1 (recommended)
 
 ## Problem Statement
 
-Within a single region, a [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md) deployment still has a single failure domain — one bad deployment, one runaway query, one DDoS at the edge can affect 100% of in-region users. Cell-Based Architecture partitions a region's capacity into N independent cells (default 3 per region) so that the blast radius of any failure is bounded to ≤ 1/N of users. This is the BCBS 230 §27 "impact-tolerance bounding" pattern made concrete.
+Within a single region, a [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md) deployment still has a single failure domain — one bad deployment, one runaway query, one DDoS at the edge can affect 100% of in-region users. Cell-Based Architecture partitions a region's capacity into N independent cells (default 3 per region) so that the blast radius of any failure is bounded to ≤ 1/N of users. This is the BCBS 230 impact-tolerance bounding (Principles 1–3) pattern made concrete.
 
 ## Context
 
@@ -237,9 +237,9 @@ Clients don't choose cells; the edge / gateway routes them based on customer-id.
 | --- | --- | --- | --- |
 | Ring 0 | AWS Operational Excellence — bulkhead pattern | "Limit blast radius" | Cell-based is the deployment-level realisation of this principle |
 | Ring 0 | Microsoft Cloud Patterns — Deployment Stamps | "Independent copies of components" | Equivalent concept; cells = stamps |
-| Ring 1 | Basel BCBS 230 §27 — Impact tolerance (UNOFFICIAL TRANSLATION pending PDF) | "Banks must define and bound the impact of disruptions" | Cells make impact bounded to 1/N |
+| Ring 1 | Basel BCBS 230 — Impact tolerance (Principles 1–3) ⚠️ (working summary — pending PDF fetch + Legal review) | "Banks must define and bound the impact of disruptions" | Cells make impact bounded to 1/N |
 | Ring 1 | Basel BCBS 239 §6 (Accuracy) | Risk-data aggregation must avoid double-counting | Strict cell isolation prevents cross-cell duplicate processing |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal) | Cells preserve service for the unaffected fraction during a single-cell incident |
+| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Cells preserve service for the unaffected fraction during a single-cell incident |
 
 ## Cost / FinOps Notes
 

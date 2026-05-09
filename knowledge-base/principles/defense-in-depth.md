@@ -22,7 +22,7 @@ A single perimeter control (a WAF, a firewall, an auth proxy) is a single point 
 
 - Ring 0: NIST SP 800-53 (multi-layer defence); OWASP ASVS V1
 - Ring 1: PCI-DSS 4.0 multi-layer requirements (§1, §6, §7, §8); BCBS 239 §6
-- Ring 2: SBV Circular 09/2020 §II security organisation (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §II security organisation ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

@@ -268,7 +268,7 @@ nfr_acceptance_criteria:
 | Ring 1 | PCI-DSS 4.0 §3 (PAN protection) | PAN never logged or stored outside vault | SEC-004 tokenisation |
 | Ring 1 | PSD2 SCA / RTS (where applicable cross-border) | Strong Customer Authentication | 3DS2 + biometric satisfies SCA |
 | Ring 1 | Visa / Mastercard scheme rules | Issuer obligations | ACS certified per scheme; annual recertification |
-| Ring 2 | SBV Circular 09/2020 §III (UNOFFICIAL) | Multi-factor authentication for banking | Biometric + device-binding satisfies multi-factor |
+| Ring 2 | SBV Circular 09/2020 §III ⚠️ (working summary — pending Legal review) | Multi-factor authentication for banking | Biometric + device-binding satisfies multi-factor |
 
 ## Cost / FinOps Notes
 

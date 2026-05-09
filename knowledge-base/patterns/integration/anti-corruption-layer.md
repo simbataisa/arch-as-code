@@ -23,7 +23,7 @@ Modern Techcombank Java services need to integrate with T24 / mainframe core ban
 
 - Ring 0: DDD (Eric Evans) Tactical Patterns
 - Ring 1: BCBS 239 §6 (data accuracy across system boundaries)
-- Ring 2: SBV Circular 09/2020 §IV (data integrity, UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV (data integrity) ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

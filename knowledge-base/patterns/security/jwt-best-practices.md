@@ -24,7 +24,7 @@ JWTs are easy to use wrong: long-lived access tokens, weak signing algorithms, m
 
 - Ring 0: RFC 8725 (JWT BCP); OWASP ASVS V3 / V4
 - Ring 1: PCI-DSS 4.0 §8 Authentication; FAPI 2.0 token guidance
-- Ring 2: SBV Circular 09/2020 §III multi-factor (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §III multi-factor ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

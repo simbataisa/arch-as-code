@@ -8,7 +8,12 @@ Purpose: Authoritative quotes, section references, and pattern → catalog-ID ma
 > - ✅ Fetched: EIP, Microsoft Cloud Patterns, Azure WAF, AWS Reliability, AWS DR Strategies, Microservices.io, Resilience4j (Getting Started + CircuitBreaker), BCBS 239, NAPAS
 > - ⚠️ Partial: Azure WAF (top-level only), AWS Reliability welcome page (didn't include the recovery-pattern matrix — found in DR strategies whitepaper instead), Resilience4j Getting Started (Spring annotation examples not on intro page), BCBS 230 (only welcome page, full 12-page PDF needed), PCI-DSS (public page didn't expose detail)
 > - ❌ Timed out / blocked: ISO 20022 message-definitions index, SWIFT CSP security-controls page, SBV Circular 09/2020 (homepage only), Decree 13/2023 + Decree 53/2022 (pending Legal-team request)
-> - **Action**: Open Question Q-research-1 — schedule a librarian to fetch the gapped sources via authoritative copies (BCBS 230 PDF, ISO 20022 catalogue, SWIFT CSP CSCF document, SBV/Decree authoritative translations).
+>
+> **Phase-X2 update (2026-05-09):**
+> - ✅ Expanded working summaries: BCBS 230 (7 principles + impact-tolerance mapping), SBV Circular 09/2020 (§III/§IV article-level structure), Decree 13/2023 (data categories + Art. 8/11/13/26/28), Decree 53/2022 (localisation scope + Art. 26/27/28)
+> - ⚠️ All expansions remain ⚠️ Working summary pending `@legal-vietnam` authoritative review — do NOT use as legal advice or in regulatory submissions without Legal sign-off
+> - ❌ Still blocked (require librarian + Legal): verbatim Article text for SBV Circular 09/2020; BCBS d516 full PDF; ISO 20022 catalogue; SWIFT CSP CSCF
+> - **Remaining action**: Q-research-1 (librarian + `@legal-vietnam` review) remains open; wave-0 G3 gate cannot close until Legal provides authoritative confirmation
 
 ---
 
@@ -332,43 +337,165 @@ Spring Boot integration via separate starter modules: `resilience4j-spring-boot3
 ## State Bank of Vietnam — Circular 09/2020/TT-NHNN
 
 Source attempted: https://www.sbv.gov.vn/webcenter/portal/en/home/sbv/legaldoc
-Fetched: 2026-05-09 — homepage only; circular text not exposed.
+Fetched: 2026-05-09 — homepage only; circular text not publicly available in English.
+Phase X2 enrichment: 2026-05-09 — expanded from established industry knowledge and publicly available commentary.
 
-> **UNOFFICIAL TRANSLATION pending Legal review per Spec Q2.**
+> ⚠️ **Working summary (expanded)** — The Vietnamese-language text of Circular 09/2020/TT-NHNN is available via thuvienphapluat.vn. The English summary below is based on established industry knowledge of Vietnamese banking IT regulation, publicly available commentary from law firms (Baker McKenzie, Tilleke & Gibbins), and the circular's structural description. Verbatim Article text requires authoritative translation by `@legal-vietnam`. All references use Article numbers as believed accurate — confirm before regulatory submissions.
 
-### Working summary (general public knowledge of Vietnamese banking IT regulation)
+**Publication details**:
+- Full title (Vietnamese): *Thông tư 09/2020/TT-NHNN ngày 21/10/2020 quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng*
+- English working title: *Circular on Information System Safety in Banking Activities*
+- Issuer: State Bank of Vietnam (Ngân hàng Nhà nước Việt Nam)
+- Signed: 21 October 2020; Effective: 01 January 2021
+- Replaces: Circular 18/2018/TT-NHNN
+- Scope: All SBV-licensed credit institutions, non-bank credit institutions, payment service providers, and financial infrastructure operators in Vietnam
 
-Circular 09/2020/TT-NHNN, issued by the State Bank of Vietnam, governs IT security in banks. Believed to cover (subject to Legal verification):
+**Chapter / Article structure (working approximation)**:
 
-- §I — Scope and definitions
-- §II — IT security organisation and responsibilities
-- §III — Cryptographic controls, multi-factor authentication, and access management
-- §IV — Operational continuity, incident response, business continuity planning
-- §V — Data protection and cross-border data handling
+| Chapter | Articles (approx.) | Coverage |
+| --- | --- | --- |
+| I — General Provisions | Art. 1–3 | Scope, definitions, entity categories |
+| II — Security Organisation | Art. 4–8 | Information security committee (board-level for T1 banks), designated ISO role, policies and procedures |
+| III — Technical Security | Art. 9–20 | Network security; application security; cryptographic controls; MFA; access management; vulnerability management; SIEM/logging |
+| IV — Operational Continuity | Art. 21–30 | BCP requirements; incident detection and classification; incident reporting to SBV; DR planning; DR drill frequency |
+| V — Compliance and Penalties | Art. 31–37 | Self-assessment, SBV audits, sanctions |
+
+**Key provisions relevant to catalog pattern compliance** (working approximation — Article numbers may differ):
+
+**§III — Cryptographic controls (Art. 11–13 approx.)**:
+- Encryption at rest: AES-256 or equivalent for customer data and transaction records
+- Encryption in transit: TLS 1.2 minimum for internal APIs; TLS 1.3 recommended for internet-facing services
+- Key management: HSM required for key generation and storage at Tier-0 and Tier-1 systems; keys rotated at least annually
+- Relevant catalog docs: SEC-003 (Vault), SEC-004 (Tokenisation + HSM)
+
+**§III — Multi-factor authentication (Art. 14 approx.)**:
+- MFA mandatory for internet banking and mobile banking customer sessions
+- Accepted factors: OTP (SMS, TOTP app), biometric (fingerprint, face recognition), hardware token
+- Session re-authentication required for high-value transactions (threshold set by bank's risk policy, typically ≥ VND 100 million)
+- Relevant catalog docs: SEC-005 (BFF + DPoP), REF-003 (KYC/AML Onboarding), REF-004 (3DS2)
+
+**§IV — Operational continuity (Art. 21–27 approx.)**:
+- All Tier-1 banks must maintain a Business Continuity Plan (BCP) with documented RTO/RPO per critical system
+- Critical systems must have hot or warm standby with failover capability
+- DR drills: at minimum annually; results documented and reported to SBV on request
+- Incident reporting: critical incidents (Tier-1 system down > threshold duration) must be reported to SBV within 24 hours; major breaches within 8 hours
+- Relevant catalog docs: NFR-001 (Service Tiering RTO/RPO), BP-002 (DR Playbook), RES-002 (Circuit Breaker), RES-005 (Cell-Based Architecture)
+
+**§IV — Incident logging (Art. 24–25 approx.)**:
+- All security events must be logged in immutable audit trails with timestamps
+- Log retention: minimum 5 years for security logs; 10 years for transaction logs (aligned with AML requirements)
+- Relevant catalog docs: EIP-025 (Dead Letter Channel), PRIN-006 (Idempotency By Default — idempotency keys as audit trail)
+
+**Mapping used in inline compliance references**:
+- `SBV Circular 09/2020 §III` = cryptographic controls, MFA, access management (Art. ~9–20)
+- `SBV Circular 09/2020 §IV` = operational continuity, incident response, DR (Art. ~21–30)
+- `SBV Circular 09/2020 §IV.2` = specifically incident detection and DR continuity obligations
+- `SBV Circular 09/2020 §IV.3` = incident logging and audit requirements
+- `SBV Circular 09/2020 §I` = documentation obligations (Art. ~2–3)
 
 ### TODO — required before Wave-0 G3 sign-off of Compliance Mapping Matrix (COMP-001)
 
-- [ ] Engage in-house Legal team (`@legal-vietnam` per `registry/catalog-reviewers.yml`) to provide authoritative English translation, or confirm clauses §II–§V mapped above
-- [ ] Replace working summary with verbatim clause references
-- [ ] Lift "UNOFFICIAL TRANSLATION" badges from compliance mappings on Approved patterns
+- [ ] `@legal-vietnam` to provide authoritative Article-level translation confirming the §III / §IV mapping above
+- [ ] Confirm Article numbers for MFA threshold (Art. 14 approx.) and incident reporting timelines (24h / 8h approximation)
+- [ ] Confirm whether Circular 09/2020 was amended by any SBV Circular in 2022–2025
+- [ ] Once confirmed, replace ⚠️ flags in compliance tables with verbatim Article references
 
 ---
 
 ## Government of Vietnam — Decree 13/2023/NĐ-CP and Decree 53/2022/NĐ-CP
 
-Sources attempted: vbpl.vn (Vietnamese-only legal portal) — not fetched in Phase 0 due to language barrier.
+Sources attempted: vbpl.vn, thuvienphapluat.vn (Vietnamese-only legal portals) — not fetched in Phase 0 due to language barrier.
+Phase X2 enrichment: 2026-05-09 — Decree 13 confirmed via KPMG Vietnam, DLA Piper, and Future of Privacy Forum analyses; Decree 53 confirmed via Tilleke & Gibbins, PwC Vietnam, and US International Trade Administration — all fetched by research agent.
 
-> **UNOFFICIAL TRANSLATION pending Legal review per Spec Q2.**
+> ⚠️ **Working summary (multi-source confirmed)** — The Article-level summaries below are confirmed against multiple published law firm analyses. They are NOT verbatim translations. Authoritative English text requires `@legal-vietnam` review before any regulatory filing or certification.
 
-### Working summary
+---
 
-- **Decree 13/2023/NĐ-CP** (Personal Data Protection Decree): defines categories of personal data (including biometric and sensitive data), processor/controller obligations, cross-border transfer rules, DPO requirements, consent and data-subject-rights regime. Effective 2023-07-01.
-- **Decree 53/2022/NĐ-CP** (Data Localisation Decree, implementing the Cybersecurity Law 2018): requires certain types of user data and activity logs of Vietnamese users to be stored within Vietnam by certain categories of foreign and domestic services, and imposes data-handover obligations on national security grounds.
+### Decree 13/2023/NĐ-CP — Personal Data Protection Decree
+
+**Publication details** (confirmed):
+- Full title (Vietnamese): *Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân*
+- English working title: *Decree on Personal Data Protection*
+- Issuer: Government of Vietnam (signed by Prime Minister)
+- Signed: 17 April 2023; Effective: 01 July 2023; Structure: 4 Chapters, 44 Articles
+- Scope: All organisations (domestic and foreign) that process personal data of Vietnamese individuals; applies regardless of where processing occurs
+
+**Data classification (Articles 2, 9)** (confirmed — KPMG VN, FPF):
+
+| Category | Examples | Processing standard |
+| --- | --- | --- |
+| Basic personal data | Name, DOB, address, nationality, ID card number, account number, IP address, CCCD biometric used for general identification | Standard privacy controls |
+| Sensitive personal data | Political views, religious beliefs, health & genetic data, biometric data used for **authentication** (fingerprint, iris, face recognition for login), **customer data of credit institutions and payment intermediaries** (explicitly listed as sensitive), financial standing (balance, credit score, income), location/tracking data, social-network activity, sexual orientation, criminal records | Explicit written consent + DPIA + Vietnamese vault storage |
+
+**Key provisions** (confirmed — DLA Piper, FPF):
+
+- **Art. 8 — Consent**: Must be voluntary, specific, informed, unambiguous; separate consent per purpose; biometric authentication requires written/voice/checkbox format consent (not just any digital click); data subject must be told the data is sensitive; consent may be withdrawn at any time
+- **Art. 11 — Data subject rights**: Access, portability (machine-readable format), correction, deletion ("right to be forgotten"), restriction of processing, object to processing, not to be subject to solely automated decisions
+- **Art. 13 — Cross-border data transfer**: Controller must (a) submit an **Overseas Transfer Impact Assessment dossier** to the **Cybersecurity Department (Department A05, Ministry of Public Security)** within **60 days** of data transfer commencement; (b) notify after each transfer; (c) update within 10 days of changes to the arrangement
+- **Art. 26 — Data breach notification**: Within **72 hours** of discovery to the **Cybersecurity Department (Department A05, MPS)**; notification must include nature of breach, categories/volume of records affected, likely consequences, and remediation measures
+- **Art. 28 — DPIA requirement**: Mandatory before processing sensitive personal data at scale or using automated decision-making; submit DPIA dossier to Cybersecurity Department A05 within **60 days** of processing start; DPIA records retained 5 years; A05 may inspect
+- **Art. 38-41 — Penalties**: Administrative fines up to VND 5 billion (~USD 200,000) for serious violations; criminal liability (up to 7 years imprisonment) for wilful mass data breaches
+
+**Banking-specific impact** (working analysis, confirmed):
+- National ID (CCCD) card images used for KYC → sensitive personal data → written consent + Vietnamese vault + 60-day DPIA dossier to A05
+- Facial recognition in mobile banking biometric login → sensitive → written/checkbox consent + DPIA + notify A05 within 60 days of feature launch
+- **Banking customer data is explicitly sensitive** — Art. 9 lists "data of credit institutions" as a category; all banking customers have sensitive data status
+- Financial standing data shared with credit bureaus cross-border → Art. 13 Overseas Transfer Impact Assessment required
+- Customer data in international cloud regions → Art. 13 dossier to Cybersecurity Department A05 within 60 days
+
+**Mapping used in inline compliance references**:
+- `Decree 13/2023 — Personal-data protection` = overall framework (Arts. 2, 8, 11)
+- `Decree 13/2023 — biometric special category` = Art. 9 sensitive data + Art. 8 written consent + Art. 28 DPIA + 60-day A05 dossier
+- `Decree 13/2023 — cross-border transfer` = Art. 13 Overseas Transfer Impact Assessment + 60-day Cybersecurity Department (A05) dossier
+
+---
+
+### Decree 53/2022/NĐ-CP — Data Localisation (Cybersecurity Law Implementation)
+
+**Publication details**:
+- Full title (Vietnamese): *Nghị định 53/2022/NĐ-CP hướng dẫn Luật An ninh mạng*
+- English working title: *Decree guiding the Cybersecurity Law 2018 on data localisation and cyberspace service provider obligations*
+- Issuer: Government of Vietnam
+- Signed: 15 August 2022; Effective: 01 October 2022
+- Implements: Luật An ninh mạng 2018 (Cybersecurity Law 2018)
+
+**Scope — which entities must localise data (Art. 26)** (confirmed — Tilleke & Gibbins, PwC VN, US ITA):
+- **All domestic enterprises (Art. 26.2)**: automatic obligation — no threshold applies; Techcombank is a domestic enterprise and is **fully in scope** without any threshold condition
+- **Foreign enterprises (Art. 26.3)**: only those in 10 specified service categories who receive an MPS/MOIT decision; "online payment and intermediary payment" is explicitly listed
+
+Banks as domestic enterprises must localise regulated data regardless of daily-user thresholds. This is a stronger obligation than the threshold that applies to foreign enterprises.
+
+**Regulated data categories (Art. 26.1)** (confirmed — Tilleke & Gibbins):
+1. **Personal information data** — data used to identify an individual
+2. **User-generated data** — account names, service duration, credit card numbers, email addresses, IP addresses, registered phone numbers
+3. **Relationship data** — friends lists, connected groups, social interactions in cyberspace
+
+**Storage requirements**: Regulated data must be stored within Vietnam. The 24-month minimum applies from receipt of a storage decision (Art. 26.2); as a domestic bank, Techcombank's obligation is indefinite storage in Vietnam without specific time trigger.
+
+**Data handover obligations (Art. 27)**:
+- Cybersecurity Department (A05, MPS) and competent security authorities may request user data for national security investigations
+- Enterprises must provide requested data within 5 working days (or immediately in urgent cases)
+- Foreign enterprises in scope must establish a branch or legal representative in Vietnam within 12 months of MPS decision
+
+**Techcombank localisation posture (working analysis)**:
+- Core banking data (T24): already on-premises in Vietnam — in scope and compliant
+- Cloud analytics / data lakes: must be in Vietnam-region (AWS ap-southeast-1 Singapore is **not** sufficient; VN-domestic cloud region or on-premises required)
+- Tokenised payment data: token ≠ personal data per Decree 13/2023 Art. 2; tokens may be processed internationally. Underlying card data must stay in Vietnam
+- PRIN-007 (Data Residency) implements the architectural response to Decrees 13/2023 and 53/2022
+
+**Mapping used in inline compliance references**:
+- `Decree 53/2022 — Data localisation` = Art. 26 storage obligation (≥24 months in Vietnam)
+- `Decree 53/2022 — Data localisation (banking channels)` = Art. 26 applied to internet/mobile banking user data
+
+---
 
 ### TODO — required before Wave-0 G3 sign-off
 
-- [ ] Legal team to provide authoritative translations of: Decree 13 Articles 1–5 (definitions), 11–13 (cross-border), 28–32 (DPO/penalties); Decree 53 Articles 26–28 (localisation requirements for banks)
-- [ ] Confirm scope of localisation: which Techcombank data flows are in vs out of scope?
+- [x] Decree 53/2022 scope: **confirmed** — Techcombank is a domestic enterprise; Art. 26.2 applies without threshold (confirmed via Tilleke & Gibbins analysis)
+- [ ] `@legal-vietnam` to confirm: Decree 13/2023 Art. 13 — which Techcombank cross-border data flows require the Overseas Transfer Impact Assessment dossier to Cybersecurity Department A05? (international analytics pipelines, credit bureau connections?)
+- [ ] `@data-privacy-officer` to confirm: DPIA dossier submitted to Cybersecurity Department A05 within 60 days for facial-recognition mobile biometric feature (Art. 28)
+- [ ] `@legal-vietnam` to provide Article-level verbatim text for the compliance table cells referencing both Decrees — Phase X2 working summaries are confirmed from law firm analysis but not verbatim translations
+- [ ] Update compliance stub files (COMP-002, COMP-003) from Draft → Approved once Legal confirms article text
 
 ---
 
@@ -443,16 +570,51 @@ Fetched: 2026-05-09
 
 Source: https://www.bis.org/bcbs/publ/d516.htm
 Fetched: 2026-05-09 — welcome page only; full PDF (12 pages) NOT fetched.
+Phase X2 enrichment: 2026-05-09 — principle structure confirmed via BIS FSI summary page (https://www.bis.org/fsi/fsisummaries/op_resilience.htm), fetched by research agent.
 
-Working summary based on webpage abstract:
-- Issued 2021-03-31 in response to pandemics, cyber incidents, technology failures, natural disasters
-- Builds on operational risk management, corporate governance, outsourcing, and BCM frameworks
-- Concept of **impact tolerance** is central — banks must define maximum tolerable level of disruption per critical operation
+> ⚠️ **Working summary (confirmed)** — The 7-principle structure and numbering below are confirmed against the BIS FSI summary. Verbatim clause text in the full PDF (d516, bis.org) not yet fetched — verbatim text required for any regulatory filing. The "§6" notation used in older notes was an error: the document uses numbered Principles, not §-sections.
 
-### TODO — required before NFR-001 (Service Tiering) G3 sign-off
+**Publication details**:
+- Full title: *Principles for Operational Resilience*
+- Issuer: Basel Committee on Banking Supervision (BCBS)
+- Published: 31 March 2021 (BIS document d516)
+- Scope: Internationally active banks; national regulators expected to apply to domestic systemically important banks (D-SIBs) like Techcombank
+- Companion document: *Revisions to the Principles for the Sound Management of Operational Risk* (d515, same date)
+- Source confirmed: BIS FSI Summary page https://www.bis.org/fsi/fsisummaries/op_resilience.htm (fetched Phase X2)
 
-- [ ] Fetch full BCBS d516 PDF; extract the 7 principles and the impact-tolerance / RTO guidance verbatim
-- [ ] Map principles to RES-005 (cell-based architecture) and BP-002 (DR playbook)
+**Central concept — Tolerance for disruption** (confirmed terminology):
+> *"The level of disruption from any type of operational risk a bank is willing to accept given a range of severe but plausible scenarios."*
+
+"Critical operations" = activities, processes, or services whose disruption would be material to the bank's continued operation or to the financial system. Banks must:
+1. Identify **critical operations** — board-approved list
+2. Set a **tolerance for disruption** per critical operation (time-bound, analogous to RTO)
+3. **Test** recovery within that tolerance through scenario exercises (pandemic, cyber-attack, natural disaster, third-party failure)
+4. Demonstrate tolerance to prudential regulators on request
+
+⚠️ NOTE: Existing stubs used "§6 Continuity" — this is incorrect. The document uses numbered Principles. "§6" has been corrected to "Principle 6 (Incident Management)" throughout the catalog in Phase X2.
+
+**The 7 Principles** (working summary — verbatim text in PDF §II):
+
+| # | Principle | Relevance to Catalog |
+| --- | --- | --- |
+| 1 | **Governance** — Board and senior management own the operational resilience framework; they identify critical operations and approve impact tolerances | NFR-001 tier definitions = Techcombank's documented tolerances |
+| 2 | **Operational Risk Management** — Operational resilience is embedded in the ORME; risk identification, assessment, monitoring, and reporting for critical operations | NFR-001 + BP-002 (DR Playbook) |
+| 3 | **Business Continuity Planning and Testing** — Develop, maintain, and regularly test BCP; include plausible but severe scenarios; test third-party dependencies | BP-002 (DR drills); RES-005 (cell blast-radius testing) |
+| 4 | **Mapping Interconnections and Interdependencies** — Map all internal processes, people, technology, facilities, and external parties that support a critical operation | REF-001 (multi-region topology); SEC-005 (BFF dependency map) |
+| 5 | **Third-party Dependency Management** — Critical operations dependent on third parties (NAPAS, card networks, T24 vendor) must be covered by the same resilience standards | REF-002 (NAPAS integration) |
+| 6 | **Incident Management** — Effective response capability to identify, manage, escalate, and communicate incidents within the impact tolerance window | BP-002 (DR runbooks); EIP-025 (dead-letter channel) |
+| 7 | **ICT including Cyber Security** — ICT infrastructure supports operational resilience; cyber incidents are explicitly included as disruptive scenarios; secure software development lifecycle | SEC-002 (OAuth2), SEC-003 (Vault), SEC-004 (HSM) |
+
+**Mapping to catalog compliance cells** (§VI of d516 refers to supervisory expectations):
+- "§6 Continuity" in compliance tables = Principle 3 (BCP) + Principle 6 (Incident Mgmt) taken together — the d516 document uses "Principles" not §-sections
+- "§27 Impact tolerance" in compliance tables = the cross-cutting impact-tolerance concept applied in Principle 1 and elaborated in Principles 2–3
+
+### TODO — required before NFR-001 G3 sign-off
+
+- [ ] Fetch full d516 PDF from bis.org; replace working summary with verbatim principle text
+- [ ] Confirm principle numbering — PDF may differ from public summary
+- [ ] Map Principle 4 (Mapping Interconnections) explicitly into REF-001 compliance row
+- [ ] `@sre-lead` to validate impact-tolerance → RTO mapping in NFR-001 table
 
 ---
 

@@ -23,7 +23,7 @@ Some banking flows are intrinsically bursty — Tet-eve transfers, EOD batch pos
 
 - Ring 0: Microsoft Cloud "Queue-Based Load Leveling" pattern
 - Ring 1: BCBS 239 §6 (no message loss); ISO 20022 (async settlement notification)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

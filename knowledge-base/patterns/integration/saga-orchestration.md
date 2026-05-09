@@ -247,7 +247,7 @@ FAILURE PATH (Payment fails):
 | Ring 0 | Microsoft Cloud Patterns — Saga | "Manage data consistency across microservices" | Same pattern; same intent |
 | Ring 1 | Basel BCBS 239 §6 (Accuracy) | "Aggregation must avoid double-counting" | Saga + idempotent steps + compensations preserve accounting accuracy across distributed transactions |
 | Ring 1 | ISO 20022 multi-leg payment flows | Multi-step settlement (e.g., pacs.008 → pacs.002 → pacs.004 reversal) | Saga is the canonical orchestration for ISO 20022 multi-leg flows |
-| Ring 2 | SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity | Compensations preserve consistency under partial failure during EOD windows |
+| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Operational continuity | Compensations preserve consistency under partial failure during EOD windows |
 
 ## Cost / FinOps Notes
 

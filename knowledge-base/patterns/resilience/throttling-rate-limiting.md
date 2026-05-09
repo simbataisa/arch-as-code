@@ -23,7 +23,7 @@ Without explicit throttling, a misbehaving client (or a Tet-eve traffic spike) c
 
 - Ring 0: Microsoft Cloud "Throttling" + "Rate Limiting" patterns
 - Ring 1: PSD2 §SCA backoff requirements; FAPI rate-limit guidance (where applicable)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

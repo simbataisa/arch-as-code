@@ -19,7 +19,7 @@ TBD — populate during Wave authoring per Procedure A.2 of the implementation p
 
 - Ring 0: TBD
 - Ring 1: BCBS 239
-- Ring 2: SBV Reporting (UNOFFICIAL)
+- Ring 2: SBV Reporting ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

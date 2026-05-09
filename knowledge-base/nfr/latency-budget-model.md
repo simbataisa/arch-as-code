@@ -229,7 +229,7 @@ groups:
 | Ring 0 (generic) | Google SRE Book Chapter 4 (Service Level Objectives) | SLO/SLI/error-budget framework | Latency budgets are the SLI side of T0/T1 SLOs |
 | Ring 1 (international banking) | Basel BCBS 239 — §3 (Timeliness) | "Risk data must be aggregated and reported on a timely basis" | T0/T1 P95 budgets ensure risk-data flows complete within minute-level supervisory expectations |
 | Ring 1 (international banking) | ISO 20022 RTPS (Real-Time Payment Scheme) | Settlement timestamp expectations | T0 sync-API P95 < 200 ms supports same-second response per RTPS norms |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal review) | Latency budgets are part of "operational service quality" obligations |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Latency budgets are part of "operational service quality" obligations |
 
 ## Cost / FinOps Notes
 

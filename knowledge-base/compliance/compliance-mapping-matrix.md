@@ -55,17 +55,17 @@ Authoritative cross-reference table generated from `_compliance-matrix.yml`. Eac
 
 | Catalog ID | PCI-DSS 4.0 | BCBS 239 | BCBS 230 | ISO 20022 | SWIFT CSP 2024 | GDPR | PSD2 | FATF | EMVCo 3DS |
 |---|---|---|---|---|---|---|---|---|---|
-| NFR-001 | — | §3 Timeliness | §6 Continuity (UNOFFICIAL) | — | — | — | — | — | — |
+| NFR-001 | — | §3 Timeliness | Principle 6 (Incident Management) ⚠️ (working summary — pending Legal review) | — | — | — | — | — | — |
 | NFR-002 | — | §3 Timeliness | — | RTPS settlement timestamp | — | — | — | — | — |
 | PRIN-006 | — | §6 Accuracy | — | EndToEndId | — | — | — | — | — |
-| TPL-001 | — | Principles 1, 2 | Principle 1 (UNOFFICIAL) | — | — | — | — | — | — |
+| TPL-001 | — | Principles 1, 2 | Principle 1 (Governance) ⚠️ (working summary — pending PDF fetch) | — | — | — | — | — | — |
 | COMP-001 | — | — | — | — | — | — | — | — | — |
-| REF-001 | — | §3 Timeliness | §6 Continuity (UNOFFICIAL) | — | — | — | — | — | — |
+| REF-001 | — | §3 Timeliness | Principle 6 (Incident Management) ⚠️ (working summary — pending Legal review) | — | — | — | — | — | — |
 | EIP-024 | — | §6 Accuracy | — | — | — | — | — | — | — |
 | EIP-025 | — | §6 Accuracy | — | — | — | — | — | — | — |
-| RES-005 | — | — | §27 Impact tolerance (UNOFFICIAL) | — | — | — | — | — | — |
-| RES-002 | — | — | §6 (UNOFFICIAL) | — | — | — | — | — | — |
-| BP-005 | — | — | §6 Continuity testing (UNOFFICIAL) | — | — | — | — | — | — |
+| RES-005 | — | — | Impact tolerance (Principles 1–3) ⚠️ (working summary — pending Legal review) | — | — | — | — | — | — |
+| RES-002 | — | — | Principle 6 (Incident Management) ⚠️ (working summary — pending PDF fetch) | — | — | — | — | — | — |
+| BP-005 | — | — | Principle 3 (BCP and Testing) ⚠️ (working summary — pending Legal review) | — | — | — | — | — | — |
 | INT-001 | — | §6 Accuracy | — | Multi-leg flow | — | — | — | — | — |
 | INT-002 | — | §6 Accuracy | — | — | — | — | — | — | — |
 | DATA-001 | — | §3 Timeliness | — | — | — | — | — | — | — |
@@ -76,7 +76,7 @@ Authoritative cross-reference table generated from `_compliance-matrix.yml`. Eac
 | REF-004 | §6, §8 | — | — | — | — | — | SCA / RTS | — | 3DS 2.x specification |
 | PRIN-007 | — | — | — | — | — | Art. 44–49 Cross-border | — | — | — |
 
-#### Ring 2 — Vietnam-specific (UNOFFICIAL TRANSLATIONS pending Legal review per Spec Q2)
+#### Ring 2 — Vietnam-specific (⚠️ Working summaries — pending `@legal-vietnam` authoritative review per Spec Q2)
 
 | Catalog ID | SBV Circular 09/2020 | Decree 13/2023 (Personal Data) | Decree 53/2022 (Cybersec) |
 |---|---|---|---|
@@ -117,7 +117,7 @@ Within a pattern doc, the `## Compliance Mapping` section is structured as:
 |---|---|---|---|
 | Ring 0 (generic) | <regulation-id from _compliance-matrix.yml regulations> | §… | one sentence |
 | Ring 1 (intl banking) | <regulation-id> | §… | one sentence |
-| Ring 2 (Vietnam) | <regulation-id> | §… | one sentence — flag UNOFFICIAL if Vietnamese source |
+| Ring 2 (Vietnam) | <regulation-id> | §… | one sentence — flag ⚠️ (working summary) if Vietnamese source |
 ```
 
 A nightly cron / pre-merge CI job runs `scripts/sync-compliance-matrix.py`, which:
@@ -148,7 +148,7 @@ def render_table(mapping: dict, regs: list[dict]) -> str:
 ### Lint rules
 
 - **Every Approved-status pattern must have ≥ 1 non-empty cell** across all rings (otherwise the pattern has no regulatory grounding — flag for review).
-- **No Vietnamese-source cell may omit the UNOFFICIAL flag** until Legal team sign-off.
+- **No Vietnamese-source cell may omit the ⚠️ working summary flag** until `@legal-vietnam` sign-off — see `_research-notes.md` for the authoritative working summaries.
 - **A regulation column with no cells** is a gap — surface in [§5 Gap Analysis](../../governance/standards/enterprise-architecture-catalog.md#5-gap-analysis) of the catalog.
 
 ## Variants & Trade-offs
@@ -173,7 +173,7 @@ def render_table(mapping: dict, regs: list[dict]) -> str:
 | Ring 0 | NIST 800-160 | Requirements traceability | Matrix traces each regulatory requirement to ≥ 1 implementing pattern |
 | Ring 1 | BCBS 239 — Principles 1, 2 (governance) | "Banks shall have an effective risk-data infrastructure" | Matrix is part of the risk-data infrastructure governance |
 | Ring 1 | Basel BCBS 230 — Principle 1 (governance) | Operational resilience requires explicit ownership | Matrix is the cross-system governance artifact for op-resilience |
-| Ring 2 | SBV Circular 09/2020 §I (UNOFFICIAL TRANSLATION pending Legal review) | Documentation requirements | Master matrix is the documented, regulator-reviewable artifact mapping every Approved pattern to its Vietnam-specific controls |
+| Ring 2 | SBV Circular 09/2020 §I ⚠️ (working summary — pending Legal review) | Documentation requirements | Master matrix is the documented, regulator-reviewable artifact mapping every Approved pattern to its Vietnam-specific controls |
 
 ## Cost / FinOps Notes
 
@@ -185,7 +185,7 @@ STRIDE: this matrix addresses **Repudiation** of compliance commitments — ever
 
 - Top threats addressed:
   - Mapping drift between code and compliance — synced via the nightly job.
-  - Stale Vietnamese citations — `(UNOFFICIAL)` flag forces Legal review before Approved status.
+  - Stale Vietnamese citations — `⚠️ (working summary — pending Legal review)` flag forces Legal review before Approved status.
 - Residual:
   - Regulator may interpret a control differently than our cell text — mitigated by including the actual control text from `_research-notes.md`.
 
@@ -223,4 +223,4 @@ STRIDE: this matrix addresses **Repudiation** of compliance commitments — ever
 
 ---
 
-**Key Takeaway**: One matrix mapping every Approved pattern × every relevant regulation. Vietnamese sources flagged UNOFFICIAL until Legal review. Pattern's `## Compliance Mapping` section is the source; matrix is generated.
+**Key Takeaway**: One matrix mapping every Approved pattern × every relevant regulation. Vietnamese sources flagged ⚠️ as working summaries until `@legal-vietnam` provides authoritative review — see `_research-notes.md` for detailed summaries. Pattern's `## Compliance Mapping` section is the source; matrix is generated.

@@ -19,7 +19,7 @@ TBD — populate during Wave authoring per Procedure A.2 of the implementation p
 
 - Ring 0: TBD
 - Ring 1: ISO 20022 EndToEndId
-- Ring 2: SBV Circ. 09 §IV.2 (UNOFFICIAL)
+- Ring 2: SBV Circ. 09 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

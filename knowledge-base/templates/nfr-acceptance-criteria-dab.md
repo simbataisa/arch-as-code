@@ -98,12 +98,12 @@ nfr_acceptance_criteria:
         satisfied_via: NFR-002 P95 enforcement
       - source: BCBS 239 §6 (accuracy)
         satisfied_via: PRIN-006 + EIP-024
-      - source: BCBS 230 §6 (continuity)
+      - source: BCBS 230 Principle 6 (Incident Management)
         satisfied_via: NFR-001 T0 tier; REF-001 active-active
       - source: PCI-DSS 4.0 §3.5
         satisfied_via: SEC-004 (if card flows)
     ring_2:
-      - source: SBV Circ. 09/2020 §IV.2 (UNOFFICIAL TRANSLATION)
+      - source: SBV Circ. 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
         satisfied_via: NFR-001 + REF-001 + PRIN-006
 
   # === Testing commitments ===
@@ -259,7 +259,7 @@ This template *is* the format. Self-application:
 | Ring 0 | NIST SP 800-160 (Systems Security Engineering) | Requirements traceability | YAML block traces every NFR claim back to a catalog ID |
 | Ring 1 | Basel BCBS 239 — Principles 1, 2 (governance) | Risk-data infrastructure must have governance | NFR-AC YAML is part of the governance artefact set |
 | Ring 1 | Basel BCBS 230 — Principle 1 (Governance) | Operational resilience requires explicit impact-tolerance statements | NFR-AC `rto_minutes` + `failure_modes` are the impact-tolerance statements |
-| Ring 2 | SBV Circular 09/2020 — §I (Documentation) | Banks must document IT operational requirements (UNOFFICIAL TRANSLATION pending Legal review) | NFR-AC blocks form the documented requirements set |
+| Ring 2 | SBV Circular 09/2020 — §I (Documentation) | Banks must document IT operational requirements ⚠️ (working summary — pending Legal review) | NFR-AC blocks form the documented requirements set |
 
 ## Cost / FinOps Notes
 

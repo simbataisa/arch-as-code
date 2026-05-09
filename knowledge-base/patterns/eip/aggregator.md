@@ -24,7 +24,7 @@ A single business event often arrives as multiple correlated messages (e.g., one
 
 - Ring 0: EIP §7 Message Routing — Aggregator
 - Ring 1: BCBS 239 §6 (no message loss; combined-event accuracy)
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

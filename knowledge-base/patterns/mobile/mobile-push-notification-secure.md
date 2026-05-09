@@ -19,7 +19,7 @@ TBD — populate during Wave authoring per Procedure A.2 of the implementation p
 
 - Ring 0: TBD
 - Ring 1: TBD
-- Ring 2: Decree 13/2023 (UNOFFICIAL)
+- Ring 2: Decree 13/2023 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

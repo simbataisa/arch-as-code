@@ -23,7 +23,7 @@ Static, long-lived secrets (DB passwords, API keys, signing keys) accumulate ope
 
 - Ring 0: NIST SP 800-57 Part 1 (Key Management Lifecycle)
 - Ring 1: PCI-DSS 4.0 §3.6 (key lifecycle); §3.7 (key management procedures)
-- Ring 2: SBV Circular 09/2020 §III cryptographic controls (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §III cryptographic controls ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

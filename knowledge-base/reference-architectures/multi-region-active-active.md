@@ -6,7 +6,7 @@ Tier Applicability: T0 (mandatory), T1 (recommended; otherwise active-passive ho
 
 ## Problem Statement
 
-A T0 service must survive any single-region event (network partition, AZ-wide power loss, regional control-plane impairment, regional cyber incident) with sub-5-minute RTO and zero RPO. A passive-standby topology cannot meet this — promotion takes minutes; data tail loss is non-zero. Active-active across two (or more) Vietnam-eligible regions is the only topology that satisfies SBV §IV.2 + BCBS 230 §6 for Tier-0 services.
+A T0 service must survive any single-region event (network partition, AZ-wide power loss, regional control-plane impairment, regional cyber incident) with sub-5-minute RTO and zero RPO. A passive-standby topology cannot meet this — promotion takes minutes; data tail loss is non-zero. Active-active across two (or more) Vietnam-eligible regions is the only topology that satisfies SBV §IV.2 + BCBS 230 Principle 6 (Incident Management) for Tier-0 services.
 
 This reference architecture is the canonical T0 blueprint. Every T0 service inherits this topology unless it explicitly opts out (with EA-Board approval and a documented compensating control).
 
@@ -301,9 +301,9 @@ Mobile clients use the AnyCast endpoint; no region-pinning logic. The Global Acc
 |---|---|---|---|
 | Ring 0 (generic) | AWS Well-Architected Reliability Pillar — §3 (Failure mode topology) | "Multi-site Active-Active for near-zero RTO/RPO" | This is the canonical AWS WA recovery pattern, applied to Techcombank context |
 | Ring 1 (international banking) | Basel BCBS 239 — §3 (Timeliness) | Risk-data must be aggregated timely | Active-active ensures continuous ledger and risk-data flow even during regional events |
-| Ring 1 (international banking) | Basel BCBS 230 — §6 (Continuity) | Operational resilience requires explicit recovery topology (UNOFFICIAL TRANSLATION pending PDF) | Active-active is the documented Tier-0 topology |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 — §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal review) | Multi-region within Vietnam (vn-south-1 + vn-north-1) satisfies SBV continuity expectations while keeping data resident per Decree 53 |
-| Ring 2 (Vietnam) | Decree 53/2022 — Data localisation (UNOFFICIAL) | Customer data must be stored within Vietnam | Both active regions are domestic Vietnamese data centres / cloud regions |
+| Ring 1 (international banking) | Basel BCBS 230 Principle 3 (BCP) + Principle 6 (Incident Management) | Operational resilience requires explicit recovery topology ⚠️ (working summary — pending PDF fetch + Legal review) | Active-active is the documented Tier-0 topology |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 — §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Multi-region within Vietnam (vn-south-1 + vn-north-1) satisfies SBV continuity expectations while keeping data resident per Decree 53 |
+| Ring 2 (Vietnam) | Decree 53/2022 — Data localisation ⚠️ (working summary — pending Legal review) | Customer data must be stored within Vietnam | Both active regions are domestic Vietnamese data centres / cloud regions |
 
 ## Cost / FinOps Notes
 

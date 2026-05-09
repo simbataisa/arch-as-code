@@ -23,7 +23,7 @@ Application code that talks directly to other applications via shared databases 
 
 - Ring 0: EIP §3 Messaging Channels (Hohpe & Woolf)
 - Ring 1: BCBS 239 §6 (no message loss); ISO 20022 message envelope concepts
-- Ring 2: SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal)
+- Ring 2: SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review)
 
 ## NFR Hooks
 

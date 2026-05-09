@@ -186,7 +186,7 @@ Not directly applicable — clients don't typically run message consumers. Howev
 | Ring 0 | Microservices.io — Idempotent Consumer | Consumer-side idempotency pattern | Same shape; same intent |
 | Ring 1 | Basel BCBS 239 — Principle 6 (Accuracy) | Risk-data aggregation must avoid double-counting | Idempotent reception prevents duplicate ledger postings → accurate aggregation |
 | Ring 1 | ISO 20022 — `EndToEndId` | Each interbank message carries a unique end-to-end ID | Used as natural key for Strategy B |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal) | Required behaviour for retried messages during EOD batch and network instability |
+| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Required behaviour for retried messages during EOD batch and network instability |
 
 ## Cost / FinOps Notes
 

@@ -268,7 +268,7 @@ graph TB
 | Ring 0 | Debezium documentation | CDC implementation | Tooling reference |
 | Ring 1 | Basel BCBS 239 §6 (Accuracy) | "Aggregation must avoid double-counting; no message loss" | Outbox guarantees the event reflects committed data; CDC guarantees no event loss |
 | Ring 1 | ISO 20022 settlement-message integrity | Settlement events must mirror the underlying ledger commit | Outbox eliminates the dual-write race that would otherwise produce out-of-order or lost settlement messages |
-| Ring 2 | SBV Circular 09/2020 §IV.2 (UNOFFICIAL TRANSLATION pending Legal) | Operational continuity | Outbox + CDC ensures downstream services receive every committed event |
+| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Operational continuity | Outbox + CDC ensures downstream services receive every committed event |
 
 ## Cost / FinOps Notes
 

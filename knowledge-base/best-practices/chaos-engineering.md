@@ -176,8 +176,8 @@ Client-side chaos: simulate poor network conditions on a percentage of customer 
 | Ring 0 | Principles of Chaos Engineering (principlesofchaos.org) | 5 principles | Practice anchored in industry standard |
 | Ring 0 | NIST SP 800-53 CP-4 (Contingency Plan Testing) | "Test the contingency plan" | Chaos drills are the active verification of contingency plans |
 | Ring 0 | Google SRE Book Chapter 17 (Testing for Reliability) | "Disaster role-playing" / DiRT | Same idea; same intent |
-| Ring 1 | Basel BCBS 230 — §6 (Continuity testing) | Operational resilience requires regular continuity testing (UNOFFICIAL) | Drill cadence directly satisfies the testing requirement |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity (UNOFFICIAL TRANSLATION pending Legal) | Drill artefacts evidence Techcombank exercises continuity |
+| Ring 1 | Basel BCBS 230 Principle 3 (BCP and Testing) | Operational resilience requires regular continuity testing ⚠️ (working summary — pending Legal review) | Drill cadence directly satisfies the testing requirement |
+| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Drill artefacts evidence Techcombank exercises continuity |
 
 ## Cost / FinOps Notes
 
