@@ -1,5 +1,5 @@
 version: 1
-last_updated: 2026-05-09
+last_updated: '2026-05-09'
 rows:
 - id: PRIN-001
   title: API-First Design
@@ -1147,7 +1147,7 @@ rows:
 - id: EIP-002
   title: Point-to-Point Channel
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/point-to-point-channel.md
   tiers:
@@ -1159,13 +1159,13 @@ rows:
     - EIP §3
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-003
   title: Publish-Subscribe Channel
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/publish-subscribe-channel.md
   tiers:
@@ -1178,13 +1178,13 @@ rows:
     - EIP §3
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-004
   title: Message Router
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/message-router.md
   tiers:
@@ -1196,7 +1196,7 @@ rows:
     - EIP §4
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-005
@@ -1220,7 +1220,7 @@ rows:
 - id: EIP-006
   title: Message Translator
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/message-translator.md
   tiers:
@@ -1232,13 +1232,13 @@ rows:
     - EIP §8
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-007
   title: Content Enricher
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/content-enricher.md
   tiers:
@@ -1250,13 +1250,13 @@ rows:
     - EIP §8
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-008
   title: Content Filter
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/content-filter.md
   tiers:
@@ -1268,13 +1268,13 @@ rows:
     - EIP §8
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-009
   title: Claim Check
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/claim-check.md
   tiers:
@@ -1286,13 +1286,13 @@ rows:
     - EIP §8
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-010
   title: Normalizer
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/normalizer.md
   tiers:
@@ -1304,7 +1304,7 @@ rows:
     - EIP §8
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-011
@@ -1328,7 +1328,7 @@ rows:
 - id: EIP-012
   title: Splitter
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/splitter.md
   tiers:
@@ -1340,13 +1340,13 @@ rows:
     - EIP §7
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-013
   title: Resequencer
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/resequencer.md
   tiers:
@@ -1358,13 +1358,13 @@ rows:
     - EIP §7
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-014
   title: Composed Message Processor
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/composed-message-processor.md
   tiers:
@@ -1376,13 +1376,13 @@ rows:
     - EIP §7
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-015
   title: Scatter-Gather
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/scatter-gather.md
   tiers:
@@ -1394,13 +1394,13 @@ rows:
     - EIP §7
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-016
   title: Routing Slip
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/routing-slip.md
   tiers:
@@ -1412,7 +1412,7 @@ rows:
     - EIP §7
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-017
@@ -1436,7 +1436,7 @@ rows:
 - id: EIP-018
   title: Message Store
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/message-store.md
   tiers:
@@ -1449,13 +1449,13 @@ rows:
     ring1:
     - BCBS 239 §6
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-019
   title: Smart Proxy
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/smart-proxy.md
   tiers:
@@ -1467,13 +1467,13 @@ rows:
     - EIP §11
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-020
   title: Test Message
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/test-message.md
   tiers:
@@ -1486,13 +1486,13 @@ rows:
     - EIP §11
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-021
   title: Channel Purger
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/channel-purger.md
   tiers:
@@ -1504,13 +1504,13 @@ rows:
     - EIP §11
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-022
   title: Durable Subscriber
   category: eip
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/eip/durable-subscriber.md
   tiers:
@@ -1522,7 +1522,7 @@ rows:
     - EIP §10
     ring1: []
     ring2: []
-  last_reviewed: 2026-05-09
+  last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
 - id: EIP-023
