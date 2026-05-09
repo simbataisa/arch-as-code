@@ -1,0 +1,80 @@
+# DAB Light Submission Reviewers Configuration
+#
+# This file defines who must review and approve this Light DAB submission.
+# Update the TODO placeholders with actual team members and roles.
+#
+# Light DAB typically requires fewer reviewers than Full DAB.
+# Required Approvers:
+# - primary_reviewer: Must approve before merge
+# - technical_reviewers: At least one must approve
+# - stakeholder_reviewers: At least one must approve (optional for light DAB)
+
+# Primary reviewer - usually the domain lead or senior architect
+primary_reviewer: TODO_PRIMARY_REVIEWER_GITLAB_USERNAME
+  # Example: payments_lead
+  # For payments domain: @payments-lead
+  # For core banking: @core-banking-lead
+
+# Technical reviewers - architects and senior engineers
+# For Light DAB, typically 1-2 reviewers sufficient
+technical_reviewers:
+  - TODO_ARCHITECT_1_GITLAB_USERNAME
+    # Example: @payments-architect-1
+
+# Stakeholder reviewers - business leads, compliance
+# For Light DAB, can be optional or minimal
+stakeholder_reviewers:
+  - TODO_DOMAIN_LEAD_GITLAB_USERNAME
+    # Example: @domain-lead
+
+# Approval requirements configuration
+approval_required:
+  # Does the primary reviewer MUST approve?
+  primary: true
+
+  # How many technical reviewers must approve?
+  # Options: "all", "at_least_one", or specific number
+  technical: at_least_one
+
+  # How many stakeholder reviewers must approve?
+  # Options: "all", "at_least_one", "optional"
+  stakeholder: at_least_one
+
+# Optional: Specific review requirements
+review_config:
+  # Days allowed for review before escalation
+  review_deadline_days: 3
+
+  # Auto-escalate to security if concerns found?
+  escalate_to_security: false
+
+  # Require all comments to be addressed?
+  require_all_comments_resolved: true
+
+  # Allow self-approval?
+  allow_self_approval: false
+
+# Metadata (for automation)
+metadata:
+  domain: TODO_DOMAIN_NAME
+    # Example: payments, core-banking, digital-channels, etc.
+
+  project: TODO_PROJECT_NAME
+    # Example: payment-api-enhancement, etc.
+
+  year: TODO_SUBMISSION_YEAR
+    # Example: 2026
+
+  submission_type: light-dab
+
+  created_date: TODO_DATE_YYYY_MM_DD
+    # Example: 2026-03-08
+
+# Notes for reviewers
+notes: |
+  TODO: Add specific guidance for reviewers here.
+
+  Examples:
+  - "This is a Light DAB for [Project Name]"
+  - "Key focus areas: [specific concerns]"
+  - "Timeline: [when decision needed]"

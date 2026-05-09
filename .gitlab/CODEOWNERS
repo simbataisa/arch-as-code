@@ -1,0 +1,56 @@
+# CODEOWNERS for Techcombank Architecture-As-Code Repository
+# For more information: https://docs.gitlab.com/ee/user/project/code_owners.html
+
+# Governance & Repository Structure
+/governance/                                    @techcombank/ea-board
+/.gitlab/                                       @techcombank/ea-board
+/README.md                                      @techcombank/ea-board
+
+# Design Approval Board (DAB) Submissions
+**/dab/**/                                      @techcombank/ea-board
+**/dab/**/01-business-context.md                @techcombank/ea-board
+**/dab/**/02-current-state-architecture.md      @techcombank/ea-board
+**/dab/**/03-high-level-architecture.md         @techcombank/ea-board
+**/dab/**/04-detailed-design.md                 @techcombank/ea-board
+**/dab/**/05-migration-strategy.md              @techcombank/ea-board
+**/dab/**/06-operational-readiness.md           @techcombank/ea-board
+**/dab/**/07-financial-analysis.md              @techcombank/ea-board
+**/dab/**/08-security-design.md                 @techcombank/ea-board @techcombank/security-board
+**/dab/**/09-dab-light-assessment.md            @techcombank/ea-board @techcombank/ea-directors
+**/dab/**/10-risk-register.md                   @techcombank/ea-board
+**/dab/**/architecture-diagrams/                @techcombank/ea-board
+**/dab/**/openapi/                              @techcombank/ea-board
+
+# Knowledge Base - Governance
+/docs/governance/                               @techcombank/ea-board
+/docs/governance/dab-process.md                 @techcombank/ea-board
+/docs/governance/architecture-standards.md      @techcombank/ea-board
+/docs/governance/exception-process.md           @techcombank/ea-board
+
+# Knowledge Base - Principles & Strategy
+/docs/principles/                               @techcombank/ea-board
+/docs/strategy/                                 @techcombank/ea-board
+
+# Knowledge Base - Patterns & Standards
+/docs/patterns/                                 @techcombank/ea-board
+/docs/standards/                                @techcombank/ea-board
+
+# Knowledge Base - Domain Architecture
+/docs/domains/payments/                         @techcombank/payments-architects
+/docs/domains/core-banking/                     @techcombank/core-banking-architects
+/docs/domains/digital-channels/                 @techcombank/digital-channels-architects
+/docs/domains/risk-management/                  @techcombank/risk-management-architects
+/docs/domains/data-platform/                    @techcombank/data-platform-architects
+/docs/domains/lending/                          @techcombank/lending-architects
+/docs/domains/wealth-management/                @techcombank/wealth-management-architects
+
+# Knowledge Base - Security & Compliance
+/docs/security/                                 @techcombank/security-board
+/docs/compliance/                               @techcombank/ea-board
+
+# Knowledge Base - Operations & Support
+/docs/operations/                               @techcombank/platform-ops
+/docs/support/                                  @techcombank/ea-board
+
+# Default ownership
+*                                               @techcombank/ea-board

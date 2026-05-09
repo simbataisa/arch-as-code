@@ -1,0 +1,90 @@
+# DAB Submission Reviewers Configuration
+#
+# This file defines who must review and approve this DAB submission.
+# Update the TODO placeholders with actual team members and roles.
+#
+# Required Approvers:
+# - primary_reviewer: Must approve before merge
+# - technical_reviewers: At least one (or all) must approve
+# - stakeholder_reviewers: At least one must approve
+
+# Primary reviewer - usually the domain lead or chief architect
+# This person has final authority over the architecture decision
+primary_reviewer: TODO_PRIMARY_REVIEWER_GITLAB_USERNAME
+  # Example: payments_lead
+  # For payments domain: @payments-lead
+  # For core banking: @core-banking-lead
+
+# Technical reviewers - architects and senior engineers
+# Ensure deep technical review of design decisions
+technical_reviewers:
+  - TODO_ARCHITECT_1_GITLAB_USERNAME
+    # Example: @payments-architect-1
+  - TODO_ARCHITECT_2_GITLAB_USERNAME
+    # Example: @payments-architect-2
+  - TODO_OPTIONAL_ARCHITECT_3_GITLAB_USERNAME
+    # Optional: Add additional architects for cross-domain reviews
+
+# Stakeholder reviewers - business leads, compliance, security
+# Ensure alignment with business needs and regulatory requirements
+stakeholder_reviewers:
+  - TODO_DOMAIN_LEAD_GITLAB_USERNAME
+    # Example: @domain-lead
+  - TODO_SECURITY_OFFICER_GITLAB_USERNAME
+    # Example: @security-officer (required if handling sensitive data)
+  - TODO_OPTIONAL_COMPLIANCE_GITLAB_USERNAME
+    # Optional: Compliance officer if handling regulated data
+
+# Approval requirements configuration
+approval_required:
+  # Does the primary reviewer MUST approve?
+  primary: true
+
+  # How many technical reviewers must approve?
+  # Options: "all", "at_least_one", or specific number like 2
+  technical: at_least_one
+
+  # How many stakeholder reviewers must approve?
+  # Options: "all", "at_least_one"
+  stakeholder: at_least_one
+
+# Optional: Specific review requirements
+review_config:
+  # Days allowed for review before escalation
+  review_deadline_days: 5
+
+  # Auto-escalate to CISO if security concerns found?
+  escalate_to_security: true
+
+  # Require all comments to be addressed?
+  require_all_comments_resolved: true
+
+  # Allow self-approval? (typically false)
+  allow_self_approval: false
+
+# Metadata (for automation)
+metadata:
+  domain: TODO_DOMAIN_NAME
+    # Example: payments, core-banking, digital-channels, etc.
+
+  project: TODO_PROJECT_NAME
+    # Example: payment-orchestration, account-aggregation, etc.
+
+  year: TODO_SUBMISSION_YEAR
+    # Example: 2026
+
+  submission_type: TODO_DAB_TYPE
+    # Example: full-dab or light-dab
+
+  created_date: TODO_DATE_YYYY_MM_DD
+    # Example: 2026-03-08
+
+# Notes for reviewers
+notes: |
+  TODO: Add specific guidance for reviewers here.
+
+  Examples:
+  - "This submission involves payment processing - security review is critical."
+  - "Cross-domain impact: ensure alignment with core banking architecture."
+  - "Legacy system integration: review compatibility concerns."
+  - "Please focus on: [specific architectural concern]"

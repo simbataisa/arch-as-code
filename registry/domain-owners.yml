@@ -1,0 +1,299 @@
+# Techcombank Domain Architecture Ownership Registry
+#
+# This registry defines the organizational structure for all architecture domains.
+# Each domain has a lead architect and designated review team.
+#
+# Last Updated: 2026-03-08
+# Maintained by: Architecture Governance Board
+
+domains:
+  # Domain 1: Payments
+  payments:
+    display_name: "Payment Technology"
+    department: "Payment Technology Department"
+    domain_description: "All payment processing, routing, settlement, and reconciliation systems"
+
+    domain_lead:
+      name: "Payments Domain Lead"
+      email: "payments-lead@techcombank.com"
+      gitlab_username: "payments_lead"
+      role: "Chief Architect - Payments"
+
+    gitlab_group: "techcombank/payments-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "payments-architect-1"
+        expertise: ["Payment APIs", "Settlement Systems", "Reconciliation"]
+        availability: "Active"
+
+      - name: "Senior Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "payments-architect-2"
+        expertise: ["Payment Routing", "Liquidity Management", "Risk Controls"]
+        availability: "Active"
+
+      - name: "Architect 3"
+        email: "architect3@techcombank.com"
+        gitlab_username: "payments-architect-3"
+        expertise: ["Legacy Integration", "ACH Systems", "SWIFT"]
+        availability: "Active"
+
+    slack_channel: "#payments-architecture"
+    meet_cadence: "Weekly - Mondays 10:00 AM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+  # Domain 2: Core Banking
+  core-banking:
+    display_name: "Core Banking Technology"
+    department: "Core Banking Technology Department"
+    domain_description: "Accounts, deposits, ledger, customer data, core transaction processing"
+
+    domain_lead:
+      name: "Core Banking Domain Lead"
+      email: "core-banking-lead@techcombank.com"
+      gitlab_username: "core_banking_lead"
+      role: "Chief Architect - Core Banking"
+
+    gitlab_group: "techcombank/core-banking-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "core-banking-architect-1"
+        expertise: ["Account Management", "Ledger Systems", "Data Consistency"]
+        availability: "Active"
+
+      - name: "Senior Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "core-banking-architect-2"
+        expertise: ["Mainframe Integration", "Legacy Systems", "COBOL Bridge"]
+        availability: "Active"
+
+      - name: "Architect 3"
+        email: "architect3@techcombank.com"
+        gitlab_username: "core-banking-architect-3"
+        expertise: ["Database Performance", "Replication", "Backup/Recovery"]
+        availability: "Active"
+
+    slack_channel: "#core-banking-architecture"
+    meet_cadence: "Bi-weekly - Tuesdays 09:00 AM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+  # Domain 3: Digital Channels
+  digital-channels:
+    display_name: "Digital Technology"
+    department: "Digital Technology Department"
+    domain_description: "Web platforms, mobile apps, user portals, digital customer experience"
+
+    domain_lead:
+      name: "Digital Channels Domain Lead"
+      email: "digital-lead@techcombank.com"
+      gitlab_username: "digital_lead"
+      role: "Chief Architect - Digital Channels"
+
+    gitlab_group: "techcombank/digital-channels-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "digital-channels-architect-1"
+        expertise: ["Frontend Architecture", "Web Applications", "UX Systems"]
+        availability: "Active"
+
+      - name: "Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "digital-channels-architect-2"
+        expertise: ["Mobile Development", "iOS/Android", "Cross-platform"]
+        availability: "Active"
+
+    slack_channel: "#digital-architecture"
+    meet_cadence: "Weekly - Thursdays 02:00 PM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+  # Domain 4: Risk Management
+  risk-management:
+    display_name: "Risk Technology"
+    department: "Risk Technology Department"
+    domain_description: "Credit risk, market risk, operational risk, compliance, AML/KYC"
+
+    domain_lead:
+      name: "Risk Management Domain Lead"
+      email: "risk-lead@techcombank.com"
+      gitlab_username: "risk_lead"
+      role: "Chief Architect - Risk Management"
+
+    gitlab_group: "techcombank/risk-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "risk-architect-1"
+        expertise: ["Credit Risk Models", "Scoring", "Decision Engines"]
+        availability: "Active"
+
+      - name: "Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "risk-architect-2"
+        expertise: ["Compliance Systems", "AML", "KYC", "Regulatory Reporting"]
+        availability: "Active"
+
+    slack_channel: "#risk-architecture"
+    meet_cadence: "Bi-weekly - Wednesdays 08:00 AM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+  # Domain 5: Data Platform
+  data-platform:
+    display_name: "Data Engineering"
+    department: "Data Engineering Department"
+    domain_description: "Data warehouse, analytics, big data, machine learning, data governance"
+
+    domain_lead:
+      name: "Data Platform Domain Lead"
+      email: "data-lead@techcombank.com"
+      gitlab_username: "data_lead"
+      role: "Chief Architect - Data Platform"
+
+    gitlab_group: "techcombank/data-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "data-architect-1"
+        expertise: ["Data Warehouse", "ETL/ELT", "Data Models"]
+        availability: "Active"
+
+      - name: "Senior Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "data-architect-2"
+        expertise: ["Big Data", "Spark", "Distributed Computing", "ML Platforms"]
+        availability: "Active"
+
+    slack_channel: "#data-architecture"
+    meet_cadence: "Weekly - Mondays 03:00 PM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+  # Domain 6: Lending
+  lending:
+    display_name: "Lending Technology"
+    department: "Lending Technology Department"
+    domain_description: "Loan origination, underwriting, servicing, collections, portfolio management"
+
+    domain_lead:
+      name: "Lending Domain Lead"
+      email: "lending-lead@techcombank.com"
+      gitlab_username: "lending_lead"
+      role: "Chief Architect - Lending"
+
+    gitlab_group: "techcombank/lending-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "lending-architect-1"
+        expertise: ["Loan Origination", "Underwriting", "Document Management"]
+        availability: "Active"
+
+      - name: "Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "lending-architect-2"
+        expertise: ["Loan Servicing", "Collections", "Portfolio Analytics"]
+        availability: "Active"
+
+    slack_channel: "#lending-architecture"
+    meet_cadence: "Bi-weekly - Fridays 10:00 AM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+  # Domain 7: Wealth Management
+  wealth-management:
+    display_name: "Wealth Technology"
+    department: "Wealth Technology Department"
+    domain_description: "Investment management, portfolio services, advisory systems, private banking"
+
+    domain_lead:
+      name: "Wealth Management Domain Lead"
+      email: "wealth-lead@techcombank.com"
+      gitlab_username: "wealth_lead"
+      role: "Chief Architect - Wealth Management"
+
+    gitlab_group: "techcombank/wealth-architects"
+
+    architects:
+      - name: "Senior Architect 1"
+        email: "architect1@techcombank.com"
+        gitlab_username: "wealth-architect-1"
+        expertise: ["Portfolio Management", "Investment Systems", "Trading"]
+        availability: "Active"
+
+      - name: "Architect 2"
+        email: "architect2@techcombank.com"
+        gitlab_username: "wealth-architect-2"
+        expertise: ["Advisory Engines", "Private Banking", "Client Management"]
+        availability: "Active"
+
+    slack_channel: "#wealth-architecture"
+    meet_cadence: "Monthly - 3rd Friday 11:00 AM UTC"
+    dab_submission_process: "Light: 3 days, Full: 7 days"
+
+# Cross-Domain Coordinators
+cross_domain_roles:
+  chief_architect:
+    name: "Chief Information Architect"
+    email: "chief-architect@techcombank.com"
+    gitlab_username: "chief_architect"
+    role: "Chief Architect - Enterprise"
+    responsibilities:
+      - "Overall architecture governance"
+      - "Cross-domain coordination"
+      - "Technology standards"
+      - "Final escalation authority"
+
+  security_architect:
+    name: "Chief Security Architect"
+    email: "security-architect@techcombank.com"
+    gitlab_username: "security_architect"
+    role: "Chief Security Architect"
+    responsibilities:
+      - "Security review of all DABs"
+      - "Compliance verification"
+      - "Threat modeling guidance"
+      - "Encryption and access control standards"
+
+  compliance_officer:
+    name: "Chief Compliance Officer"
+    email: "compliance-officer@techcombank.com"
+    gitlab_username: "compliance_officer"
+    role: "Chief Compliance Officer"
+    responsibilities:
+      - "Regulatory compliance verification"
+      - "Audit coordination"
+      - "Policy enforcement"
+      - "Regulatory reporting"
+
+# Escalation Path
+escalation:
+  level_1: "Domain Architect"
+  level_2: "Domain Lead"
+  level_3: "Chief Architect"
+  level_4: "CISO / Compliance Officer"
+  level_5: "CIO"
+
+# DAB Review Guidelines
+dab_review_guidelines:
+  average_review_time_light_dab: "3 business days"
+  average_review_time_full_dab: "7 business days"
+  approval_required: "Primary reviewer + at least one technical reviewer"
+  escalation_trigger: "No approval after 5 days (Light) or 10 days (Full)"
+  ciso_required: "Yes (if handling sensitive data or payment systems)"
+  compliance_required: "Yes (if handling regulated data or compliance-critical system)"
+
+# Repository Information
+repository:
+  name: "Arch-As-Code"
+  url: "https://gitlab.techcombank.com/architecture/arch-as-code"
+  main_branch: "main"
+  dab_location: "domains/{domain}/dab/{year}/{project}/"
+  registry_location: "registry/"
+  last_updated: "2026-03-08"
+  updated_by: "architecture-bot"

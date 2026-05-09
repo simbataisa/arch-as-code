@@ -1,0 +1,17 @@
+# Architecture-As-Code: Toolchain Dependencies
+# ================================================
+# Dependencies for all AaC scripts.
+#
+# Setup:
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+
+# --- Core ---
+PyYAML>=6.0,<7.0              # YAML parsing (openapi-to-markdown, reviewers)
+requests>=2.31,<3.0            # GitLab API calls (assign-reviewers)
+
+# --- Optional: Enhanced validation ---
+# Uncomment if you want to validate OpenAPI specs before rendering
+# openapi-spec-validator>=0.7,<1.0
+# jsonschema>=4.20,<5.0

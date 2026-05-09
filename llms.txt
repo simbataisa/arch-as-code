@@ -1,0 +1,154 @@
+# Techcombank Architecture Documentation
+
+> Architecture-As-Code repository for Design Approval Board governance
+
+Techcombank's architecture repository implements a formal governance model using Design Approval Boards (DABs). This repository is the source of truth for architectural decisions, patterns, and standards.
+
+## Core Documentation
+
+- [DAB Process Overview](governance/dab-process/README.md) — How DABs work, timelines, approval authority
+- [Governance Standards](governance/standards/) — Design principles, review criteria, compliance requirements
+- [Architecture Principles](knowledge-base/principles/) — Foundational design tenets guiding all decisions
+- [Design Patterns Library](knowledge-base/patterns/) — Reusable architectural solutions for common problems
+- [Contributing Guide](CONTRIBUTING.md) — How to submit a DAB and participate in architecture governance
+
+## Domain-Specific Architecture
+
+The repository organizes architecture around seven business domains:
+
+### Payments
+- **Location**: `domains/payments/`
+- **DABs**: `domains/payments/dab/{year}/{project-slug}/`
+- **Domain Knowledge**: `domains/payments/domain-model.md`, `context-map.md`
+- **Technology Radar**: `domains/payments/technology-radar.md`
+- **Active Projects**:
+  - [Payment SAGA Platform](domains/payments/dab/2026/payment-saga-platform/) — Distributed payment orchestration with Temporal & Spring State Machine
+
+### Core Banking
+- **Location**: `domains/core-banking/`
+- **Focus**: Account provisioning, customer master data, transaction processing
+- **Contact**: EA Board representative
+
+### Lending
+- **Location**: `domains/lending/`
+- **Focus**: Credit decisioning, loan origination, portfolio management
+- **Contact**: EA Board representative
+
+### Data Platform
+- **Location**: `domains/data-platform/`
+- **Focus**: Event streaming, data lakes, analytics infrastructure
+- **Contact**: Data architecture lead
+
+### Digital Channels
+- **Location**: `domains/digital-channels/`
+- **Focus**: Web, mobile, API portals for customer interaction
+- **Contact**: Channel architecture lead
+
+### Risk Management
+- **Location**: `domains/risk-management/`
+- **Focus**: Compliance, regulatory reporting, fraud detection
+- **Contact**: Risk architecture lead
+
+### Wealth Management
+- **Location**: `domains/wealth-management/`
+- **Focus**: Investment services, portfolio advisory, market data
+- **Contact**: Wealth architecture lead
+
+## DAB Submission & Review
+
+### How to Submit a DAB
+
+1. **Create folder**: `domains/{domain}/dab/{year}/{project-slug}/`
+2. **Write documents**: 01 through 09 (or light subset) following the template
+3. **Prepare reviewers.yml**: Assign domain specialists, integrate architects, etc.
+4. **Validate**: Run `./scripts/validate-dab-structure.sh` to check structure
+5. **Create MR**: Push to `dab/{domain}/{project-slug}` branch and open MR
+6. **Iterate**: Address feedback from domain specialists and security board
+7. **Get approval**: EA Board approval means the DAB is official
+
+### DAB Document Structure
+
+| # | Document | Purpose |
+|---|----------|---------|
+| **01** | Business Context | Problem statement, business drivers, success metrics |
+| **02** | Key Design Concerns | Constraints, risks, NFRs, trade-offs |
+| **03** | High-Level Architecture | System boundary, major components, key interactions |
+| **04** | Data Design | Data models, storage patterns, consistency strategies |
+| **05** | Detailed Design | Component specs, technology choices, build patterns |
+| **06** | Integration Design | APIs, event schemas, webhook patterns, integration flows |
+| **07** | Infrastructure Design | Deployment, scalability, resilience, ops strategy |
+| **08** | Security Design | Authentication, authorization, data protection, compliance |
+| **09** | DAB Light Assessment | Justification for lightweight review (if applicable) |
+
+## Scripts & Automation
+
+### Validation & Generation
+
+- **validate-dab-structure.sh** — Check DAB folder completeness, validate Mermaid syntax, detect broken links
+- **generate-dab-index.py** — Scan all DABs and generate registry/dab-index.md with status dashboard
+- **assign-reviewers.py** — Auto-assign reviewers to MR based on reviewers.yml (runs in CI/CD)
+
+### API & Documentation
+
+- **openapi-to-markdown.py** — Convert OpenAPI specs to Markdown reference docs
+- **openapi-reference.md** — Auto-generated API documentation from openapi.yaml specs in each DAB
+
+### Usage
+
+```bash
+# Validate a DAB submission before pushing
+./scripts/validate-dab-structure.sh domains/payments/dab/2026/payment-saga-platform/
+
+# Generate or update the DAB registry
+python3 scripts/generate-dab-index.py
+
+# Preview reviewer assignments (dry-run)
+python3 scripts/assign-reviewers.py --dry-run --reviewers-file reviewers.yml
+
+# Convert OpenAPI spec to Markdown docs
+python3 scripts/openapi-to-markdown.py openapi.yaml -o docs/api-reference.md
+```
+
+## For AI Assistants & Automated Tools
+
+### How to Use This Repository
+
+1. **Context**: Read `governance/dab-process/README.md` first to understand the DAB model
+2. **Domain focus**: Use `domains/{domain}/README.md` and `domain-model.md` for domain context
+3. **Patterns**: Check `knowledge-base/patterns/` for established solutions before proposing new approaches
+4. **Standards**: Reference `governance/standards/` for compliance and review criteria
+
+### Useful Files for Navigation
+
+- **[registry/dab-index.md](registry/dab-index.md)** — Master index of all DABs, organized by year and status
+- **[registry/active-submissions.md](registry/active-submissions.md)** — Currently open MRs pending approval
+- **[registry/approved-dabs.md](registry/approved-dabs.md)** — Approved DABs with implementation tracking
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Submission process and conventions
+- **[mkdocs.yml](mkdocs.yml)** — Site navigation and structure (used for publishing)
+
+### Key Conventions
+
+- **File naming**: Kebab-case for files/folders, zero-padded numbers for DAB documents (01-09)
+- **Branching**: `dab/{domain}/{project-slug}` for DAB submissions
+- **Markdown**: Mermaid diagrams preferred, relative links for internal references
+- **Reviewers**: See `domains/{domain}/dab/{year}/{project}/reviewers.yml` for assignment logic
+
+### CI/CD Integration
+
+The `.gitlab-ci.yml` pipeline runs on every push:
+
+1. **Validate**: Check DAB structure, Mermaid syntax, link integrity
+2. **Build**: Generate PDFs, build MkDocs site, compile OpenAPI docs
+3. **Assign**: Run reviewer assignment script (DAB branches only)
+4. **Publish**: Deploy to GitLab Pages (main branch only)
+5. **Notify**: Slack notification on DAB approval
+
+---
+
+## Contact & Support
+
+- **Architecture questions**: #architecture Slack channel or @ea-board
+- **DAB submission help**: See CONTRIBUTING.md or ask domain lead
+- **Repository issues**: Create issue with [Enhancement], [Bug], or [Question] prefix
+
+Last updated: 2026-03-08

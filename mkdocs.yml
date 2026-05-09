@@ -1,0 +1,204 @@
+site_name: Techcombank Architecture
+site_description: Architecture-As-Code repository with Design Approval Board governance
+site_author: Techcombank EA Team
+site_url: https://techcombank.gitlab.io/architecture
+
+repo_name: architecture
+repo_url: https://gitlab.com/techcombank/architecture
+edit_uri: edit/main/docs/
+
+docs_dir: .
+site_dir: ./public
+
+theme:
+  name: material
+  custom_dir: overrides
+  palette:
+    - scheme: light
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: dark
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.select
+    - content.tooltips
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Overview: README.md
+    - Contributing Guide: CONTRIBUTING.md
+    - DAB Process: governance/dab-process/README.md
+
+  - Governance:
+    - Design Approval Board: governance/dab-process/README.md
+    - Standards & Criteria: governance/standards/
+    - Review Process: governance/dab-process/README.md
+    - CODEOWNERS: .gitlab/CODEOWNERS
+
+  - Registry:
+    - DAB Index: registry/dab-index.md
+    - Active Submissions: registry/active-submissions.md
+    - Approved DABs: registry/approved-dabs.md
+
+  - Architecture Knowledge Base:
+    - Principles: knowledge-base/principles/README.md
+    - Design Patterns: knowledge-base/patterns/
+    - Technology Radar: knowledge-base/technology-radar.md
+    - Glossary: knowledge-base/glossary.md
+
+  - Domain Architectures:
+    - Payments:
+      - Domain Overview: domains/payments/README.md
+      - Domain Model: domains/payments/domain-model.md
+      - Context Map: domains/payments/context-map.md
+      - Technology Radar: domains/payments/technology-radar.md
+      - Active DABs:
+        - Payment SAGA Platform: domains/payments/dab/2026/payment-saga-platform/03-high-level-architecture.md
+
+    - Core Banking:
+      - Domain Overview: domains/core-banking/README.md
+      - Domain Model: domains/core-banking/domain-model.md
+      - Context Map: domains/core-banking/context-map.md
+
+    - Lending:
+      - Domain Overview: domains/lending/README.md
+      - Domain Model: domains/lending/domain-model.md
+      - Context Map: domains/lending/context-map.md
+
+    - Data Platform:
+      - Domain Overview: domains/data-platform/README.md
+      - Domain Model: domains/data-platform/domain-model.md
+      - Technology Radar: domains/data-platform/technology-radar.md
+
+    - Digital Channels:
+      - Domain Overview: domains/digital-channels/README.md
+      - Domain Model: domains/digital-channels/domain-model.md
+
+    - Risk Management:
+      - Domain Overview: domains/risk-management/README.md
+      - Domain Model: domains/risk-management/domain-model.md
+
+    - Wealth Management:
+      - Domain Overview: domains/wealth-management/README.md
+      - Domain Model: domains/wealth-management/domain-model.md
+
+  - API Reference: openapi-api-docs.md
+
+  - Scripts & Automation: scripts/README.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - codehilite:
+      linenums: false
+  - def_list
+  - extra
+  - footnotes
+  - md_in_html
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.blocks.admonition
+  - pymdownx.blocks.details
+  - pymdownx.blocks.html
+  - pymdownx.blocks.tab:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      block_tag: 'div'
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:pymdownx.emoji.twemoji
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      use_pygments: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+        - name: plantuml
+          class: plantuml
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object:pymdownx.slugs.slugify
+        case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+plugins:
+  - search:
+      lang: en
+  - mermaid2
+  - exclude:
+      glob:
+        - ".*"
+        - "*.pyc"
+        - ".venv/**/*"
+        - ".git/**/*"
+        - "*.egg-info/**/*"
+        - "__pycache__/**/*"
+        - "node_modules/**/*"
+        - ".gitlab/**/*"
+        - "templates/**/*"
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/slack
+      link: https://techcombank.slack.com/archives/C0XXXXXX
+    - icon: fontawesome/brands/gitlab
+      link: https://gitlab.com/techcombank/architecture
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mermaid-config.js
+
+copyright: >
+  Copyright &copy; 2024 - 2026 Techcombank.
+  Architecture is managed by Enterprise Architecture Board.

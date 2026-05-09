@@ -1,0 +1,410 @@
+# ============================================================
+# Techcombank Architecture — Master CI/CD Pipeline
+# ============================================================
+#
+# Pipeline Stages:
+#   1. validate  — Lint Markdown, validate DAB structure, check links
+#   2. build     — Generate PDFs/DOCX, build MkDocs site, compile OpenAPI docs
+#   3. assign    — Run reviewer assignment script for DAB MRs
+#   4. publish   — Deploy to GitLab Pages (main branch only)
+#   5. notify    — Send Slack notifications on approval/rejection
+#
+# Conventions:
+#   - DAB branches: dab/{domain}/{project-slug}
+#   - Main branch: main (protected, requires approvals)
+#   - Rules: Use 'rules:' for conditional execution per job
+#
+
+variables:
+  REGISTRY: $CI_REGISTRY
+  IMAGE: $CI_REGISTRY_IMAGE
+  GIT_DEPTH: 0  # Full history for changelog generation
+
+stages:
+  - validate
+  - build
+  - assign
+  - publish
+  - notify
+
+# ============================================================
+# STAGE 1: VALIDATE
+# ============================================================
+
+validate:markdown-lint:
+  stage: validate
+  image: node:18-alpine
+  before_script:
+    - npm install --global markdownlint-cli
+  script:
+    - echo "🔍 Linting Markdown files..."
+    - |
+      markdownlint \
+        --ignore node_modules \
+        --ignore .venv \
+        --ignore .git \
+        --config .markdownlint.json \
+        '**/*.md' || exit 1
+    - echo "✅ All Markdown files are valid"
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|dab\/)/'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  allow_failure: false
+
+validate:dab-structure:
+  stage: validate
+  image: alpine:3.18
+  before_script:
+    - apk add --no-cache bash
+  script:
+    - echo "🔍 Validating DAB structure..."
+    - |
+      if [[ "$CI_COMMIT_BRANCH" =~ ^dab/ ]]; then
+        # Find the DAB folder
+        DAB_PATH=$(find . -type d -path "*/dab/*/$(echo $CI_COMMIT_BRANCH | sed 's/^dab\///' | sed 's/\//\//g')*" | head -1)
+        if [ -z "$DAB_PATH" ]; then
+          echo "❌ Could not find DAB folder for branch: $CI_COMMIT_BRANCH"
+          exit 1
+        fi
+        echo "📁 Found DAB: $DAB_PATH"
+        ./scripts/validate-dab-structure.sh "$DAB_PATH" || exit 1
+      else
+        echo "ℹ️  Skipping DAB validation (not a DAB branch)"
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^dab\//'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^dab\//'
+      when: always
+    - when: never
+  allow_failure: false
+
+validate:mermaid-syntax:
+  stage: validate
+  image: node:18-alpine
+  before_script:
+    - npm install --global mermaid-cli
+    - apk add --no-cache bash grep
+  script:
+    - echo "🔍 Validating Mermaid diagrams..."
+    - |
+      MERMAID_FILES=$(find . -type f -name "*.md" ! -path "./node_modules/*" ! -path "./.venv/*" -exec grep -l '```mermaid' {} \;)
+      if [ -z "$MERMAID_FILES" ]; then
+        echo "ℹ️  No Mermaid diagrams found"
+        exit 0
+      fi
+      FAIL_COUNT=0
+      for file in $MERMAID_FILES; do
+        echo "📄 Checking: $file"
+        # Extract and validate Mermaid blocks (basic check for common syntax)
+        if grep -Pzo '```mermaid\n[^`]+```' "$file" | grep -q 'graph\|flowchart\|sequenceDiagram\|classDiagram'; then
+          echo "  ✅ Diagram syntax looks valid"
+        else
+          echo "  ⚠️  Could not validate diagram (may be incomplete preview)"
+        fi
+      done
+      echo "✅ Mermaid validation complete"
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|dab\/)/'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  allow_failure: true  # Warnings only, don't block
+
+validate:links:
+  stage: validate
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet requests beautifulsoup4
+  script:
+    - echo "🔍 Checking internal links..."
+    - |
+      python3 << 'EOF'
+      import os
+      import re
+      from pathlib import Path
+
+      # Check markdown links for broken internal references
+      broken_count = 0
+      for md_file in Path(".").rglob("*.md"):
+        if any(part.startswith(".") for part in md_file.parts):
+          continue  # Skip hidden directories
+        with open(md_file, "r", encoding="utf-8", errors="ignore") as f:
+          content = f.read()
+          # Find markdown links: [text](path)
+          for match in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', content):
+            link = match.group(2)
+            # Skip external links and anchors
+            if link.startswith(("http://", "https://", "#")):
+              continue
+            # Resolve relative path
+            target = (md_file.parent / link).resolve()
+            if not target.exists() and not target.with_suffix("").exists():
+              print(f"  ❌ Broken link in {md_file}: {link}")
+              broken_count += 1
+      if broken_count > 0:
+        print(f"\n⚠️  Found {broken_count} broken link(s)")
+        exit(1)
+      else:
+        print("✅ All internal links are valid")
+      EOF
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|dab\/)/'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  allow_failure: true  # Warnings only
+
+validate:yaml:
+  stage: validate
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet pyyaml
+  script:
+    - echo "🔍 Validating YAML files..."
+    - |
+      python3 << 'EOF'
+      import yaml
+      from pathlib import Path
+
+      yaml_files = list(Path(".").rglob("*.yml")) + list(Path(".").rglob("*.yaml"))
+      errors = []
+      for yml_file in yaml_files:
+        if any(part.startswith(".") for part in yml_file.parts):
+          continue
+        try:
+          with open(yml_file, "r") as f:
+            yaml.safe_load(f)
+          print(f"  ✅ {yml_file}")
+        except yaml.YAMLError as e:
+          print(f"  ❌ {yml_file}: {e}")
+          errors.append(str(yml_file))
+      if errors:
+        print(f"\n❌ {len(errors)} YAML file(s) have syntax errors")
+        exit(1)
+      else:
+        print("✅ All YAML files are valid")
+      EOF
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|dab\/)/'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  allow_failure: false
+
+# ============================================================
+# STAGE 2: BUILD
+# ============================================================
+
+build:mkdocs:
+  stage: build
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin
+  script:
+    - echo "🏗️  Building MkDocs site..."
+    - mkdocs build --strict -f mkdocs.yml -d ./public
+    - echo "✅ MkDocs build complete"
+    - ls -lh public/
+  artifacts:
+    paths:
+      - public/
+    expire_in: 30 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+    - when: never
+
+build:openapi-docs:
+  stage: build
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet pyyaml pyyaml-include
+  script:
+    - echo "🏗️  Generating OpenAPI documentation..."
+    - |
+      if [ -f "openapi.yaml" ]; then
+        python3 scripts/openapi-to-markdown.py openapi.yaml -o registry/openapi-reference.md
+        echo "✅ OpenAPI docs generated: registry/openapi-reference.md"
+      else
+        echo "ℹ️  No root-level openapi.yaml found"
+      fi
+      # Also process DAB-specific OpenAPI specs
+      find domains -name "openapi.yaml" | while read openapi_file; do
+        output_dir=$(dirname "$openapi_file")
+        python3 scripts/openapi-to-markdown.py "$openapi_file" -o "$output_dir/openapi-reference.md"
+        echo "✅ Generated: $output_dir/openapi-reference.md"
+      done
+  artifacts:
+    paths:
+      - registry/openapi-reference.md
+      - domains/*/dab/*/*/openapi-reference.md
+    expire_in: 30 days
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|dab\/)/'
+      when: always
+    - when: never
+
+build:dab-registry:
+  stage: build
+  image: python:3.11-slim
+  script:
+    - echo "🏗️  Generating DAB registry..."
+    - python3 scripts/generate-dab-index.py
+    - echo "✅ DAB registry updated"
+    - ls -lh registry/
+  artifacts:
+    paths:
+      - registry/dab-index.md
+      - registry/active-submissions.md
+      - registry/approved-dabs.md
+    expire_in: 30 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|dab\/)/'
+      when: always
+    - when: never
+
+# ============================================================
+# STAGE 3: ASSIGN REVIEWERS
+# ============================================================
+
+assign:reviewers:
+  stage: assign
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet pyyaml requests
+  script:
+    - echo "👥 Assigning DAB reviewers..."
+    - |
+      if [[ "$CI_COMMIT_BRANCH" =~ ^dab/ ]]; then
+        python3 scripts/assign-reviewers.py
+        echo "✅ Reviewer assignment complete"
+      else
+        echo "ℹ️  Not a DAB branch, skipping reviewer assignment"
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^dab\//'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^dab\//'
+      when: on_success
+    - when: never
+  allow_failure: true  # Non-blocking if API unavailable
+
+# ============================================================
+# STAGE 4: PUBLISH
+# ============================================================
+
+publish:pages:
+  stage: publish
+  image: alpine:3.18
+  dependencies:
+    - build:mkdocs
+  script:
+    - echo "📤 Deploying to GitLab Pages..."
+    - test -d public || mkdir public
+    - echo "✅ Deployment ready: $(ls -lh public/ | wc -l) files"
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - when: never
+  environment:
+    name: production
+    url: https://techcombank.gitlab.io/architecture
+    deployment_tier: production
+
+# ============================================================
+# STAGE 5: NOTIFY
+# ============================================================
+
+notify:slack-dab-approval:
+  stage: notify
+  image: curlimages/curl:latest
+  variables:
+    SLACK_WEBHOOK: $SLACK_WEBHOOK_ARCHITECTURE
+  script:
+    - echo "📢 Sending Slack notification..."
+    - |
+      if [[ "$CI_COMMIT_BRANCH" =~ ^dab/ && "$CI_COMMIT_MESSAGE" =~ "Approved" ]]; then
+        curl -X POST "$SLACK_WEBHOOK" \
+          -H 'Content-Type: application/json' \
+          -d "{
+            \"text\": \"✅ DAB Approved: $(echo $CI_COMMIT_BRANCH | sed 's/dab\\///')\",
+            \"attachments\": [
+              {
+                \"color\": \"good\",
+                \"fields\": [
+                  {\"title\": \"Branch\", \"value\": \"$CI_COMMIT_BRANCH\", \"short\": true},
+                  {\"title\": \"Commit\", \"value\": \"$CI_COMMIT_SHORT_SHA\", \"short\": true},
+                  {\"title\": \"MR\", \"value\": \"!$CI_MERGE_REQUEST_IID\", \"short\": true}
+                ]
+              }
+            ]
+          }"
+        echo "✅ Notification sent"
+      else
+        echo "ℹ️  No DAB approval detected, skipping notification"
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^dab\//'
+      when: manual  # Only run on explicit trigger
+    - when: never
+  allow_failure: true
+
+# ============================================================
+# UTILITY JOBS
+# ============================================================
+
+docs:review-preview:
+  stage: build
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin
+  script:
+    - mkdocs build --strict -f mkdocs.yml -d ./public
+  artifacts:
+    paths:
+      - public/
+    expire_in: 7 days
+  environment:
+    name: preview/$CI_MERGE_REQUEST_IID
+    url: https://$CI_PROJECT_NAME-$CI_MERGE_REQUEST_IID.gitlab.io
+    auto_stop_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+    - when: never
+  allow_failure: true
+
+# ============================================================
+# SCHEDULED JOBS
+# ============================================================
+
+schedule:regenerate-indexes:
+  stage: build
+  image: python:3.11-slim
+  script:
+    - echo "🔄 Regenerating architecture indexes..."
+    - python3 scripts/generate-dab-index.py
+    - |
+      git config user.email "bot@techcombank.com"
+      git config user.name "Architecture Bot"
+      git add registry/
+      git commit -m "chore(registry): Regenerate DAB index [skip ci]" || echo "No changes"
+      git push origin main || echo "Failed to push (may be expected)"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+  allow_failure: true

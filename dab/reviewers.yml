@@ -1,0 +1,79 @@
+# ============================================================
+# DAB Reviewers — Project-Specific Assignment
+# ============================================================
+# This file defines the specialist reviewers for THIS project.
+# Fixed DAB chairs are managed via CODEOWNERS (always required).
+#
+# HOW TO USE:
+#   1. Copy this file into your project's dab/ folder
+#   2. Update the project section with your project details
+#   3. Assign reviewers from the appropriate architect pools
+#   4. Commit and push — CI/CD will auto-assign approvers
+#
+# NOTES:
+#   - Use GitLab @username format for all approvers
+#   - 'required' sets the minimum number of approvals per role
+#   - 'files' maps which DAB documents this reviewer covers
+#   - Fixed chairs (EA Board, Security Board) are NOT listed here
+#     because they are enforced via CODEOWNERS on every DAB
+# ============================================================
+
+project:
+  name: "Payment SAGA Platform"
+  domain: "Payments"
+  submitted_by: "@architect-lead"
+  submission_date: "2026-03-08"
+
+# --- Dynamic Reviewers (change per project) ---
+reviewers:
+
+  solution_architecture:
+    files:
+      - "02-key-design-concerns.md"
+      - "03-high-level-architecture.md"
+      - "05-detailed-design.md"
+    approvers:
+      - "@sa-john"             # Primary SA for this project
+      - "@sa-jane"             # Secondary SA (backup)
+    required: 1                # At least 1 SA must approve
+
+  data_architecture:
+    files:
+      - "04-data-design.md"
+    approvers:
+      - "@data-arch-1"
+    required: 1
+
+  integration_architecture:
+    files:
+      - "06-integration-design.md"
+      - "openapi.yaml"
+      - "openapi-reference.md"
+    approvers:
+      - "@sa-alex"             # Integration specialist
+    required: 1
+
+  infrastructure:
+    files:
+      - "07-infrastructure-design.md"
+    approvers:
+      - "@infra-arch-1"
+    required: 1
+
+  business_review:
+    files:
+      - "01-business-context.md"
+    approvers:
+      - "@ba-lead"
+    required: 1
+
+# ============================================================
+# FIXED REVIEWERS (reference only — enforced via CODEOWNERS)
+# ============================================================
+# The following are ALWAYS required and auto-assigned by GitLab
+# via the CODEOWNERS file. Listed here for documentation only.
+#
+#   DAB Chair:            @techcombank/ea-board         (1 required)
+#   Security Review:      @techcombank/security-board   (1 required)
+#   Assessment Sign-off:  @techcombank/ea-directors     (1 required)
+# ============================================================
