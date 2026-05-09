@@ -2594,3 +2594,153 @@ rows:
   last_reviewed: '2026-05-09'
   notes: Stub — Wave 1
   target_wave: 1
+- id: OBS-001
+  title: OpenTelemetry Instrumentation
+  category: observability
+  status: Draft
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/otel-instrumentation.md
+  tiers: [T0, T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-92]
+    ring1: [BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: OBS-002
+  title: Distributed Trace Propagation
+  category: observability
+  status: Draft
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/distributed-trace-propagation.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [W3C TraceContext]
+    ring1: [BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: OBS-003
+  title: Structured Logging Standard
+  category: observability
+  status: Draft
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/structured-logging-standard.md
+  tiers: [T0, T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-92, PCI-DSS §10.3]
+    ring1: [BCBS 239 §6]
+    ring2: [Decree 13/2023 Art. 9, SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: OBS-004
+  title: SLO Alerting
+  category: observability
+  status: Draft
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/slo-alerting.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Google SRE Book]
+    ring1: [BCBS 230 Principle 2]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: OBS-005
+  title: Async Middleware Observability
+  category: observability
+  status: Draft
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/async-middleware-observability.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [OpenTelemetry Specification]
+    ring1: [BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: PLT-001
+  title: Service Mesh Traffic Management
+  category: platform
+  status: Draft
+  owner: platform-lead
+  path: knowledge-base/patterns/platform/service-mesh-traffic.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-204]
+    ring1: [BCBS 230 Principle 4]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: PLT-002
+  title: CNCF Stack Selection
+  category: platform
+  status: Draft
+  owner: ea-board
+  path: knowledge-base/patterns/platform/cncf-stack-selection.md
+  tiers: [T0, T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-53 SA-4]
+    ring1: [BCBS 230 Principle 7]
+    ring2: [SBV Circular 09/2020 §III]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: INT-010
+  title: AsyncAPI Specification
+  category: integration
+  status: Draft
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/asyncapi-specification.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [AsyncAPI 3.0 Specification]
+    ring1: [BCBS 239 §6, SWIFT CSP 2024 §5]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: INT-011
+  title: CloudEvents Envelope Standard
+  category: integration
+  status: Draft
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/cloudevents-envelope.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [CloudEvents 1.0 Specification]
+    ring1: [BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
+- id: INT-012
+  title: Error Code Mapping and Propagation
+  category: integration
+  status: Draft
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/error-code-mapping.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [RFC 9457, OWASP Error Handling]
+    ring1: [BCBS 239 §6, PCI-DSS §6.5]
+    ring2: [SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-10'
+  notes: Wave 2a
+  target_wave: 2
