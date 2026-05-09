@@ -198,20 +198,23 @@ public class OrderService {
 ```mermaid
 gantt
     title Distributed trace — POST /api/v1/orders (total 234 ms)
-    dateFormat X
+    dateFormat x
     axisFormat %L
+
     section Order Service
-    Validate Order        :0, 10
-    Save Order            :10, 50
-    Call Payment Service  :50, 200
-    Call Inventory Service:200, 234
+    Validate Order            :0, 10
+    Save Order                :10, 50
+    Invoke Payment Service    :50, 200
+    Invoke Inventory Service  :200, 234
+
     section Payment Service
-    Validate Payment      :50, 60
-    Charge Card           :60, 180
-    Save Transaction      :180, 200
+    Validate Payment          :50, 60
+    Charge Card               :60, 180
+    Save Transaction          :180, 200
+
     section Inventory Service
-    Reserve Items         :200, 220
-    Update Stock          :220, 234
+    Reserve Items             :200, 220
+    Update Stock              :220, 234
 ```
 
 **Java Implementation** (Spring Cloud Sleuth + Jaeger):
