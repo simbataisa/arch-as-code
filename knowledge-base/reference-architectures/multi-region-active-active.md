@@ -29,22 +29,22 @@ graph TB
     end
 
     subgraph "Edge Layer (AnyCast)"
-        GA[AWS Global Accelerator<br/>or Cloudflare Magic Transit<br/>AnyCast IP, edge POPs]
+        GA["AWS Global Accelerator<br/>or Cloudflare Magic Transit<br/>AnyCast IP, edge POPs"]
     end
 
     subgraph "Region A — vn-south-1 (active)"
-        AGW_A[API Gateway / BFF<br/>Spring Cloud Gateway]
-        SVC_A[Service Pods<br/>3 cells × N replicas]
-        Cache_A[Redis Cluster<br/>local-AZ]
-        DB_A[Aurora Global<br/>Region A primary]
+        AGW_A["API Gateway / BFF<br/>Spring Cloud Gateway"]
+        SVC_A["Service Pods<br/>3 cells × N replicas"]
+        Cache_A["Redis Cluster<br/>local-AZ"]
+        DB_A["Aurora Global<br/>Region A primary"]
         Kafka_A[MSK Cluster A]
     end
 
     subgraph "Region B — vn-north-1 (active)"
         AGW_B[API Gateway / BFF]
-        SVC_B[Service Pods<br/>3 cells × N replicas]
-        Cache_B[Redis Cluster<br/>local-AZ]
-        DB_B[Aurora Global<br/>Region B secondary<br/>(promotable)]
+        SVC_B["Service Pods<br/>3 cells × N replicas"]
+        Cache_B["Redis Cluster<br/>local-AZ"]
+        DB_B["Aurora Global<br/>Region B secondary<br/>(promotable)"]
         Kafka_B[MSK Cluster B]
     end
 

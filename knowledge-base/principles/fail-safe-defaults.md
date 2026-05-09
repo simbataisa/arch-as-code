@@ -407,7 +407,7 @@ STRIDE: Spoofing, Elevation of Privilege, Information Disclosure
 - [PRIN-008 Defense-in-Depth](defense-in-depth.md) — fail-safe defaults are the per-layer failure mode for the six-layer stack
 - [PRIN-003 Zero-Trust Security](zero-trust-security.md) — zero-trust assumes breach; fail-safe defaults operationalise that assumption at the component level
 - [SEC-002 OAuth2/OIDC Authorization](../patterns/security/oauth2-authorization.md) — JWT validation failure must terminate the request per PRIN-010
-- [SEC-010 ABAC Policy Engine](../patterns/security/abac-policy.md) — OPA unreachable state maps to fail-closed per PRIN-010
+- [SEC-010 ABAC Policy Engine](../patterns/security/attribute-based-access-control.md) — OPA unreachable state maps to fail-closed per PRIN-010
 - [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — circuit breaker fallback functions must implement PRIN-010 semantics
 
 ## References

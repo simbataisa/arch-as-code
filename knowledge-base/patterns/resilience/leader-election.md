@@ -41,7 +41,7 @@ sequenceDiagram
     end
 
     Pod2->>Redis: SET napas-session-leader pod-2 PX 10000 NX
-    Redis-->>Pod2: nil (lease held by pod-1; stand by)
+    Redis-->>Pod2: nil (lease held by pod-1, stand by)
 
     Note over Pod1,NAPAS: Pod-1 crashes / OOMKilled
     Pod1-xPod1: Pod-1 stops renewing

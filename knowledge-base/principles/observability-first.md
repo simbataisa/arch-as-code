@@ -485,7 +485,7 @@ Kill the OTel Collector sidecar mid-test and verify: (a) the application continu
 
 - [BP-007 Golden Signals (SRE)](../best-practices/golden-signals-sre.md)
 - [BP-004 Observability Standards](../best-practices/observability-standards.md)
-- [SEC-012 Tamper-Evident Audit Log](../patterns/security/audit-log.md)
+- [SEC-012 Tamper-Evident Audit Log](../patterns/security/audit-logging-tamper-evident.md)
 - [NFR-001 Service Tiering RTO/RPO](../nfr/service-tiering-rto-rpo.md)
 - [NFR-002 Latency Budget Model](../nfr/latency-budget-model.md)
 - [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md)

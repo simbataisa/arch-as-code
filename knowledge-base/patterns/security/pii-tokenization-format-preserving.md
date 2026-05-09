@@ -21,25 +21,25 @@ Replace PII with a format-preserving token produced by AES-FF1 (NIST SP 800-38G)
 ```mermaid
 flowchart TD
     subgraph INGEST["Ingestion / API Boundary"]
-        RAW[Raw PII\nCCCD: 501234567890\nPhone: +84901234567\nPAN: 4111111111111111]
-        FPE_SVC["FPE Service\n(AES-FF1 / NIST SP 800-38G)"]
+        RAW["Raw PII: CCCD/Phone/PAN"]
+        FPE_SVC["FPE Service (AES-FF1 / NIST SP 800-38G)"]
     end
 
-    subgraph VAULT["HashiCorp Vault — Transform Secret Engine"]
-        HSM["HSM-protected\nFPE Keys\n(per data class)"]
-        TOK_STORE[Token → Plaintext mapping\nencrypted at rest]
+    subgraph VAULT["HashiCorp Vault Transform Secret Engine"]
+        HSM["HSM-protected FPE Keys (per data class)"]
+        TOK_STORE["Token → Plaintext mapping (encrypted at rest)"]
     end
 
     subgraph DOWNSTREAM["Downstream Consumers"]
-        T24[T24 Core Banking\n(sees token, same format)]
-        ANALYTICS[Analytics / DWH\n(sees token, no schema change)]
-        REPORTING[Regulatory Reports\n(sees token, correct shape)]
+        T24["T24 Core Banking (sees token, same format)"]
+        ANALYTICS["Analytics / DWH (sees token, no schema change)"]
+        REPORTING["Regulatory Reports (sees token, correct shape)"]
     end
 
     subgraph PRESENT["Presentation / Authorised Lookup"]
-        FRAUD[Fraud Operations\n(ABAC: role=FRAUD_INVESTIGATOR)]
-        DETOKEN["De-tokenise API\n/internal/v1/detoken\n(audit logged)"]
-        PLAIN[Plaintext returned\nto authorised caller only]
+        FRAUD["Fraud Operations (ABAC: role=FRAUD_INVESTIGATOR)"]
+        DETOKEN["De-tokenise API /internal/v1/detoken (audit logged)"]
+        PLAIN["Plaintext returned to authorised caller only"]
     end
 
     RAW -->|tokenise request| FPE_SVC
@@ -465,7 +465,7 @@ STRIDE analysis against the FPE tokenisation pattern:
 - [SEC-004 Tokenization + HSM](tokenization-hsm.md) — random tokenisation baseline
 - [SEC-010 ABAC](../security/attribute-based-access-control.md) — gates de-tokenise access
 - [RES-002 Circuit Breaker](../resilience/circuit-breaker.md) — protects against Vault outage
-- [INT-005 ACL / T24 Gateway](../../patterns/integration/t24-acl-gateway.md) — FPE applied before T24 OFS write
+- [INT-005 ACL / T24 Gateway](../integration/anti-corruption-layer.md) — FPE applied before T24 OFS write
 
 ---
 

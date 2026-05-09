@@ -440,8 +440,8 @@ STRIDE analysis — rate limiting primarily defends against Denial of Service an
 - [OWASP ASVS V13 API and Web Service Verification Requirements](https://owasp.org/www-project-application-security-verification-standard/)
 - [RES-002 Circuit Breaker](circuit-breaker.md)
 - [RES-009 Load Shedding](load-shedding.md)
-- [INT-003 API Gateway](../../patterns/integration/api-gateway.md)
-- [SEC-008 Service Mesh mTLS](../../patterns/security/service-mesh-mtls.md)
+- [INT-003 API Gateway](../integration/api-gateway-routing.md)
+- [SEC-008 Service Mesh mTLS](../security/mtls-service-mesh.md)
 
 ---
 

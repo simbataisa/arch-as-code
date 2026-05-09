@@ -223,11 +223,11 @@ Tier Applicability: [T0 | T1 | T2 | T3 — list applicable tiers]
 
 > **Authoring note**: List the implementing patterns from the catalog that collectively realise this reference architecture. Include at least 4–6 links. These are the patterns that a development team would implement when building the components described in this reference architecture.
 
-- [PLACEHOLDER: e.g., "[RES-002 Circuit Breaker](../../patterns/resilience/circuit-breaker.md) — protects NAPAS and fraud-service integration points"]
-- [PLACEHOLDER: e.g., "[PAT-NNN Saga Orchestration](../../patterns/transactions/saga-orchestration.md) — coordinates multi-service payment state machine"]
-- [PLACEHOLDER: e.g., "[NFR-001 Service Tiering + RTO/RPO Matrix](../../nfr/service-tiering-rto-rpo.md) — defines T0 availability and DR targets for this flow"]
-- [PLACEHOLDER: e.g., "[NFR-002 Latency Budget Model](../../nfr/latency-budget-model.md) — p99 < 200ms budget decomposition across the payment call chain"]
-- [PLACEHOLDER: e.g., "[NFR-003 Capacity Planning Model](../../nfr/capacity-planning-model.md) — pod and connection pool sizing for Tết peak load"]
+- [PLACEHOLDER: e.g., "[RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — protects NAPAS and fraud-service integration points"]
+- [PLACEHOLDER: e.g., "[INT-001 Saga Orchestration](../patterns/integration/saga-orchestration.md) — coordinates multi-service payment state machine"]
+- [PLACEHOLDER: e.g., "[NFR-001 Service Tiering + RTO/RPO Matrix](../nfr/service-tiering-rto-rpo.md) — defines T0 availability and DR targets for this flow"]
+- [PLACEHOLDER: e.g., "[NFR-002 Latency Budget Model](../nfr/latency-budget-model.md) — p99 < 200ms budget decomposition across the payment call chain"]
+- [PLACEHOLDER: e.g., "[NFR-003 Capacity Planning Model](../nfr/capacity-planning-model.md) — pod and connection pool sizing for Tết peak load"]
 - [PLACEHOLDER: Add 1–2 more]
 
 ## References

@@ -21,13 +21,13 @@ Reach for this practice when:
 
 ```mermaid
 graph LR
-    Hypothesis[1. State a hypothesis<br/>"Service X tolerates Y failure<br/>without exceeding budget Z"]
-    --> Scope[2. Define blast radius<br/>(start small: 1 pod / 1 cell / staging)]
+    Hypothesis["1. State a hypothesis<br/>Service X tolerates Y failure<br/>without exceeding budget Z"]
+    --> Scope["2. Define blast radius<br/>(start small: 1 pod / 1 cell / staging)"]
     --> Plan[3. Plan rollback &amp; abort criteria]
     --> Run[4. Inject the failure]
-    --> Measure[5. Measure golden signals<br/>against baseline]
+    --> Measure["5. Measure golden signals<br/>against baseline"]
     --> Learn[6. Learn — confirm or refute hypothesis]
-    --> Automate[7. Automate the experiment<br/>add to recurring schedule]
+    --> Automate["7. Automate the experiment<br/>add to recurring schedule"]
     Automate --> Hypothesis
 ```
 

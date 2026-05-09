@@ -36,24 +36,20 @@ sequenceDiagram
 
     alt Happy path (NP responds in 800 ms)
         NP-->>NS: ISO 8583 0210 (response code 00)
-        deactivate NP
         NS-->>PS: PaymentResult.SUCCESS
-        deactivate NS
         PS-->>GW: HTTP 200 PaymentResponse
-        deactivate PS
         GW-->>C: HTTP 200 (total: ~900 ms)
-        deactivate GW
     else NAPAS slow (NP takes > 1 500 ms)
         NP--xNS: [timeout fires at 1 500 ms]
-        deactivate NP
         NS-->>PS: TimeLimitExceededException
-        deactivate NS
         PS-->>GW: HTTP 504 (payment pending — idempotent retry safe)
-        deactivate PS
         GW-->>C: HTTP 504 (total: ~1 600 ms — still within 3 000 ms SLA)
-        deactivate GW
         Note over C,NP: Fast failure preserves remaining 1 400 ms budget
     end
+    deactivate NP
+    deactivate NS
+    deactivate PS
+    deactivate GW
 ```
 
 The budget must be cascaded: each service declares its own `callTimeout` smaller than the upstream-assigned deadline, with a headroom margin (typically 200–500ms) to account for network transit, serialisation, and filter-chain overhead.

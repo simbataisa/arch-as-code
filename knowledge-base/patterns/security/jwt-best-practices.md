@@ -39,7 +39,7 @@ sequenceDiagram
 
     Note over Client,API: Token refresh
     Client->>AuthSvc: POST /oauth2/token/refresh<br/>(refresh_token cookie)
-    AuthSvc->>AuthSvc: Validate opaque token; rotate refresh token
+    AuthSvc->>AuthSvc: Validate opaque token, rotate refresh token
     AuthSvc-->>Client: new access_token + new refresh_token
 
     Note over Client,API: Logout / revocation

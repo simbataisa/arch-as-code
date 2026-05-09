@@ -415,8 +415,8 @@ STRIDE: Elevation of Privilege, Tampering, Information Disclosure
 - [PRIN-012 Async by Default](async-by-default.md) — intra-module calls may be synchronous; async applies at the service boundary when modules are extracted
 - [PRIN-010 Fail-Safe Defaults](fail-safe-defaults.md) — module boundary violations detected at startup must fail the application boot
 - [PRIN-008 Defense-in-Depth](defense-in-depth.md) — fewer deployment units reduce the surface area for network-layer attacks between services
-- [INT-001 NAPAS Connector](../patterns/integration/napas-connector.md) — NAPAS integration is hosted within the monolith as a module until extraction signals are met
-- [INT-002 T24 OFS Anti-Corruption Layer](../patterns/integration/t24-acl.md) — the canonical ACL module implementation referenced by Core Rule 3
+- [INT-001 NAPAS Connector](../reference-architectures/real-time-payments-napas.md) — NAPAS integration is hosted within the monolith as a module until extraction signals are met
+- [INT-002 T24 OFS Anti-Corruption Layer](../patterns/integration/anti-corruption-layer.md) — the canonical ACL module implementation referenced by Core Rule 3
 
 ## References
 

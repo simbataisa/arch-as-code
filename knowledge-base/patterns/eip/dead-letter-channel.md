@@ -21,14 +21,14 @@ Reach for this pattern when:
 
 ```mermaid
 graph LR
-    Producer --> Topic[Main Topic<br/>payment-events]
-    Topic --> Consumer[Consumer<br/>ledger-poster]
-    Consumer -->|"transient failure<br/>(retry up to N)"| Backoff[Backoff Retry<br/>(in-process)]
+    Producer --> Topic["Main Topic<br/>payment-events"]
+    Topic --> Consumer["Consumer<br/>ledger-poster"]
+    Consumer -->|"transient failure<br/>(retry up to N)"| Backoff["Backoff Retry<br/>(in-process)"]
     Backoff --> Consumer
-    Consumer -->|"permanent failure<br/>or N exhausted"| DLT[Dead Letter Topic<br/>payment-events-dlt]
+    Consumer -->|"permanent failure<br/>or N exhausted"| DLT["Dead Letter Topic<br/>payment-events-dlt"]
     DLT --> Triage[Triage UI / Dashboard]
     Triage --> Replay[Replay back to main]
-    Triage --> Reject[Mark rejected<br/>+ business workflow]
+    Triage --> Reject["Mark rejected<br/>+ business workflow"]
 ```
 
 ### Categorisation

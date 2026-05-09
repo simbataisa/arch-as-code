@@ -401,7 +401,7 @@ STRIDE: Denial of Service, Tampering, Information Disclosure
 - [PRIN-013 Modular Monolith Preference](modular-monolith-preference.md) — intra-module calls within a modular monolith may be synchronous; async applies at the service boundary
 - [PRIN-003 Zero-Trust Security](zero-trust-security.md) — Kafka topic ACLs enforce zero-trust between producers and consumers
 - [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — synchronous justified calls must be wrapped in circuit breakers per PRIN-010
-- [INT-001 NAPAS Connector](../patterns/integration/napas-connector.md) — NAPAS integration is the canonical async integration pattern
+- [INT-001 NAPAS Connector](../reference-architectures/real-time-payments-napas.md) — NAPAS integration is the canonical async integration pattern
 
 ## References
 

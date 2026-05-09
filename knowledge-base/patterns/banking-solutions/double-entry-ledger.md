@@ -92,7 +92,7 @@ erDiagram
     }
 
     ACCOUNT_BALANCES {
-        uuid        account_id      PK  FK
+        uuid        account_id      PK
         numeric     balance         "SUM(CR) - SUM(DR)"
         timestamptz as_of           "last materialised"
         bigint      version         "optimistic lock"
@@ -531,11 +531,11 @@ STRIDE analysis against the double-entry ledger pattern:
 - Vietnam Accounting Standard VAS 01/2006 — Accounting Presentation Standards
 - ISO 20022 — Universal Financial Industry Message Scheme (pain.001, camt.053)
 - [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md)
-- [INT-001 Saga Pattern](../../patterns/integration/saga.md) — cross-service transaction coordination
-- [INT-002 Outbox + CDC](../../patterns/integration/outbox-cdc.md) — atomic event publication with posting
+- [INT-001 Saga Pattern](../integration/saga-orchestration.md) — cross-service transaction coordination
+- [INT-002 Outbox + CDC](../integration/cdc-outbox-pattern.md) — atomic event publication with posting
 - [INT-004 Event Sourcing](../../patterns/integration/event-sourcing.md) — ledger as event log
-- [INT-005 ACL / T24 Gateway](../../patterns/integration/t24-acl-gateway.md) — T24 OFS integration
-- [REF-001 Multi-Region](../../patterns/reliability/multi-region.md) — synchronous replication for T0
+- [INT-005 ACL / T24 Gateway](../integration/anti-corruption-layer.md) — T24 OFS integration
+- [REF-001 Multi-Region](../../reference-architectures/multi-region-active-active.md) — synchronous replication for T0
 
 ---
 

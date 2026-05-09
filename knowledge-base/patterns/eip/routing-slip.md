@@ -25,7 +25,7 @@ sequenceDiagram
     participant DocVerify as DocumentVerificationService
     participant Biometric as BiometricMatchingService
     participant Credit as CreditScoringService
-    participant Activate as AccountActivationService
+    participant ActivateSvc as AccountActivationService
     participant T24 as T24CoreBanking
 
     App->>KYCOrch: POST /kyc/applications (applicantId, riskTier)
@@ -43,11 +43,11 @@ sequenceDiagram
     Biometric-->>Credit: forward with slip[0] removed\n+ biometricOutcome written
 
     Credit->>Credit: Query internal risk model
-    Credit-->>Activate: forward with slip[0] removed\n+ creditOutcome written
+    Credit-->>ActivateSvc: forward with slip[0] removed\n+ creditOutcome written
 
-    Activate->>T24: OFS Create Customer + Account
-    T24-->>Activate: T24 account number
-    Activate-->>App: Webhook: account opened (accountNo)
+    ActivateSvc->>T24: OFS Create Customer + Account
+    T24-->>ActivateSvc: T24 account number
+    ActivateSvc-->>App: Webhook: account opened (accountNo)
 ```
 
 ## Implementation Guidelines
@@ -252,12 +252,14 @@ sequenceDiagram
 ## When to Use / When NOT to Use
 
 **Use when:**
+
 - A message must visit multiple processors in a defined sequence and the sequence may vary by message type or business rule.
 - Each step is owned by a different team or deployed independently, and you want to avoid a centralised orchestrator that all teams must coordinate on.
 - The pipeline must be resumable from the last completed step without re-running earlier steps.
 - You want per-message audit of the processing sequence embedded in the message itself.
 
 **Do NOT use when:**
+
 - The processing sequence is identical for all messages and never varies — a simple chain of services with hard-coded topic forwarding is simpler and equally correct.
 - Processing steps must execute in parallel — use Scatter-Gather (EIP-015) instead; Routing Slip is inherently sequential.
 - The number of steps is very large (> ~10) or deeply conditional — a Process Manager (EIP-019) with explicit saga state is easier to reason about and debug.
@@ -265,13 +267,13 @@ sequenceDiagram
 
 ## Variants & Trade-offs
 
-| Variant | When | Trade-off |
-|---|---|---|
-| Static slip (this doc) | Pipeline sequence is determined at entry and does not change mid-flight | Simple to reason about; the orchestrator builds the full slip at start; cannot react to step outcomes to skip/add steps |
-| Dynamic slip | A slip-management service can add or remove steps based on intermediate results | More flexible (e.g., skip credit scoring if sanctions fail); slip modification requires a management service — more moving parts |
-| Slip stored in Kafka header | Slip is small (< ~500 bytes) and changes per message | Zero additional storage; header size limit is a constraint |
-| Slip stored in message store (EIP-009) | Slip is large or complex; many steps | Payload not polluted with slip data; requires a distributed state store and lookup on every step |
-| Priority routing slip | Different SLA tiers get different slip orderings | Useful for VIP KYC vs standard KYC; requires the policy bean to understand SLA classification |
+| Variant                                | When                                                                            | Trade-off                                                                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Static slip (this doc)                 | Pipeline sequence is determined at entry and does not change mid-flight         | Simple to reason about; the orchestrator builds the full slip at start; cannot react to step outcomes to skip/add steps          |
+| Dynamic slip                           | A slip-management service can add or remove steps based on intermediate results | More flexible (e.g., skip credit scoring if sanctions fail); slip modification requires a management service — more moving parts |
+| Slip stored in Kafka header            | Slip is small (< ~500 bytes) and changes per message                            | Zero additional storage; header size limit is a constraint                                                                       |
+| Slip stored in message store (EIP-009) | Slip is large or complex; many steps                                            | Payload not polluted with slip data; requires a distributed state store and lookup on every step                                 |
+| Priority routing slip                  | Different SLA tiers get different slip orderings                                | Useful for VIP KYC vs standard KYC; requires the policy bean to understand SLA classification                                    |
 
 ## NFR Acceptance Criteria
 
@@ -287,7 +289,7 @@ nfr:
     recovery: "pod restart < 60s; Kafka consumer group rebalance < 15s; pipeline resumes without data loss"
 
   performance:
-    end_to_end_kyc_p95_seconds: 25  # sum of all step SLAs + Kafka overhead
+    end_to_end_kyc_p95_seconds: 25 # sum of all step SLAs + Kafka overhead
     per_step_latency_p95_ms:
       sanctions: 5000
       doc_verify: 8000
@@ -307,7 +309,8 @@ nfr:
       - kyc_pipeline_duration_seconds (histogram, by riskTier)
       - kyc_slip_exhausted_unexpectedly_total
       - kyc_step_prerequisite_failed_total (by step)
-    log_fields: [applicantId, correlationId, currentStep, remainingSlipLength, stepResult]
+    log_fields:
+      [applicantId, correlationId, currentStep, remainingSlipLength, stepResult]
     alerts:
       - name: RS_SlipExhaustedPrematurely
         condition: "rate(kyc_slip_exhausted_unexpectedly_total[5m]) > 0"
@@ -319,16 +322,16 @@ nfr:
 
 ## Compliance Mapping
 
-| Layer | Reference | Section/Control | How this pattern satisfies |
-|---|---|---|---|
-| Ring 0 (global) | Enterprise Integration Patterns (Hohpe/Woolf) | Chapter 7 — Routing Slip | Canonical pattern; this doc applies it to Techcombank's multi-step KYC onboarding pipeline |
-| Ring 0 | NIST SP 800-53 | IA-3 Device Identification and Authentication / IA-5 Authenticator Management | Biometric and document verification steps enforce identity assurance; the routing slip guarantees these steps cannot be bypassed |
-| Ring 0 | OWASP ASVS V5 | V9.1 Communications Security | Each step service communicates via authenticated Kafka topics (mTLS + ACLs); the routing slip cannot be forged without producer credentials |
-| Ring 1 (international banking) | FATF Recommendations 10 & 12 | Customer Due Diligence (CDD) and PEP Screening | High-risk-tier routing slip includes PEP screening step; FATF-required checks are structurally enforced by the slip policy, not optional |
-| Ring 1 | BCBS 239 §6 | Accuracy & Completeness | Step outcomes accumulated in the application payload provide a complete, accurate processing trail per application; no step result is lost |
-| Ring 1 | Basel III / BCBS Operational Risk | Op-risk control — processing integrity | Sequential step gating (prerequisite checks) prevents out-of-order processing that could produce legally invalid account openings |
-| Ring 2 (Vietnam) | SBV Circular 16/2020/TT-NHNN §III ⚠️ (working summary — pending Legal review) | eKYC requirements — biometric identity verification | Biometric matching step is structurally required in the standard and high-risk slips; slip policy configuration is version-controlled and change-managed |
-| Ring 2 | NAPAS eKYC Integration Standard v2.1 ⚠️ (working summary — pending Legal review) | Document verification sequencing | doc-verify precedes biometric in all slip configurations, satisfying NAPAS integration standard sequencing requirements |
+| Layer                          | Reference                                                                        | Section/Control                                                               | How this pattern satisfies                                                                                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ring 0 (global)                | Enterprise Integration Patterns (Hohpe/Woolf)                                    | Chapter 7 — Routing Slip                                                      | Canonical pattern; this doc applies it to Techcombank's multi-step KYC onboarding pipeline                                                               |
+| Ring 0                         | NIST SP 800-53                                                                   | IA-3 Device Identification and Authentication / IA-5 Authenticator Management | Biometric and document verification steps enforce identity assurance; the routing slip guarantees these steps cannot be bypassed                         |
+| Ring 0                         | OWASP ASVS V5                                                                    | V9.1 Communications Security                                                  | Each step service communicates via authenticated Kafka topics (mTLS + ACLs); the routing slip cannot be forged without producer credentials              |
+| Ring 1 (international banking) | FATF Recommendations 10 & 12                                                     | Customer Due Diligence (CDD) and PEP Screening                                | High-risk-tier routing slip includes PEP screening step; FATF-required checks are structurally enforced by the slip policy, not optional                 |
+| Ring 1                         | BCBS 239 §6                                                                      | Accuracy & Completeness                                                       | Step outcomes accumulated in the application payload provide a complete, accurate processing trail per application; no step result is lost               |
+| Ring 1                         | Basel III / BCBS Operational Risk                                                | Op-risk control — processing integrity                                        | Sequential step gating (prerequisite checks) prevents out-of-order processing that could produce legally invalid account openings                        |
+| Ring 2 (Vietnam)               | SBV Circular 16/2020/TT-NHNN §III ⚠️ (working summary — pending Legal review)    | eKYC requirements — biometric identity verification                           | Biometric matching step is structurally required in the standard and high-risk slips; slip policy configuration is version-controlled and change-managed |
+| Ring 2                         | NAPAS eKYC Integration Standard v2.1 ⚠️ (working summary — pending Legal review) | Document verification sequencing                                              | doc-verify precedes biometric in all slip configurations, satisfying NAPAS integration standard sequencing requirements                                  |
 
 ## Cost / FinOps Notes
 
@@ -377,4 +380,5 @@ nfr:
 - Spring Cloud Config Reference — `@ConfigurationProperties` with `Map<String, List<String>>`
 
 ---
+
 **Key Takeaway**: The Routing Slip pattern structures Techcombank's KYC onboarding as an ordered, auditable sequence of independently deployed services — sanctions, document verification, biometric matching, credit scoring, and account activation — where the slip header both drives the pipeline and serves as the per-applicant compliance audit trail, with HMAC signing ensuring no step can be skipped.

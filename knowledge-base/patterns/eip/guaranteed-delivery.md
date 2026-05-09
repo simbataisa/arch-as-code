@@ -16,14 +16,14 @@ Tier Applicability: T0, T1
 Guaranteed Delivery ensures every message published by a producer is received by at least one consumer exactly once (from the consumer's perspective), even in the presence of broker failures, network partitions, consumer restarts, and DR failovers. The pattern combines four complementary mechanisms that together form a layered durability guarantee:
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph Producer Side
         APP[Application Service]
         OUTBOX[(Transactional Outbox\nPostgreSQL\nINT-002)]
         RELAY[Outbox Relay\nCDC / Debezium]
     end
 
-    subgraph Kafka Broker - RF=3
+    subgraph Kafka Broker
         direction LR
         L["Partition Leader\n(Broker 1)"]
         F1["Follower\n(Broker 2)"]
@@ -57,14 +57,14 @@ graph TD
 
 ### Delivery guarantee layers
 
-| Layer | Mechanism | Failure it covers |
-|---|---|---|
-| L1: Outbox | DB transaction includes event row (INT-002) | Application crash before Kafka produce |
-| L2: Broker durability | `acks=all`, RF=3, min.insync.replicas=2 | Broker leader failure before replication |
-| L3: Producer idempotence | `enable.idempotence=true`, `retries=MAX_VALUE` | Producer retry producing duplicates |
-| L4: Consumer commit-after-effect | Manual offset commit after side-effect | Consumer crash between effect and commit |
-| L5: Idempotent consumer | Dedupe store (EIP-024) | At-least-once delivery producing duplicates |
-| L6: Dead Letter Channel | DLT after N retries (EIP-025) | Permanent processing failures |
+| Layer                            | Mechanism                                      | Failure it covers                           |
+| -------------------------------- | ---------------------------------------------- | ------------------------------------------- |
+| L1: Outbox                       | DB transaction includes event row (INT-002)    | Application crash before Kafka produce      |
+| L2: Broker durability            | `acks=all`, RF=3, min.insync.replicas=2        | Broker leader failure before replication    |
+| L3: Producer idempotence         | `enable.idempotence=true`, `retries=MAX_VALUE` | Producer retry producing duplicates         |
+| L4: Consumer commit-after-effect | Manual offset commit after side-effect         | Consumer crash between effect and commit    |
+| L5: Idempotent consumer          | Dedupe store (EIP-024)                         | At-least-once delivery producing duplicates |
+| L6: Dead Letter Channel          | DLT after N retries (EIP-025)                  | Permanent processing failures               |
 
 ## Implementation Guidelines
 
@@ -108,8 +108,8 @@ graph TD
    topic_config:
      replication.factor: 3
      min.insync.replicas: 2
-     unclean.leader.election.enable: "false"   # never elect an out-of-sync replica
-     retention.ms: "2592000000"                # 30 days for T0
+     unclean.leader.election.enable: "false" # never elect an out-of-sync replica
+     retention.ms: "2592000000" # 30 days for T0
      cleanup.policy: "delete"
      compression.type: "lz4"
    ```
@@ -270,14 +270,14 @@ graph TD
 
 ## Compliance Mapping
 
-| Ring | Regulation | Provision | How this pattern satisfies |
-|---|---|---|---|
-| Ring 0 | EIP Book (Hohpe & Woolf) | Chapter 3 — Guaranteed Delivery | Canonical pattern; this doc applies all four mechanical layers to Techcombank's Kafka stack |
-| Ring 0 | NIST SP 800-53 | SI-12 (Information Management), CP-10 (Information System Recovery) | Durable retention + cross-region replication constitutes the messaging layer of the system recovery plan |
-| Ring 0 | ISO 27001 | A.12.3.1 (Information Backup) | Broker replication (RF=3) + MirrorMaker 2 + outbox persistence = three independent copies of every financial event |
-| Ring 1 | BCBS 239 §6 | Completeness — "data should include all material information and should not be lost during aggregation" | Guaranteed Delivery is the technical control that makes §6 Completeness achievable; without it, the data pipeline is inherently leaky |
-| Ring 1 | ISO 20022 | Settlement Finality — a confirmed ISO 20022 message is legally binding | `acks=all` + idempotent producer ensures the confirmed payment message in Kafka is exactly the message the downstream system processes |
-| Ring 1 | SWIFT CSP 2024 | Control 1.2 — Secure the Infrastructure | SWIFT messages in transit on internal Kafka channels are protected by the same durability controls as all T0 channels; mTLS (SEC-001) adds confidentiality |
+| Ring   | Regulation                 | Provision                                                                                                                | How this pattern satisfies                                                                                                                                                                         |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ring 0 | EIP Book (Hohpe & Woolf)   | Chapter 3 — Guaranteed Delivery                                                                                          | Canonical pattern; this doc applies all four mechanical layers to Techcombank's Kafka stack                                                                                                        |
+| Ring 0 | NIST SP 800-53             | SI-12 (Information Management), CP-10 (Information System Recovery)                                                      | Durable retention + cross-region replication constitutes the messaging layer of the system recovery plan                                                                                           |
+| Ring 0 | ISO 27001                  | A.12.3.1 (Information Backup)                                                                                            | Broker replication (RF=3) + MirrorMaker 2 + outbox persistence = three independent copies of every financial event                                                                                 |
+| Ring 1 | BCBS 239 §6                | Completeness — "data should include all material information and should not be lost during aggregation"                  | Guaranteed Delivery is the technical control that makes §6 Completeness achievable; without it, the data pipeline is inherently leaky                                                              |
+| Ring 1 | ISO 20022                  | Settlement Finality — a confirmed ISO 20022 message is legally binding                                                   | `acks=all` + idempotent producer ensures the confirmed payment message in Kafka is exactly the message the downstream system processes                                                             |
+| Ring 1 | SWIFT CSP 2024             | Control 1.2 — Secure the Infrastructure                                                                                  | SWIFT messages in transit on internal Kafka channels are protected by the same durability controls as all T0 channels; mTLS (SEC-001) adds confidentiality                                         |
 | Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity — systems must continue processing during disruptions ⚠️ (working summary — pending Legal review) | MirrorMaker 2 cross-region replication + consumer manual-commit + DLT ensures that a single-region outage does not cause message loss; processing resumes in DR with the replicated message stream |
 
 ## NFR Acceptance Criteria
@@ -288,24 +288,24 @@ nfr:
   pattern: Guaranteed Delivery
 
   availability:
-    target: 99.999%  # five nines for T0 financial channels
+    target: 99.999% # five nines for T0 financial channels
     broker_replication_factor: 3
     min_in_sync_replicas: 2
-    unclean_leader_election: false   # never sacrifice durability for availability
+    unclean_leader_election: false # never sacrifice durability for availability
     cross_region_replication: required_for_T0
 
   durability:
-    message_loss_tolerance: 0        # zero for T0 and T1 financial channels
+    message_loss_tolerance: 0 # zero for T0 and T1 financial channels
     producer_acks: all
     enable_idempotence: true
     consumer_auto_commit: false
     offset_commit_timing: "after side-effect durably persisted"
-    outbox_required_for: T0          # optional but recommended for T1
+    outbox_required_for: T0 # optional but recommended for T1
 
   performance:
-    produce_latency_p95_ms: 8        # acks=all adds ~3ms vs acks=1 on local cluster
+    produce_latency_p95_ms: 8 # acks=all adds ~3ms vs acks=1 on local cluster
     produce_latency_p99_ms: 20
-    consumer_redelivery_latency_ms:  # time from failure to redelivery
+    consumer_redelivery_latency_ms: # time from failure to redelivery
       attempt_1: 1000
       attempt_2: 2000
       attempt_3: 4000
@@ -316,7 +316,7 @@ nfr:
     backoff_initial_ms: 1000
     backoff_multiplier: 2.0
     backoff_max_ms: 30000
-    dlt_required: true               # EIP-025 mandatory on all channels
+    dlt_required: true # EIP-025 mandatory on all channels
 
   observability:
     required_metrics:
@@ -395,7 +395,7 @@ nfr:
 - Apache Kafka documentation — Producer Configuration, Topic Configuration, Transactions
 - Spring Kafka reference — `@RetryableTopic`, `DefaultErrorHandler`, `DeadLetterPublishingRecoverer`
 - Debezium documentation — Outbox Event Router
-- Related catalog IDs: [EIP-001 Message Channel](message-channel.md), [EIP-024 Idempotent Receiver](idempotent-receiver.md), [EIP-025 Dead Letter Channel](dead-letter-channel.md), [INT-002 Transactional Outbox + CDC](../integration/cdc-outbox-pattern.md), [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md), [SEC-001 mTLS](../../security/mtls.md)
+- Related catalog IDs: [EIP-001 Message Channel](message-channel.md), [EIP-024 Idempotent Receiver](idempotent-receiver.md), [EIP-025 Dead Letter Channel](dead-letter-channel.md), [INT-002 Transactional Outbox + CDC](../integration/cdc-outbox-pattern.md), [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md), [SEC-001 mTLS](../security/mtls-service-mesh.md)
 
 ---
 

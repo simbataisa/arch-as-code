@@ -505,7 +505,7 @@ Inject random OFS field reordering and new unexpected fields into WireMock T24 r
 ## References
 
 - [INT-006 Strangler Fig Migration](strangler-fig.md)
-- [INT-002 Outbox + CDC](outbox-cdc.md)
+- [INT-002 Outbox + CDC](cdc-outbox-pattern.md)
 - [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md)
 - [PRIN-011 Least-Privilege](../../principles/least-privilege.md)
 - [RES-002 Circuit Breaker](../resilience/circuit-breaker.md)

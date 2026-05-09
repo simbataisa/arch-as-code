@@ -192,9 +192,6 @@ sequenceDiagram
     Notif->>Notif: Send SMS/Email
     Notif-->>-Queue: ACK
 
-    style C fill:#E8F4F8
-    style PaymentSvc fill:#D0021B,color:#fff
-    style DB fill:#99CCFF,color:#000
 ```
 
 ### 4. State Diagram

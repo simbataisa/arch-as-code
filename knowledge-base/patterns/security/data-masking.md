@@ -465,7 +465,7 @@ STRIDE analysis against the data masking pattern:
 - SBV Circular 09/2020/TT-NHNN — Information Security in Banking
 - [SEC-013 PII Tokenization (Format-Preserving)](pii-tokenization-format-preserving.md) — reversible alternative
 - [SEC-004 Tokenization + HSM](tokenization-hsm.md) — HSM-backed token vault
-- [governance/standards/data-classification.md](../../governance/standards/data-classification.md)
+- [governance/standards/data-classification.md](../../../governance/standards/data-classification.md)
 - Jackson Databind — `ContextualSerializer` documentation
 - Logback — `Filter<ILoggingEvent>` and custom `MessageConverter`
 

@@ -540,7 +540,7 @@ STRIDE analysis — queue-based systems face unique poisoning and replay threats
 - [BCBS 239 Principles for effective risk data aggregation](https://www.bis.org/publ/bcbs239.htm)
 - [PRIN-006 Idempotency by Default](../../principles/idempotency-by-default.md)
 - [RES-002 Circuit Breaker](circuit-breaker.md)
-- [INT-002 Outbox + CDC](../../patterns/integration/outbox-cdc.md)
+- [INT-002 Outbox + CDC](../integration/cdc-outbox-pattern.md)
 
 ---
 

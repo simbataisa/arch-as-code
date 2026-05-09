@@ -37,11 +37,11 @@ sequenceDiagram
     Note over App,Vault: Mid-lifecycle — lease renewal (before TTL expiry)
     VA->>Vault: PUT sys/leases/renew/<lease_id>
     Vault-->>VA: Renewed lease (new TTL=1h)
-    Note over VA: Creds unchanged; no app restart needed
+    Note over VA: Creds unchanged, no app restart needed
 
     Note over App,Vault: TTL max-TTL reached — credential rotation
     VA->>Vault: GET database/creds/payment-service-role (new request)
-    Vault->>DB: CREATE ROLE tcb_app_<new_uuid>; REVOKE old role after grace=5min
+    Vault->>DB: CREATE ROLE tcb_app_<new_uuid>, REVOKE old role after grace=5min
     Vault-->>VA: {new username, new password, new lease_id}
     VA->>App: Overwrite /vault/secrets/db.env
     App->>App: Spring @RefreshScope triggered → DataSource re-initialises
@@ -51,7 +51,7 @@ sequenceDiagram
     CM->>CM: Monitor Certificate.spec.renewBefore (30d before expiry)
     CM->>Vault: Issue new cert via Vault PKI issuer
     Vault-->>CM: Signed certificate + private key
-    CM->>App: Update Kubernetes Secret (TLS); triggers rolling pod restart
+    CM->>App: Update Kubernetes Secret (TLS), triggers rolling pod restart
 ```
 
 ## Implementation Guidelines

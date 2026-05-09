@@ -19,11 +19,11 @@ Mandate a single JSON log schema with mandatory fields, apply PII masking at emi
 
 ```mermaid
 flowchart LR
-    App[Application\nLogback appender] -->|PiiMaskingConverter| JSON[Structured JSON\nlog line]
-    JSON --> FB[Fluent Bit\nsidecar container]
-    FB -->|OpenSearch output| OS[OpenSearch\ntechcombank-logs-{service}-{date}]
-    FB -->|Dynatrace output| DT[Dynatrace Log Ingest\nAPI v2]
-    OS --> ILM[ILM Policy\nhot→warm→cold→delete]
+    App["Application Logback appender"] -->|PiiMaskingConverter| JSON["Structured JSON log line"]
+    JSON --> FB["Fluent Bit sidecar container"]
+    FB -->|OpenSearch output| OS["OpenSearch: techcombank-logs"]
+    FB -->|Dynatrace output| DT["Dynatrace Log Ingest API v2"]
+    OS --> ILM["ILM Policy: hot→warm→cold→delete"]
 
     classDef app fill:#e7f0ff,stroke:#2050a0
     classDef infra fill:#fff5d8,stroke:#c08c00

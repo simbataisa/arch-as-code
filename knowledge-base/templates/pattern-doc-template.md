@@ -256,9 +256,9 @@ STRIDE applied to [PLACEHOLDER: pattern name]:
 
 > **Authoring note**: List 4–6 related catalog entries with relative links. Include: the spine NFR docs that govern this pattern's SLO, any prerequisite patterns, and common alternatives.
 
-- [PLACEHOLDER: e.g., "[NFR-001 Service Tiering + RTO/RPO Matrix](../../nfr/service-tiering-rto-rpo.md) — tier determines the availability SLO the saga must meet"]
-- [PLACEHOLDER: e.g., "[RES-002 Circuit Breaker](../resilience/circuit-breaker.md) — protects downstream calls within each saga step"]
-- [PLACEHOLDER: e.g., "[PAT-NNN Alternative Pattern Name](../domain/alternative.md) — use instead when only a single service is involved"]
+- [PLACEHOLDER: e.g., "[NFR-001 Service Tiering + RTO/RPO Matrix](../nfr/service-tiering-rto-rpo.md) — tier determines the availability SLO the saga must meet"]
+- [PLACEHOLDER: e.g., "[RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — protects downstream calls within each saga step"]
+- [PLACEHOLDER: e.g., "[RES-003 Retry with Backoff](../patterns/resilience/retry-with-backoff.md) — use instead when only a single service is involved"]
 - [PLACEHOLDER: Add 1–3 more]
 
 ## References
