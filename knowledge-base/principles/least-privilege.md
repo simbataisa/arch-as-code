@@ -463,6 +463,20 @@ Run an automated scope-mapping audit: scan all `@PreAuthorize` annotations in th
 
 Revoke a service's OAuth2 client credentials mid-test and verify the service returns HTTP 401 with a structured error body (not a 500 Internal Server Error). Kill the Vault sidecar and verify the service continues serving requests from the existing connection pool until TTL expiry, then alerts on the inability to renew.
 
+## When to Use
+
+- All production IAM roles and service accounts: every AWS IAM role, Kubernetes ServiceAccount, and database user must be scoped to the minimum permissions required for the service's documented API surface — no wildcard actions, no cross-namespace access.
+- Database access: each microservice has its own database user with SELECT/INSERT/UPDATE on its own schema only; no service account has DDL rights in production.
+- Kubernetes RBAC: each service's ServiceAccount has a Role bound only to the namespace resources it needs — no ClusterRole unless the service genuinely requires cluster-wide visibility (e.g., a monitoring agent).
+- HashiCorp Vault policies: each service's AppRole policy grants read access only to the secret paths it explicitly needs; wildcard path grants are prohibited in Tier 0–2 services.
+- Human access in production: production console access is time-limited (JIT via Vault) with dual-approval for Tier 0 systems and MFA required; standing privileged access is prohibited.
+
+## When Not to Use
+
+- Developer sandbox environments with no customer data: apply sensible defaults but do not require the full JIT approval workflow — it blocks developer velocity without reducing real risk.
+- As a substitute for network segmentation: least-privilege on credentials does not replace firewall rules, security groups, or service mesh mTLS — apply both.
+- Applied retroactively without impact analysis: tightening permissions on a live service without auditing current usage first risks silent breakage; run a 30-day CloudTrail / Vault audit log review before scoping down any production role.
+
 ## References
 
 - [PRIN-003 Zero-Trust Security](zero-trust-security.md)
