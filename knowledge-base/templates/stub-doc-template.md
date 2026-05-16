@@ -15,17 +15,31 @@ TBD — describe the concrete pain points this document addresses.
 
 - TBD — outline the approach at one level of abstraction above implementation.
 
-## Compliance Hooks
+## Compliance Mapping
 
-- Ring 0 (generic): TBD
-- Ring 1 (international banking): TBD
-- Ring 2 (Vietnam / SBV): TBD
+| Ring | Framework | Control |
+|------|-----------|---------|
+| Ring 0 | [e.g. ISO 27001 A.x.x] | [control description — replace with actual] |
+| Ring 1 | [e.g. BCBS 239 Principle N] | [control description — replace with actual] |
+| Ring 2 | [e.g. SBV Circular 09/2020 Article N] | [control description] ⚠️ (working summary — pending Legal review) |
 
 ## NFR Hooks
 
 - Availability (HA): TBD
 - Performance (HP): TBD
 - Resilience (HR): TBD
+
+## When to Use
+
+- TBD — list the scenarios where this pattern/principle is the right choice.
+
+## When Not to Use
+
+- TBD — list the anti-patterns or scenarios where this document does not apply.
+
+## Key Takeaway
+
+TBD — one sentence that captures the essential insight of this document.
 
 ## References
 
