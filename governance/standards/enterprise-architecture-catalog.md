@@ -171,18 +171,18 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | DATA-011 | Data Quality Rules | data | Proposed | radii | @data-platform-domain-owner | `knowledge-base/patterns/data/data-quality-rules.md` | T1, T2 | BCBS 239 §4 | 2026-05-09 | 2 | Stub — Wave 2 |
 | DATA-012 | Data Virtualization | data | Proposed | radii | @data-platform-domain-owner | `knowledge-base/patterns/data/data-virtualization.md` | T2, T3 | — | 2026-05-09 | 2 | Stub — Wave 2 |
 | DATA-013 | Reference Data Master | data | Proposed | radii | @data-platform-domain-owner | `knowledge-base/patterns/data/reference-data-master.md` | T0, T1 | BCBS 239 §6 | 2026-05-09 | 2 | Stub — Wave 2 |
-| EIP-001 | Message Channel | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-channel.md` | T0, T1, T2 | EIP §3 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-002 | Point-to-Point Channel | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/point-to-point-channel.md` | T0, T1 | EIP §3 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-003 | Publish-Subscribe Channel | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/publish-subscribe-channel.md` | T0, T1, T2 | EIP §3 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-004 | Message Router | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-router.md` | T0, T1 | EIP §4 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-005 | Content-Based Router | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/content-based-router.md` | T0, T1 | EIP §4 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-006 | Message Translator | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-translator.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-007 | Content Enricher | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/content-enricher.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-008 | Content Filter | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/content-filter.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-009 | Claim Check | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/claim-check.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-010 | Normalizer | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/normalizer.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-011 | Aggregator | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/aggregator.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-012 | Splitter | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/splitter.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-001 | Message Channel | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-channel.md` | T0, T1, T2 | EIP §3 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-002 | Point-to-Point Channel | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/point-to-point-channel.md` | T0, T1 | EIP §3 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-003 | Publish-Subscribe Channel | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/publish-subscribe-channel.md` | T0, T1, T2 | EIP §3 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-004 | Message Router | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-router.md` | T0, T1 | EIP §4 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-005 | Content-Based Router | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/content-based-router.md` | T0, T1 | EIP §4 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-006 | Message Translator | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-translator.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-007 | Content Enricher | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/content-enricher.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-008 | Content Filter | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/content-filter.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-009 | Claim Check | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/claim-check.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-010 | Normalizer | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/normalizer.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-011 | Aggregator | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/aggregator.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-012 | Splitter | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/splitter.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
 | EIP-013 | Resequencer | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/resequencer.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
 | EIP-014 | Composed Message Processor | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/composed-message-processor.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
 | EIP-015 | Scatter-Gather | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/scatter-gather.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
