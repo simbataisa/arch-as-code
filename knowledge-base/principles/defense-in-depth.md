@@ -473,6 +473,19 @@ Run OWASP ZAP active scan against the staging environment after every release. V
 
 Disable each layer in turn in a chaos environment (kill the WAF rule, rotate to an expired certificate, stop the OPA sidecar, take the HSM offline). Verify that the service fails closed (denies all requests) rather than failing open, and that the audit layer captures the failure event.
 
+## When to Use
+
+- **Tier 0 and Tier 1 internet-facing services**: every service that receives external traffic (payment APIs, mobile BFFs, open-banking endpoints) must implement all six layers.
+- **PCI Cardholder Data Environment (CDE)**: any system that stores, processes, or transmits card data must apply Layer 5 (data-layer tokenisation) and Layer 6 (tamper-evident audit log) as hard requirements.
+- **Systems handling personal data under Decree 13/2023**: PII stores require Layer 3 (ABAC consent enforcement) and Layer 5 (field-level masking) as mandatory controls.
+- **Multi-tenant SaaS integrations**: where a single service hosts data for multiple tenants, Layer 3 ABAC must include `tenant_id` as a mandatory context attribute.
+
+## When Not to Use
+
+- **Isolated developer tooling with no production data**: internal CLI tools, seed-data generators, and local dev environments operated by vetted engineers need not implement the full six-layer stack. Apply Layer 1 (network restriction to corporate VPN) and Layer 3 (SSO) only.
+- **Batch jobs with no external interface**: nightly ETL jobs that run inside a VPC with no inbound traffic surface require Layers 1, 5, and 6 but not Layers 2–4 (no inter-service mTLS or application-layer auth needed).
+- **As a substitute for threat modelling**: Defense-in-Depth is a structural principle, not a threat-modelling exercise. Run STRIDE against each layer separately; this principle tells you where to place controls, not which controls to choose.
+
 ## References
 
 - [PRIN-003 Zero-Trust Security](zero-trust-security.md)
