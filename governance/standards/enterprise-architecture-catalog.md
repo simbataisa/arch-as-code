@@ -139,12 +139,12 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | BP-003 | Microservice Decomposition | best-practices | Approved | radii | @ea-board | `knowledge-base/best-practices/microservice-decomposition.md` | T0, T1, T2, T3 | — | 2026-03-08 | 0 | Existing — cross-link only |
 | BP-004 | Observability Standards | best-practices | Approved | radii | @sre-lead | `knowledge-base/best-practices/observability-standards.md` | T0, T1, T2, T3 | — | 2026-03-08 | 0 | Existing — cross-link only |
 | BP-005 | Chaos Engineering | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/chaos-engineering.md` | T0, T1 | Principles of Chaos Engineering; BCBS 230 §6 (UNOFFICIAL); SBV Circ. 09 §IV.2 (UNOFFICIAL) | 2026-05-09 | 0 | Wave 3a starter set |
-| BP-006 | Capacity Planning | best-practices | Proposed | radii | @sre-lead | `knowledge-base/best-practices/capacity-planning.md` | T0, T1 | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| BP-007 | Golden Signals (SRE) | best-practices | Proposed | radii | @sre-lead | `knowledge-base/best-practices/golden-signals-sre.md` | T0, T1, T2 | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
-| BP-008 | Error Budgets | best-practices | Proposed | radii | @sre-lead | `knowledge-base/best-practices/error-budgets.md` | T0, T1 | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
-| BP-009 | Runbook Authoring | best-practices | Proposed | radii | @sre-lead | `knowledge-base/best-practices/runbook-authoring.md` | T0, T1, T2, T3 | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| BP-010 | Incident Postmortem | best-practices | Proposed | radii | @sre-lead | `knowledge-base/best-practices/incident-postmortem.md` | T0, T1 | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
-| BP-011 | Blameless Culture | best-practices | Proposed | radii | @sre-lead | `knowledge-base/best-practices/blameless-culture.md` | T0, T1, T2, T3 | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| BP-006 | Capacity Planning | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/capacity-planning.md` | T0, T1 | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| BP-007 | Golden Signals (SRE) | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/golden-signals-sre.md` | T0, T1, T2 | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
+| BP-008 | Error Budgets | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/error-budgets.md` | T0, T1 | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
+| BP-009 | Runbook Authoring | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/runbook-authoring.md` | T0, T1, T2, T3 | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| BP-010 | Incident Postmortem | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/incident-postmortem.md` | T0, T1 | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
+| BP-011 | Blameless Culture | best-practices | Draft | radii | @sre-lead | `knowledge-base/best-practices/blameless-culture.md` | T0, T1, T2, T3 | — | 2026-05-09 | 1 | Stub — Wave 1 |
 | BSP-001 | Double-Entry Ledger | banking-solutions | Proposed | radii | @payments-domain-owner | `knowledge-base/patterns/banking-solutions/double-entry-ledger.md` | T0 | BCBS 239 §6; IFRS 9; SBV Circ. 09 §IV (UNOFFICIAL) | 2026-05-09 | 2 | Stub — Wave 2; foundational for ledger flows |
 | BSP-002 | Idempotent Payment Key | banking-solutions | Proposed | radii | @payments-domain-owner | `knowledge-base/patterns/banking-solutions/idempotent-payment-key.md` | T0 | ISO 20022 EndToEndId; SBV Circ. 09 §IV.2 (UNOFFICIAL) | 2026-05-09 | 2 | Stub — Wave 2; pairs with PRIN-006 |
 | BSP-003 | Sanction Screening Pipeline | banking-solutions | Proposed | radii | @risk-management-domain-owner | `knowledge-base/patterns/banking-solutions/sanction-screening-pipeline.md` | T0 | FATF Rec. 6 | 2026-05-09 | 2 | Stub — Wave 2 |
@@ -219,9 +219,9 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | MOB-006 | Mobile Force-Upgrade | mobile | Proposed | radii | @tech-lead-mobile | `knowledge-base/patterns/mobile/mobile-force-upgrade.md` | T0, T1, T2 | — | 2026-05-09 | 2 | Stub — Wave 2 |
 | NFR-001 | Service Tiering + RTO/RPO Matrix | nfr | Draft | spine | @sre-lead | `knowledge-base/nfr/service-tiering-rto-rpo.md` | — | AWS Well-Architected Reliability; BCBS 230 §6 (UNOFFICIAL); BCBS 239 §3; SBV Circ. 09 §IV.2 (UNOFFICIAL) | 2026-05-09 | 0 | Spine — Wave 0 starter set; defines T0–T3 service classes |
 | NFR-002 | Latency Budget Model | nfr | Draft | spine | @sre-lead | `knowledge-base/nfr/latency-budget-model.md` | — | Azure WAF Performance Efficiency; BCBS 239 §3 timeliness; ISO 20022 RTPS | 2026-05-09 | 0 | Spine — Wave 0 starter set; defines per-tier P50/P95/P99 |
-| NFR-003 | Capacity Planning Model | nfr | Proposed | radii | @sre-lead | `knowledge-base/nfr/capacity-planning-model.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| NFR-004 | Throughput Model | nfr | Proposed | radii | @sre-lead | `knowledge-base/nfr/throughput-model.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| NFR-005 | Error Budget Policy | nfr | Proposed | radii | @sre-lead | `knowledge-base/nfr/error-budget-policy.md` | — | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
+| NFR-003 | Capacity Planning Model | nfr | Draft | radii | @sre-lead | `knowledge-base/nfr/capacity-planning-model.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| NFR-004 | Throughput Model | nfr | Draft | radii | @sre-lead | `knowledge-base/nfr/throughput-model.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| NFR-005 | Error Budget Policy | nfr | Draft | radii | @sre-lead | `knowledge-base/nfr/error-budget-policy.md` | — | Google SRE Book | 2026-05-09 | 1 | Stub — Wave 1 |
 | PRIN-001 | API-First Design | principles | Approved | radii | @ea-board | `knowledge-base/principles/api-first-design.md` | T0, T1, T2, T3 | — | 2026-03-08 | 0 | Existing — cross-link only in Phase 4 |
 | PRIN-002 | Event-Driven Architecture | principles | Approved | radii | @ea-board | `knowledge-base/principles/event-driven-architecture.md` | T0, T1, T2, T3 | — | 2026-03-08 | 0 | Existing — cross-link only |
 | PRIN-003 | Zero-Trust Security | principles | Approved | radii | @ciso-delegate | `knowledge-base/principles/zero-trust-security.md` | T0, T1, T2, T3 | NIST SP 800-207 | 2026-03-08 | 0 | Existing — cross-link only |
@@ -272,9 +272,9 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | SEC-012 | Tamper-Evident Audit Logging | security | Proposed | radii | @ciso-delegate | `knowledge-base/patterns/security/audit-logging-tamper-evident.md` | T0, T1 | PCI-DSS §10 | 2026-05-09 | 1 | Stub — Wave 1 |
 | SEC-013 | PII Tokenization (Format-Preserving) | security | Proposed | radii | @ciso-delegate | `knowledge-base/patterns/security/pii-tokenization-format-preserving.md` | T0, T1 | NIST SP 800-38G; Decree 13/2023 (UNOFFICIAL) | 2026-05-09 | 1 | Stub — Wave 1 |
 | TPL-001 | NFR Acceptance Criteria — DAB Submission Template | templates | Draft | spine | @dab-chair | `knowledge-base/templates/nfr-acceptance-criteria-dab.md` | — | — | 2026-05-09 | 0 | Spine — Wave 0 starter set |
-| TPL-002 | Pattern Doc Template | templates | Proposed | radii | @ea-board | `knowledge-base/templates/pattern-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| TPL-003 | Stub Doc Template | templates | Proposed | radii | @ea-board | `knowledge-base/templates/stub-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| TPL-004 | Reference Architecture Doc Template | templates | Proposed | radii | @ea-board | `knowledge-base/templates/ref-arch-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| TPL-002 | Pattern Doc Template | templates | Draft | radii | @ea-board | `knowledge-base/templates/pattern-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| TPL-003 | Stub Doc Template | templates | Draft | radii | @ea-board | `knowledge-base/templates/stub-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| TPL-004 | Reference Architecture Doc Template | templates | Draft | radii | @ea-board | `knowledge-base/templates/ref-arch-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
 
 ## 5. Gap Analysis
 
