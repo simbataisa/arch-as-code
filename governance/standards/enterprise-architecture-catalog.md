@@ -183,17 +183,17 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | EIP-010 | Normalizer | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/normalizer.md` | T0, T1 | EIP §8 | 2026-05-09 | 1 | Stub — Wave 1 |
 | EIP-011 | Aggregator | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/aggregator.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
 | EIP-012 | Splitter | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/splitter.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-013 | Resequencer | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/resequencer.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-014 | Composed Message Processor | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/composed-message-processor.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-015 | Scatter-Gather | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/scatter-gather.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-016 | Routing Slip | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/routing-slip.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-017 | Process Manager | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/process-manager.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1; relates to INT-001 Saga |
-| EIP-018 | Message Store | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-store.md` | T0, T1 | EIP §11; BCBS 239 §6 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-019 | Smart Proxy | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/smart-proxy.md` | T0, T1 | EIP §11 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-020 | Test Message | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/test-message.md` | T0, T1, T2 | EIP §11 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-021 | Channel Purger | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/channel-purger.md` | T1, T2 | EIP §11 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-022 | Durable Subscriber | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/durable-subscriber.md` | T0, T1 | EIP §10 | 2026-05-09 | 1 | Stub — Wave 1 |
-| EIP-023 | Guaranteed Delivery | eip | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/eip/guaranteed-delivery.md` | T0, T1 | EIP §3; BCBS 239 §6 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-013 | Resequencer | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/resequencer.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-014 | Composed Message Processor | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/composed-message-processor.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-015 | Scatter-Gather | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/scatter-gather.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-016 | Routing Slip | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/routing-slip.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-017 | Process Manager | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/process-manager.md` | T0, T1 | EIP §7 | 2026-05-09 | 1 | Stub — Wave 1; relates to INT-001 Saga |
+| EIP-018 | Message Store | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/message-store.md` | T0, T1 | EIP §11; BCBS 239 §6 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-019 | Smart Proxy | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/smart-proxy.md` | T0, T1 | EIP §11 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-020 | Test Message | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/test-message.md` | T0, T1, T2 | EIP §11 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-021 | Channel Purger | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/channel-purger.md` | T1, T2 | EIP §11 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-022 | Durable Subscriber | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/durable-subscriber.md` | T0, T1 | EIP §10 | 2026-05-09 | 1 | Stub — Wave 1 |
+| EIP-023 | Guaranteed Delivery | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/guaranteed-delivery.md` | T0, T1 | EIP §3; BCBS 239 §6 | 2026-05-09 | 1 | Stub — Wave 1 |
 | EIP-024 | Idempotent Receiver | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/idempotent-receiver.md` | T0, T1 | EIP §10.1; BCBS 239 §6 (accuracy); SBV Circ. 09 §IV.2 (UNOFFICIAL) | 2026-05-09 | 0 | Wave 3a starter set |
 | EIP-025 | Dead Letter Channel | eip | Draft | radii | @tech-lead-backend | `knowledge-base/patterns/eip/dead-letter-channel.md` | T0, T1 | EIP §10.5; BCBS 239 §6; SBV Circ. 09 §IV.3 (UNOFFICIAL) | 2026-05-09 | 0 | Wave 3a starter set |
 | FE-001 | Web Performance Budgets | frontend | Proposed | radii | @tech-lead-web | `knowledge-base/patterns/frontend/web-performance-budgets.md` | T0, T1, T2 | Core Web Vitals | 2026-05-09 | 2 | Stub — Wave 2 |
