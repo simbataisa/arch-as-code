@@ -1,6 +1,6 @@
 # Wave 4 Stub Promotion (48 docs) — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Promote all 48 Wave 1 stubs (EIP-001–023, PRIN-008–013, RES-006–012, BP-006–011, NFR-003–005, TPL-002–004) from Proposed → Draft by filling the two known content gaps, running validation scripts, and bulk-updating the enterprise-architecture-catalog.
 
@@ -27,14 +27,14 @@
 - Read: `governance/standards/enterprise-architecture-catalog.md`
 - Run: `scripts/mermaid-lint-doc.sh`, `scripts/check-compliance-rows.py`
 
-- [ ] **Step 1: Confirm Proposed count**
+- [x] **Step 1: Confirm Proposed count**
 
 ```bash
 grep "| Proposed |" governance/standards/enterprise-architecture-catalog.md | wc -l
 ```
 Expected: a number ≥ 48 (may include Wave 2/3 docs not yet executed from the Wave 3 plan).
 
-- [ ] **Step 2: Confirm compliance failures**
+- [x] **Step 2: Confirm compliance failures**
 
 ```bash
 python3 scripts/check-compliance-rows.py 2>&1
@@ -43,7 +43,7 @@ Expected output: exactly `FAIL TPL-003 (knowledge-base/templates/stub-doc-templa
 
 If additional FAILs appear, fix them before proceeding.
 
-- [ ] **Step 3: Confirm git is clean on main**
+- [x] **Step 3: Confirm git is clean on main**
 
 ```bash
 git status
@@ -57,7 +57,7 @@ Expected: `nothing to commit, working tree clean`
 **Files:**
 - Modify: `knowledge-base/templates/stub-doc-template.md`
 
-- [ ] **Step 1: Replace the Compliance Hooks section**
+- [x] **Step 1: Replace the Compliance Hooks section**
 
 Open `knowledge-base/templates/stub-doc-template.md` and replace the `## Compliance Hooks` section with the correct `## Compliance Mapping` heading and a 3-ring placeholder table that matches the pattern doc standard.
 
@@ -81,7 +81,7 @@ Replace with:
 | Ring 2 | [e.g. SBV Circular 09/2020 Article N] | [control description] ⚠️ (working summary — pending Legal review) |
 ```
 
-- [ ] **Step 2: Add When to Use / When Not to Use and Key Takeaway placeholders**
+- [x] **Step 2: Add When to Use / When Not to Use and Key Takeaway placeholders**
 
 The stub template should also carry placeholder headings so authors know every required section. After the `## NFR Hooks` section and before `## References`, add:
 
@@ -99,14 +99,14 @@ The stub template should also carry placeholder headings so authors know every r
 TBD — one sentence that captures the essential insight of this document.
 ```
 
-- [ ] **Step 3: Verify compliance check now passes**
+- [x] **Step 3: Verify compliance check now passes**
 
 ```bash
 python3 scripts/check-compliance-rows.py 2>&1
 ```
 Expected: `Done: checked=84, failures=0`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add knowledge-base/templates/stub-doc-template.md
@@ -120,7 +120,7 @@ git commit -m "fix(templates): TPL-003 — rename Compliance Hooks to Compliance
 **Files:**
 - Modify: `knowledge-base/principles/defense-in-depth.md` (before `## References`, line ~476)
 
-- [ ] **Step 1: Insert the section before References**
+- [x] **Step 1: Insert the section before References**
 
 In `knowledge-base/principles/defense-in-depth.md`, insert the following immediately before the `## References` heading:
 
@@ -140,14 +140,14 @@ In `knowledge-base/principles/defense-in-depth.md`, insert the following immedia
 
 ```
 
-- [ ] **Step 2: Run mermaid lint**
+- [x] **Step 2: Run mermaid lint**
 
 ```bash
 bash scripts/mermaid-lint-doc.sh knowledge-base/principles/defense-in-depth.md
 ```
 Expected: `OK knowledge-base/principles/defense-in-depth.md (N block(s))`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/principles/defense-in-depth.md
@@ -161,7 +161,7 @@ git commit -m "feat(principles): PRIN-008 add When to Use/Not Use sections"
 **Files:**
 - Modify: `knowledge-base/principles/observability-first.md` (before `## References`, line ~484)
 
-- [ ] **Step 1: Insert the section before References**
+- [x] **Step 1: Insert the section before References**
 
 In `knowledge-base/principles/observability-first.md`, insert the following immediately before the `## References` heading:
 
@@ -181,14 +181,14 @@ In `knowledge-base/principles/observability-first.md`, insert the following imme
 
 ```
 
-- [ ] **Step 2: Run mermaid lint**
+- [x] **Step 2: Run mermaid lint**
 
 ```bash
 bash scripts/mermaid-lint-doc.sh knowledge-base/principles/observability-first.md
 ```
 Expected: `OK knowledge-base/principles/observability-first.md (N block(s))`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/principles/observability-first.md
@@ -202,7 +202,7 @@ git commit -m "feat(principles): PRIN-009 add When to Use/Not Use sections"
 **Files:**
 - Modify: `knowledge-base/principles/least-privilege.md` (before `## References`, line ~466)
 
-- [ ] **Step 1: Insert the section before References**
+- [x] **Step 1: Insert the section before References**
 
 In `knowledge-base/principles/least-privilege.md`, insert the following immediately before the `## References` heading:
 
@@ -223,14 +223,14 @@ In `knowledge-base/principles/least-privilege.md`, insert the following immediat
 
 ```
 
-- [ ] **Step 2: Run mermaid lint**
+- [x] **Step 2: Run mermaid lint**
 
 ```bash
 bash scripts/mermaid-lint-doc.sh knowledge-base/principles/least-privilege.md
 ```
 Expected: `OK knowledge-base/principles/least-privilege.md (N block(s))`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add knowledge-base/principles/least-privilege.md
@@ -255,7 +255,7 @@ git commit -m "feat(principles): PRIN-011 add When to Use/Not Use sections"
 - `knowledge-base/patterns/eip/aggregator.md` (EIP-011)
 - `knowledge-base/patterns/eip/splitter.md` (EIP-012)
 
-- [ ] **Step 1: Batch mermaid lint — EIP-001–012**
+- [x] **Step 1: Batch mermaid lint — EIP-001–012**
 
 ```bash
 for f in \
@@ -276,7 +276,7 @@ done
 ```
 Expected: 12 files, 0 FAIL lines. If any fail, fix the Mermaid syntax in that file and re-run.
 
-- [ ] **Step 2: Update catalog — EIP-001–012 → Draft**
+- [x] **Step 2: Update catalog — EIP-001–012 → Draft**
 
 In `governance/standards/enterprise-architecture-catalog.md`, change the Status column from `Proposed` to `Draft` for EIP-001 through EIP-012.
 
@@ -285,7 +285,7 @@ grep -E "EIP-00[1-9]|EIP-01[012]" governance/standards/enterprise-architecture-c
 ```
 Expected: 12 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add governance/standards/enterprise-architecture-catalog.md
@@ -309,7 +309,7 @@ git commit -m "chore(catalog): Wave 4A gate — EIP-001–012 promoted to Draft"
 - `knowledge-base/patterns/eip/durable-subscriber.md` (EIP-022)
 - `knowledge-base/patterns/eip/guaranteed-delivery.md` (EIP-023)
 
-- [ ] **Step 1: Batch mermaid lint — EIP-013–023**
+- [x] **Step 1: Batch mermaid lint — EIP-013–023**
 
 ```bash
 for f in \
@@ -329,7 +329,7 @@ done
 ```
 Expected: 11 files, 0 FAIL lines.
 
-- [ ] **Step 2: Update catalog — EIP-013–023 → Draft**
+- [x] **Step 2: Update catalog — EIP-013–023 → Draft**
 
 In `governance/standards/enterprise-architecture-catalog.md`, change the Status column from `Proposed` to `Draft` for EIP-013 through EIP-023.
 
@@ -338,7 +338,7 @@ grep -E "EIP-01[3-9]|EIP-02[0123]" governance/standards/enterprise-architecture-
 ```
 Expected: 11 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add governance/standards/enterprise-architecture-catalog.md
@@ -357,7 +357,7 @@ git commit -m "chore(catalog): Wave 4B gate — EIP-013–023 promoted to Draft"
 - `knowledge-base/principles/async-by-default.md` (PRIN-012)
 - `knowledge-base/principles/modular-monolith-preference.md` (PRIN-013)
 
-- [ ] **Step 1: Batch mermaid lint — PRIN-008–013**
+- [x] **Step 1: Batch mermaid lint — PRIN-008–013**
 
 ```bash
 for f in \
@@ -372,7 +372,7 @@ done
 ```
 Expected: 6 files, 0 FAIL lines.
 
-- [ ] **Step 2: Update catalog — PRIN-008–013 → Draft**
+- [x] **Step 2: Update catalog — PRIN-008–013 → Draft**
 
 In `governance/standards/enterprise-architecture-catalog.md`, change the Status column from `Proposed` to `Draft` for PRIN-008 through PRIN-013.
 
@@ -381,7 +381,7 @@ grep -E "PRIN-0(08|09|10|11|12|13)" governance/standards/enterprise-architecture
 ```
 Expected: 6 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add governance/standards/enterprise-architecture-catalog.md
@@ -401,7 +401,7 @@ git commit -m "chore(catalog): Wave 4C gate — PRIN-008–013 promoted to Draft
 - `knowledge-base/patterns/resilience/queue-based-load-levelling.md` (RES-011)
 - `knowledge-base/patterns/resilience/health-check-aggregation.md` (RES-012)
 
-- [ ] **Step 1: Batch mermaid lint — RES-006–012**
+- [x] **Step 1: Batch mermaid lint — RES-006–012**
 
 ```bash
 for f in \
@@ -417,7 +417,7 @@ done
 ```
 Expected: 7 files, 0 FAIL lines.
 
-- [ ] **Step 2: Update catalog — RES-006–012 → Draft**
+- [x] **Step 2: Update catalog — RES-006–012 → Draft**
 
 In `governance/standards/enterprise-architecture-catalog.md`, change the Status column from `Proposed` to `Draft` for RES-006 through RES-012.
 
@@ -426,7 +426,7 @@ grep -E "RES-0(06|07|08|09|10|11|12)" governance/standards/enterprise-architectu
 ```
 Expected: 7 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add governance/standards/enterprise-architecture-catalog.md
@@ -451,7 +451,7 @@ git commit -m "chore(catalog): Wave 4D gate — RES-006–012 promoted to Draft"
 - `knowledge-base/templates/stub-doc-template.md` (TPL-003) — fixed in Task 1
 - `knowledge-base/templates/ref-arch-doc-template.md` (TPL-004)
 
-- [ ] **Step 1: Batch mermaid lint — BP + NFR + TPL**
+- [x] **Step 1: Batch mermaid lint — BP + NFR + TPL**
 
 ```bash
 for f in \
@@ -472,7 +472,7 @@ done
 ```
 Expected: 12 files, 0 FAIL lines.
 
-- [ ] **Step 2: Full compliance check — all 48 Wave 4 files**
+- [x] **Step 2: Full compliance check — all 48 Wave 4 files**
 
 ```bash
 python3 scripts/check-compliance-rows.py 2>&1
@@ -481,7 +481,7 @@ Expected: `Done: checked=84, failures=0`
 
 If any failure appears, fix the specific file before continuing.
 
-- [ ] **Step 3: Update catalog — BP-006–011, NFR-003–005, TPL-002–004 → Draft**
+- [x] **Step 3: Update catalog — BP-006–011, NFR-003–005, TPL-002–004 → Draft**
 
 In `governance/standards/enterprise-architecture-catalog.md`, change the Status column from `Proposed` to `Draft` for all 12 entries.
 
@@ -490,7 +490,7 @@ grep -E "(BP-0(06|07|08|09|10|11)|NFR-00[345]|TPL-00[234])" governance/standards
 ```
 Expected: 12 lines.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add governance/standards/enterprise-architecture-catalog.md
@@ -501,7 +501,7 @@ git commit -m "chore(catalog): Wave 4E gate — BP-006–011 + NFR-003–005 + T
 
 ## Final Verification — All 48 Wave 4 docs
 
-- [ ] **Step 1: Confirm zero Proposed entries for Wave 4 IDs**
+- [x] **Step 1: Confirm zero Proposed entries for Wave 4 IDs**
 
 ```bash
 grep -E "(EIP-0(0[1-9]|1[0-9]|2[0-3])|PRIN-0(08|09|10|11|12|13)|RES-0(06|07|08|09|10|11|12)|BP-0(06|07|08|09|10|11)|NFR-00[345]|TPL-00[234])" \
@@ -509,7 +509,7 @@ grep -E "(EIP-0(0[1-9]|1[0-9]|2[0-3])|PRIN-0(08|09|10|11|12|13)|RES-0(06|07|08|0
 ```
 Expected: 0 lines.
 
-- [ ] **Step 2: Confirm all 48 are now Draft**
+- [x] **Step 2: Confirm all 48 are now Draft**
 
 ```bash
 grep -E "(EIP-0(0[1-9]|1[0-9]|2[0-3])|PRIN-0(08|09|10|11|12|13)|RES-0(06|07|08|09|10|11|12)|BP-0(06|07|08|09|10|11)|NFR-00[345]|TPL-00[234])" \
@@ -517,14 +517,14 @@ grep -E "(EIP-0(0[1-9]|1[0-9]|2[0-3])|PRIN-0(08|09|10|11|12|13)|RES-0(06|07|08|0
 ```
 Expected: 48
 
-- [ ] **Step 3: Final compliance check**
+- [x] **Step 3: Final compliance check**
 
 ```bash
 python3 scripts/check-compliance-rows.py 2>&1
 ```
 Expected: `Done: checked=N, failures=0`
 
-- [ ] **Step 4: Commit the plan file**
+- [x] **Step 4: Commit the plan file**
 
 ```bash
 git add docs/superpowers/plans/2026-05-10-wave-4-stub-promotion.md
