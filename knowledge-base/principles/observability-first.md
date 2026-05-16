@@ -481,6 +481,19 @@ Verify audit log completeness: run a synthetic payment flow and assert that the 
 
 Kill the OTel Collector sidecar mid-test and verify: (a) the application continues serving requests without error; (b) metrics are buffered and replayed on collector recovery; (c) a `otel_collector_down` alert fires within 60 seconds of the sidecar being killed.
 
+## When to Use
+
+- **All production services, Tier 0–3**: every service that runs in production must emit the four Golden Signals (Latency, Traffic, Errors, Saturation) from day one. "Add it later" is explicitly disallowed by this principle — observability is a day-1 requirement.
+- **Pre-GA staging environments**: staging must be instrumented identically to production; discrepancies between staging and production dashboards indicate instrumentation drift and must be resolved before GA.
+- **During incident response**: any service without golden-signal dashboards delays incident resolution; this principle pre-empts that situation by requiring instrumentation before the first production deployment.
+- **Greenfield and brownfield services**: both new services and services undergoing modernisation (Strangler Fig, ACL extraction) must implement OTEL tracing, Micrometer metrics, and structured logging as the first engineering tasks — before feature logic.
+
+## When Not to Use
+
+- **One-off administrative scripts that run once and are discarded**: a migration script run once by an engineer does not need a Prometheus metric. Add a progress log line to stdout; that is sufficient.
+- **Developer-local tooling with no production footprint**: local mock servers, seed-data generators, and integration-test helpers that never run in a shared environment are exempt from full instrumentation.
+- **As a replacement for alerting design**: Observability-First ensures the signals exist; the SRE team still needs to design SLOs and alert thresholds per NFR-005. Metrics without alerts are necessary but not sufficient.
+
 ## References
 
 - [BP-007 Golden Signals (SRE)](../best-practices/golden-signals-sre.md)
