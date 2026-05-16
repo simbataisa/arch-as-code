@@ -1,8 +1,35 @@
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
 .venv/
 *.pyc
+*.pyo
 __pycache__/
+*.egg-info/
+dist/
+build/
+
+# Node / Mermaid
 node_modules/
+npm-debug.log*
+
+# Editors
 *.swp
+*.swo
 .idea/
 .vscode/
+
+# Mermaid rendered output
+*.svg
+*.png
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Claude local session data
+.claude/
