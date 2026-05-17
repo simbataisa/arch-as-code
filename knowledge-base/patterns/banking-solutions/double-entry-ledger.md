@@ -522,6 +522,38 @@ STRIDE analysis against the double-entry ledger pattern:
 - Kill the PostgreSQL primary mid-posting (Toxiproxy or AWS Fault Injection Simulator); assert that the posting transaction either commits fully (both legs) or is rolled back cleanly (neither leg); assert no partial postings in the journal.
 - Inject a duplicate Kafka message for the same `PaymentCommand`; assert that the idempotency check prevents a second posting; assert `journal_entries` count = 2 (not 4).
 
+## Context
+
+The Double-Entry Ledger pattern applies whenever a service is the authoritative financial system of record for value movements: payment services, settlement engines, fee engines, FX booking, and internal fund transfers. It is mandatory for all T0 services at Techcombank and strongly recommended for T1. Apply this pattern when two or more accounts are affected by a single business event and the sum-zero invariant must be provable at any point in time for regulatory or audit purposes. It is NOT appropriate for non-financial event logging, transient session state, or analytics aggregations where mutability is acceptable.
+
+## When to Use
+
+- Any service that posts value movements between accounts — payment processing, fee booking, FX settlement, internal fund transfers — where regulators or auditors may inspect individual entries.
+- T0 services requiring idempotent reprocessing: Kafka consumer retries, NAPAS RTT timeouts, and network failures must not create duplicate postings; the `transaction_id` unique constraint provides this guarantee.
+- Contexts where reconciliation must be provable by recomputation: the append-only journal allows any balance to be independently verified by summing all DR/CR entries, satisfying BCBS 239 §6 and VAS 01/2006.
+
+## When Not to Use
+
+- Non-financial counters (request counts, cache hits, feature flag evaluations) — use a standard mutable counter or time-series metric; double-entry overhead is unjustified.
+- Analytics aggregations and reporting tables — these are derived views of the ledger, not the ledger itself; use CQRS projections (DATA-001) fed by the CDC outbox (INT-002).
+- T2/T3 services tracking soft reservations or pending estimates — soft reservations that expire without posting do not represent a confirmed value movement and should not create journal entries; use a reservation table with explicit expiry.
+
+## Variants
+
+| Variant | When to prefer | Trade-off |
+|---------|----------------|-----------|
+| Append-only journal + materialised balance view (this pattern) | T0/T1 services; regulatory compliance; auditability required | Balance query requires a join or aggregate over journal_entries for accounts without a materialised view; solved by the balance view but adds a write per posting |
+| Event-sourced ledger (INT-004) | When full replay of all account state transitions is needed for complex product logic; when the ledger events drive downstream projections | Higher storage per event; replay latency at startup; more operational complexity |
+| CQRS split-read model (DATA-001) | When read patterns (e.g., account statement pagination) are too expensive to serve from the journal directly | Eventual consistency between write model and read projection; acceptable for statements, not for real-time balance checks |
+
+## Related Patterns
+
+- [BSP-002 Idempotent Payment Key](idempotent-payment-key.md) — the `transaction_id` unique constraint that prevents duplicate journal pairs
+- [BSP-004 End-of-Day Batch Window](end-of-day-batch-window.md) — EOD reconciliation validates that all ledger sums are zero across all accounts
+- [BSP-005 Reversal and Chargeback](reversal-and-chargeback.md) — reversals post new negating DR/CR pairs; they never mutate existing entries
+- [INT-001 Saga Orchestration](../integration/saga-orchestration.md) — cross-service transaction coordination that uses this ledger as the authoritative state
+- [DATA-001 CQRS Pattern](../../patterns/data/cqrs-pattern.md) — read projections over the append-only journal for account statements and analytics
+
 ## References
 
 - Pacioli, L. (1494) — *Summa de Arithmetica* (double-entry bookkeeping origin)
