@@ -415,6 +415,37 @@ STRIDE analysis — secrets rotation defends primarily against Information Discl
 - Vault network partition: block network traffic from the application pod to Vault; verify the application continues to serve requests using cached credentials for 1 hour (default TTL); verify alert fires within 5 minutes.
 - Simultaneous rotation + load: trigger emergency rotation while driving 500 rps; verify zero connection pool acquisition timeouts and zero HTTP 5xx responses during the rotation.
 
+## Context
+
+HashiCorp Vault is the secrets management platform for all T0 and T1 services at Techcombank. Dynamic credentials (Vault database secrets engine) replace static passwords with short-TTL credentials unique to each pod — eliminating shared static passwords from the threat surface. The `@RefreshScope` + Vault Agent sidecar pattern enables zero-downtime rotation without redeployment. cert-manager handles the Kubernetes TLS certificate lifecycle independently from application credential rotation, ensuring mTLS is never interrupted by an expired certificate.
+
+## When to Use
+
+- Any long-lived credential in a production environment: database passwords, API keys, TLS certificates, service account keys, or signing keys used by T0/T1 services.
+- Post-incident response when a credential may have been compromised — immediate Vault lease revocation and re-issue is faster and safer than manual secret replacement across deployment manifests.
+- Environments subject to PCI-DSS section 3.6 (cryptographic key rotation), SWIFT CSP Control 6.2, or SBV Circular 09/2020 section IV.3 requiring documented, periodic rotation with audit trail.
+
+## When Not to Use
+
+- Short-lived secrets that naturally expire: JWT access tokens (less than 15-min TTL), ephemeral Kubernetes service account tokens, or one-time-use OTP codes — rotation overhead is not justified when secrets naturally expire faster than the rotation cycle.
+- Development and sandbox environments with no customer data where a team password manager and manual credential refresh is operationally simpler and poses no regulatory risk.
+- Hardware Security Module (HSM) root keys and master wrapping keys — rotation requires a formal physical HSM ceremony with dual control; this is out of scope for automated Vault rotation and must be handled through a separate HSM governance process.
+
+## Variants
+
+| Variant | Use when | Trade-off |
+|---------|----------|-----------|
+| Dynamic credentials via Vault database engine (this pattern) | T0/T1 services with PostgreSQL/MySQL backends; zero-downtime rotation requirement; PCI-DSS compliance | Vault database engine must have connectivity to the database; adds Vault Agent sidecar to every pod |
+| Static secret with scheduled rotation via Vault kv and lease renewal | Third-party API keys or secrets where the remote system does not support dynamic generation | Rotation window requires a brief coordinated update; short window of credential exposure between old and new key during propagation |
+| Manual rotation via team password manager | Dev/sandbox environments; T3 internal tools with no regulatory exposure | No audit trail; rotation discipline depends on team process; unacceptable for PCI-in-scope systems |
+
+## Related Patterns
+
+- [SEC-003 Vault Secret Management](vault-secret-management.md) — Vault architecture and AppRole authentication that SEC-007 builds upon
+- [SEC-006 JWT Best Practices](jwt-best-practices.md) — the 90-day RSA key pair rotation is a specific instance of this pattern
+- [COMP-008 SWIFT CSP v2024](../../compliance/swift-csp-2024.md) — SWIFT CSP Control 6.2 credential management requirements satisfied by this rotation pattern
+- [SEC-001 mTLS Service Mesh](mtls-service-mesh.md) — cert-manager TLS certificate rotation is managed alongside application secret rotation
+
 ## References
 
 - [HashiCorp Vault Database Secrets Engine](https://developer.hashicorp.com/vault/docs/secrets/databases)
