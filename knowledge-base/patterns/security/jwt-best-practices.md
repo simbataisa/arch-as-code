@@ -466,6 +466,37 @@ STRIDE analysis — JWT vulnerabilities map primarily to Spoofing and Elevation 
 - Redis denylist down: kill Redis; verify that requests continue with `denylist_check=skipped` logged, HTTP 200 returned (fail-open policy for availability); verify PagerDuty alert fires within 60 s.
 - JWKS endpoint down: bring JWKS endpoint down; verify resource servers continue to validate tokens using cached keys for 5 minutes; after cache expiry, verify HTTP 401 is returned.
 
+## Context
+
+JWT (JSON Web Token) is the standard bearer-token format for stateless API authentication in the Techcombank microservices platform. Access tokens are issued by the central Auth Service on successful OAuth2 + MFA challenge, forwarded by the BFF to downstream services, and validated at every resource server without a central session store. The 15-minute TTL balances stateless performance with the revocation window for stolen tokens; the JTI denylist in Redis provides immediate invalidation without sacrificing statelessness for the 99.9% of non-revoked tokens.
+
+## When to Use
+
+- Stateless API authentication for high-throughput microservices where per-request session-store lookup overhead is unacceptable (e.g., Payment API handling 500+ TPS).
+- OAuth2 access tokens issued by the Auth Service for BFF to downstream service calls where the BFF validates the outer token and injects a scoped downstream token.
+- Service-to-service calls within a zero-trust mTLS mesh where the JWT carries the calling service's identity and authorised scopes for audit-trail completeness.
+
+## When Not to Use
+
+- Revocation-critical flows where logout must be effective within one request — use opaque reference tokens with Redis introspection instead (SEC-011 Session Revocation); JWT denylist checks are best-effort if Redis is unavailable.
+- Tokens carrying large payloads (above 4 KB after Base64 encoding) — JWT overhead on every request becomes measurable at scale; use token introspection with a thin opaque token instead.
+- Air-gapped environments where the resource server cannot reliably reach the JWKS endpoint — use symmetric HMAC-SHA256 with a pre-shared key managed through Vault, accepting the trade-off of symmetric key distribution complexity.
+
+## Variants
+
+| Variant | Use when | Trade-off |
+|---------|----------|-----------|
+| Asymmetric RS256 with JWKS (this pattern) | Multi-service architectures where any service can validate without holding the signing key; standard for T0/T1 | JWKS endpoint is a dependency; key rotation requires coordinated JWKS cache flush |
+| Symmetric HS256 with shared secret | Single-service internal tokens where the issuer and verifier are the same deployment unit; lower latency | Shared secret must be distributed to every verifier — increases blast radius if secret is leaked |
+| Nested JWT (signed and encrypted) | Tokens crossing trust boundaries (e.g., inter-bank API calls) where the payload must be confidential even from intermediaries | Higher compute overhead; recipient must hold decryption key; not supported by standard Spring Security JWT decoder without custom configuration |
+
+## Related Patterns
+
+- [SEC-011 Session Revocation](session-revocation.md) — opaque token alternative for revocation-critical flows
+- [SEC-005 BFF + Token Binding](bff-token-binding.md) — BFF pattern that controls how tokens are forwarded to downstream services
+- [SEC-002 OAuth2 Authorization](oauth2-authorization.md) — the authorization server that issues JWT access tokens governed by this pattern
+- [SEC-007 Secrets Rotation](secrets-rotation.md) — manages the RSA key pair lifecycle including the 90-day rotation schedule
+
 ## References
 
 - [RFC 8725 — JSON Web Token Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725)
