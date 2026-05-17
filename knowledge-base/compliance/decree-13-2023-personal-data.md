@@ -1,138 +1,275 @@
-# Decree 13/2023/ND-CP — Personal Data Protection
+# Decree 13/2023/ND-CP — Personal Data Protection (VPDP)
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @head-of-compliance
-Catalog ID: COMP-003 | Radii
-Tier Applicability: T0, T1, T2
+Status: Draft | Catalog ID: COMP-003 | Owner: @head-of-compliance
+Tier Applicability: N/A — applies to all systems processing Vietnamese personal data
 
-> ⚠️ **Working summary** — verbatim Article text pending authoritative English translation from `@legal-vietnam`. Do NOT use in regulatory submissions without Legal sign-off. See `knowledge-base/_research-notes.md` for the expanded working summary and TODO list.
+> ⚠️ **Working summary** — verbatim Article text pending authoritative English translation from `@legal-vietnam`. Do NOT use in regulatory submissions without Legal sign-off.
 
 ## Problem Statement
 
-Decree 13/2023/ND-CP (effective July 1, 2023) is Vietnam's primary personal data protection regulation, analogous to GDPR in scope. It classifies biometric data, financial standing, and location data as **sensitive personal data** requiring explicit written consent, Data Privacy Impact Assessment (DPIA), and storage within Vietnam. Without a clear mapping of this Decree to architecture patterns, Techcombank's digital banking features (biometric login, KYC, open banking) may inadvertently violate data-subject rights or cross-border transfer restrictions.
+- Decree 13/2023/ND-CP (effective 2023-07-01) classifies biometric data, financial standing, and location data as **sensitive personal data** requiring explicit written consent, DPIA filing with MPS A05 Cybersecurity Department, and storage within Vietnam. Without these controls, every digital banking feature using biometrics or financial data is non-compliant by default.
+- Data subject rights under Art. 11 (access, portability, erasure) require a self-service portal backed by coordinated purge operations across core banking (T24), analytics data lake, and backup systems — capabilities that do not exist by default in most banking architectures.
+- Cross-border data transfer (Art. 13) requires an Overseas Transfer Impact Assessment dossier filed with MPS A05 within 60 days of transfer commencement. Failure to file before transferring data to international analytics or cloud regions is an immediate violation.
+- Data breach notification to MPS A05 within 72 hours (Art. 26) requires pre-wired runbooks, confirmed contact lists, and incident classification logic — missing any of these makes the 72-hour SLA operationally impossible.
+- Administrative penalties under Art. 38–41 reach VND 5 billion (~USD 200k) per violation; criminal liability (up to 7 years imprisonment) applies to wilful mass breaches. This creates material compliance risk for any feature that processes sensitive personal data without the required controls.
+
+## Context
+
+Decree 13/2023 applies to all organisations processing Vietnamese individuals' personal data, regardless of where the processing occurs (Art. 2). For Techcombank this covers: mobile banking biometric enrolment (facial recognition, fingerprint); KYC onboarding (CCCD face-match, biometric templates); open banking APIs sending financial data to third-party fintechs; analytics pipelines that include customer transaction history; and any cloud data transfers to Singapore or other international regions. @data-privacy-officer owns the DPIA registry and data subject rights portal. @head-of-compliance owns regulatory submission (A05 notifications). @ciso-delegate owns breach detection and notification runbooks.
 
 ## Solution
 
-Apply a data-classification-first design: identify whether each data element is basic or sensitive personal data, then apply the corresponding controls. The architecture catalog encodes these controls via dedicated patterns (PRIN-007, SEC-004, REF-003).
+Apply data-classification-first design: classify every data element as basic or sensitive personal data per Decree 13 Art. 2–9; apply the corresponding controls (consent capture, DPIA, Vietnamese vault, DSR API) before feature launch. The architecture catalog provides the implementation patterns; this document is the regulatory mapping that tells engineers which pattern to use for which obligation.
 
 ```mermaid
-graph TD
-    Decree["Decree 13/2023<br/>Personal Data Protection"]
-    Basic["Basic Personal Data<br/>Name · ID number · Account no · IP"]
-    Sensitive["Sensitive Personal Data<br/>Biometric (auth) · Financial standing<br/>Health · Location · Social networks"]
-    Consent["Art. 8 — Explicit Written Consent<br/>+ separate consent per purpose"]
-    DPIA["Art. 28 — DPIA Required<br/>before processing at scale"]
-    Rights["Art. 11 — Data Subject Rights<br/>Access · Portability · Deletion"]
-    XBorder["Art. 13 — Cross-Border Transfer<br/>DPIA + MPS Notification"]
-    Vault["Vietnamese Vault<br/>SEC-003 · SEC-004 · PRIN-007"]
-    Decree --> Basic & Sensitive
-    Sensitive --> Consent
-    Sensitive --> DPIA
-    Sensitive --> Vault
-    Decree --> Rights
-    Decree --> XBorder
-    classDef reg fill:#fee,stroke:#c00
-    classDef ctrl fill:#e7f0ff,stroke:#2050a0
-    classDef impl fill:#e7f8ee,stroke:#2a8d4f
-    class Decree reg
-    class Basic,Sensitive,Consent,DPIA,Rights,XBorder ctrl
-    class Vault impl
+sequenceDiagram
+    autonumber
+    participant Customer
+    participant DSRAPI as DSRApi
+    participant ConsentSvc as ConsentService
+    participant DataRegistry as DataRegistry
+    participant T24 as T24CoreBanking
+    participant Analytics as AnalyticsDataLake
+
+    Customer->>DSRAPI: POST /dsr/erasure {customerId, reason}
+    DSRAPI->>ConsentSvc: validateIdentity(customerId)
+    ConsentSvc-->>DSRAPI: identity verified
+    DSRAPI->>DataRegistry: createDSR(type=ERASURE, customerId)
+    DataRegistry-->>DSRAPI: dsrId=DSR-2026-0042
+
+    DSRAPI->>T24: scheduleAnonymisation(customerId)
+    DSRAPI->>Analytics: schedulePurge(customerId, retentionOverride=true)
+
+    Note over DSRAPI,Analytics: Processing within 30 days (Art. 11.2)
+
+    T24-->>DataRegistry: anonymisationComplete(dsrId)
+    Analytics-->>DataRegistry: purgeComplete(dsrId)
+    DataRegistry-->>DSRAPI: DSR fulfilled
+    DSRAPI-->>Customer: 200 OK erasure complete
 ```
 
-## Data Classification (Articles 2, 9)
+## Implementation Guidelines
 
-> ⚠️ Working classification — confirm article numbers with `@legal-vietnam`.
+### 1. DSR REST Endpoint (Spring Boot)
 
-| Data element | Category | Controls required |
-|---|---|---|
-| Full name, date of birth | Basic | Standard privacy controls |
-| Vietnamese national ID (CCCD number) | Basic | Standard privacy controls |
-| Account numbers (bank, card) | Basic | Standard privacy controls |
-| IP address, device ID | Basic | Standard privacy controls |
-| Biometric data used for **authentication** (fingerprint, face recognition, iris for login) | **Sensitive** | Written consent + DPIA + 60-day A05 filing + Vietnamese vault |
-| Biometric image/template (CCCD face photo used for KYC matching) | **Sensitive** | Written consent + DPIA + 60-day A05 filing + Vietnamese vault |
-| **Customer data of credit institutions** (banking relationship, account status, product holdings) | **Sensitive** (explicitly listed in Art. 9) | Written consent + DPIA + Vietnamese vault |
-| Account balance, transaction history, credit score, income | **Sensitive** (financial standing) | Written consent + DPIA + Vietnamese vault |
-| GPS / location data (transaction location, device location) | **Sensitive** | Written consent + DPIA |
-| Health / medical data | **Sensitive** | Written consent + DPIA |
-| Political views, religious beliefs | **Sensitive** | Written consent + DPIA |
+```java
+@RestController
+@RequestMapping("/dsr")
+@RequiredArgsConstructor
+public class DataSubjectRightsController {
 
-## Key Provisions (Working Summary)
+    private final ConsentService consentService;
+    private final DsrRepository dsrRepository;
+    private final PurgeOrchestrator purgeOrchestrator;
 
-| Article | Provision | Banking impact |
-|---------|-----------|----------------|
-| Art. 2 | Scope — applies to all organisations processing Vietnamese individuals' data, regardless of where processing occurs | Applies to Techcombank's international analytics pipelines and third-party integrations |
-| Art. 8 | Consent — voluntary, specific, informed, unambiguous; separate for each purpose; biometric requires written consent; withdrawable at any time | Mobile banking onboarding must capture layered consent; facial-recognition feature requires separate written consent |
-| Art. 11 | Data subject rights — access, portability (machine-readable), correction, deletion ("right to be forgotten"), restriction, object to processing | Self-service portal required for T0/T1 customer-facing systems |
-| Art. 13 | Cross-border transfer — submit **Overseas Transfer Impact Assessment dossier** to **Cybersecurity Department (A05, MPS)** within **60 days** of transfer commencement; notify after each transfer; update within 10 days of changes | Any customer data flowing to international analytics (e.g., Singapore region) requires 60-day A05 dossier; credit bureau cross-border connections require A05 notification |
-| Art. 26 | Data breach notification — within **72 hours** of discovery to **Cybersecurity Department (A05, MPS)**; include nature, volume, categories of records, likely consequences, remediation | Incident response runbooks must include A05 notification step; SLA: 72h from discovery |
-| Art. 28 | DPIA — required before processing sensitive personal data at scale or using automated decision-making; submit dossier to A05 within **60 days** of processing start; results retained 5 years; A05 may inspect | KYC biometric matching, credit-scoring models, and fraud-detection ML must each have a DPIA filed with A05 within 60 days of feature launch |
-| Art. 38–41 | Penalties — administrative fines up to VND 5 billion (~USD 200k) per violation; criminal liability (up to 7 years imprisonment) for wilful mass breaches | Material compliance risk for unauthorised data sharing or inadequate consent capture |
+    @PostMapping("/erasure")
+    public ResponseEntity<DsrResponse> requestErasure(
+            @RequestBody DsrErasureRequest req,
+            @AuthenticationPrincipal Jwt jwt) {
 
-## Compliance Mapping
+        consentService.verifyIdentity(req.customerId(), jwt.getSubject());
 
-| Ring | Regulation | Provision | Pattern implementation |
-|------|-----------|-----------|----------------------|
-| Ring 0 (global) | GDPR (EU, as reference standard) | Art. 9 (special categories), Art. 17 (right to erasure), Art. 83 (penalties) | Decree 13 is modelled on GDPR; GDPR patterns apply where Vietnamese law doesn't specify differently |
-| Ring 0 (global) | NIST Privacy Framework | Data processing transparency, individual participation | Informs data-subject rights portal design |
-| Ring 1 (international banking) | SWIFT CSP 2024 | Customer data handling controls | SWIFT CSP §5 (data integrity) aligned with Decree 13 Art. 8 consent requirements |
-| Ring 2 (Vietnam) | Decree 13/2023/ND-CP — Art. 8 | Consent for biometric data | Required by SEC-005 (BFF + DPoP biometric), REF-003 (KYC/AML), REF-004 (3DS2) |
-| Ring 2 (Vietnam) | Decree 13/2023/ND-CP — Art. 9, 13 | Sensitive data + cross-border transfer | Required by SEC-004 (Tokenisation — CCCD data), PRIN-007 (Data Residency) |
-| Ring 2 (Vietnam) | Decree 13/2023/ND-CP — Art. 26, 28 | Breach notification + DPIA | Required by BP-002 (DR Playbook) incident response section |
-| Ring 2 (Vietnam) | Decree 53/2022/ND-CP | Data localisation | Tokenised biometric templates must remain in Vietnamese vault (Decree 13 + 53 combined obligation) |
+        DsrRecord dsr = dsrRepository.create(DsrRecord.builder()
+            .type(DsrType.ERASURE)
+            .customerId(req.customerId())
+            .reason(req.reason())
+            .requestedAt(Instant.now())
+            .deadlineAt(Instant.now().plus(30, ChronoUnit.DAYS))
+            .build());
+
+        purgeOrchestrator.scheduleErasure(dsr);
+        return ResponseEntity.accepted()
+            .body(new DsrResponse(dsr.id(), dsr.deadlineAt()));
+    }
+}
+```
+
+### 2. Consent Table DDL (PostgreSQL)
+
+```sql
+CREATE TABLE consent_records (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id     VARCHAR(50)  NOT NULL,
+    purpose         VARCHAR(100) NOT NULL,
+    data_category   VARCHAR(50)  NOT NULL,
+    consent_text    TEXT         NOT NULL,
+    consented_at    TIMESTAMPTZ  NOT NULL,
+    withdrawn_at    TIMESTAMPTZ,
+    consent_medium  VARCHAR(20)  NOT NULL,
+    CONSTRAINT require_written_for_sensitive
+        CHECK (data_category != 'SENSITIVE' OR consent_medium = 'WRITTEN')
+);
+CREATE INDEX idx_consent_customer ON consent_records(customer_id);
+CREATE INDEX idx_consent_purpose ON consent_records(customer_id, purpose)
+    WHERE withdrawn_at IS NULL;
+```
+
+### 3. OPA Purpose-Limitation Policy (Art. 8 — Consent per Purpose)
+
+```rego
+package decree13.purpose_limitation
+
+import future.keywords.if
+
+default allow = false
+
+allow if {
+    consent := data.consent_records[_]
+    consent.customer_id == input.customer_id
+    consent.purpose == input.requested_purpose
+    consent.withdrawn_at == null
+    input.processing_purpose == consent.purpose
+}
+
+deny_cross_border if {
+    input.destination_country != "Vietnam"
+    not data.a05_dossier_filed[input.transfer_id]
+}
+```
+
+### 4. Data Portability Export Job
+
+```java
+@Component
+@RequiredArgsConstructor
+public class DataPortabilityExporter {
+
+    private final JdbcTemplate jdbc;
+
+    public Path exportCustomerData(String customerId) throws IOException {
+        Path exportFile = Files.createTempFile("dsr-export-" + customerId, ".json");
+
+        List<Map<String, Object>> transactions = jdbc.queryForList(
+            "SELECT * FROM transactions WHERE customer_id = ? ORDER BY posted_at DESC",
+            customerId);
+
+        List<Map<String, Object>> accounts = jdbc.queryForList(
+            "SELECT account_number, account_type, opened_date FROM accounts WHERE customer_id = ?",
+            customerId);
+
+        Map<String, Object> export = Map.of(
+            "customerId", customerId,
+            "exportDate", Instant.now().toString(),
+            "transactions", transactions,
+            "accounts", accounts
+        );
+        Files.writeString(exportFile, JsonUtil.serialize(export));
+        return exportFile;
+    }
+}
+```
+
+## When to Use
+
+- Any feature processing sensitive personal data (biometric auth, credit scoring, fraud ML, location-based services) — file DPIA with MPS A05 before launch (Art. 28); obtain written consent from each customer before enabling the feature.
+- Designing data flows that cross Vietnamese borders (international analytics, Singapore cloud region, global card network) — file Overseas Transfer Impact Assessment with MPS A05 within 60 days of transfer commencement (Art. 13).
+- Implementing customer-facing self-service for data rights — Art. 11 mandates access, portability, correction, and erasure capabilities; use the DSR API pattern (§4 above) as the implementation basis.
+
+## When Not to Use
+
+- Anonymised or pseudonymised data where re-identification is technically infeasible — Decree 13 applies to personal data; properly anonymised aggregates (e.g., branch-level transaction counts with no customer identifiers) are out of scope.
+- Employee data within Techcombank's internal HR systems — Decree 13 applies to all organisations processing Vietnamese individuals' data, but HR data is subject to the Labour Code in addition to Decree 13; consult @legal-vietnam for the boundary.
+- Fully automated processing with no Vietnamese data subject — data about non-Vietnamese individuals processed entirely outside Vietnam is out of scope for Decree 13, though GDPR may apply for EU citizens.
+
+## Variants
+
+| Variant | When to prefer | Trade-off |
+|---------|----------------|-----------|
+| Full VPDP compliance (T0/T1 customer-facing) | Any feature processing sensitive personal data — biometrics, financial standing, location | Maximum regulatory protection; requires DPIA, written consent capture, DSR portal, A05 notifications |
+| Scoped basic-data compliance (T2 internal analytics) | Internal analytics using pseudonymised data only; no sensitive personal data | Simplified controls (no DPIA, standard consent); must verify pseudonymisation is irreversible |
+| Consent delegation to vendor (Open Banking) | Third-party fintech accessing Techcombank customer data via open banking APIs | Techcombank retains responsibility; fintech must hold independent consent and have DPIA on file; contractual obligation required |
 
 ## NFR Acceptance Criteria
 
 ```yaml
-service_name: "[service]-decree13-compliance"
-tier: T0
-compliance_context:
-  regulation: Decree 13/2023/ND-CP Personal Data Protection (working summary — pending Legal)
-  consent_capture: explicit per purpose; written consent for biometric
-  breach_notification_hours: 72           # Art. 26 — notify Cybersecurity Dept A05 (MPS) within 72h
-  cross_border_dossier_days: 60           # Art. 13 — file Overseas Transfer Impact Assessment with A05 within 60 days
-  dpia_filing_days: 60                    # Art. 28 — submit DPIA dossier to A05 within 60 days of processing start
-  dpia_record_retention_years: 5         # Art. 28 — retain DPIA records 5 years
-acceptance_criteria:
-  - id: D13-1
-    description: Written consent captured and logged before biometric feature activation
-    verification: integration test — biometric enrol fails if consent record absent in audit log
-  - id: D13-2
-    description: Data subject deletion request processed within 30 days
-    verification: QA test — submit deletion request via self-service portal; verify data purged in core banking and analytics within 30 days
-  - id: D13-3
-    description: DPIA completed and filed for all sensitive-data processing at scale
-    verification: DPIA registry reviewed annually by @data-privacy-officer; each DPIA record has expiry date
-  - id: D13-4
-    description: Breach notification playbook tested annually; Cybersecurity Department A05 contact details current
-    verification: tabletop exercise results documented in governance/decisions/REVIEW-LOG-*
-  - id: D13-5
-    description: Overseas Transfer Impact Assessment dossier filed with A05 for all active cross-border data flows within 60 days of commencement (Art. 13)
-    verification: cross-border data flow registry reviewed quarterly by @data-privacy-officer; each entry has A05 dossier reference number
+nfr_acceptance_criteria:
+  id: COMP-003
+  pattern: Decree 13/2023 Personal Data Protection
+
+  performance:
+    - id: D13-HP-01
+      statement: >
+        DSR erasure request MUST be fulfilled within 30 calendar days (Art. 11.2).
+        System must track deadline and alert if approaching.
+      measurement: >
+        Integration test: submit erasure request; mock T24 + Analytics completing in 25 days;
+        assert DSR record shows fulfilled_at <= deadline_at.
+
+  resilience:
+    - id: D13-HR-01
+      statement: >
+        Breach notification runbook MUST complete MPS A05 notification within 72h of discovery (Art. 26).
+        Runbook contact list MUST be verified within 90 days.
+      measurement: >
+        Tabletop exercise: simulate data breach at T=0; assert draft notification ready by T+4h;
+        assert submitted to A05 by T+72h. Contact list review date in runbook < 90 days.
+
+  compliance:
+    - id: D13-COMP-01
+      statement: >
+        Written consent record MUST exist for every active biometric feature.
+        Consent withdrawal MUST disable feature within 1 business day.
+      measurement: >
+        Integration test: enrol biometric without consent record -> assert feature blocked.
+        Withdraw consent -> assert biometric login returns HTTP 403 within 24h.
 ```
 
-## Operational Runbook (stub)
+## Compliance Mapping
 
-1. **Data subject rights request** — customer submits via self-service portal; ticket auto-created in compliance queue
-2. **Triage** — within 3 business days: confirm identity; determine data scope
-3. **Fulfilment** — access/portability requests: export within 15 days; deletion requests: purge within 30 days
-4. **Cross-system coordination** — instruct T24 core banking, analytics data lake, and backup systems to purge/anonymise
-5. **Breach incident** — identify scope within 24h; prepare Cybersecurity Department A05 notification form within 72h; submit via prescribed channel (A05, MPS); retain evidence 5 years
-6. **New sensitive-data feature launch** — before go-live: (a) submit DPIA dossier to A05, (b) if cross-border data flow: submit Overseas Transfer Impact Assessment dossier to A05 within 60 days, (c) capture written/checkbox consent before enabling feature for any user
+| Ring | Regulation | Provision | How this pattern satisfies |
+|------|-----------|-----------|---------------------------|
+| Ring 0 | GDPR (EU, as reference standard) | Art. 9 (special categories), Art. 17 (right to erasure), Art. 83 (penalties) | Decree 13 is modelled on GDPR; the DSR API satisfies both GDPR Art. 17 and Decree 13 Art. 11; consent table satisfies both GDPR Art. 7 and Decree 13 Art. 8. |
+| Ring 1 | SWIFT CSP 2024 | Control 5 — customer data handling and integrity controls | SWIFT CSP §5 aligns with Decree 13 Art. 8 consent requirements for financial data processed via SWIFT messages; consent must be captured before account data is included in SWIFT MT/MX messages. |
+| Ring 2 | Decree 13/2023/ND-CP | Art. 8 (consent), Art. 11 (data subject rights), Art. 13 (cross-border), Art. 26 (breach notification), Art. 28 (DPIA) ⚠️ (working summary — pending Legal review) | This document IS the primary Ring 2 obligation for personal data processing. DSR API, consent table, OPA purpose-limitation, and portability exporter collectively implement Arts 8, 11, and 13. Breach notification runbook implements Art. 26. DPIA registry implements Art. 28. |
 
-## Test Strategy (stub)
+## Cost / FinOps
 
-- **Unit**: consent capture — assert consent record written to audit table before biometric enrolment
-- **Integration**: data subject access — assert all customer data exportable in machine-readable format
-- **Compliance**: annual DPIA review — @data-privacy-officer reviews and re-certifies all DPIAs
-- **Penetration test**: anonymisation verification — after deletion request, confirm no residual PII in logs, analytics, and backups
+- **DSR Portal**: 2 Spring Boot replicas + PostgreSQL for consent and DSR tables. Marginal cost: ~USD 50/month additional compute. DSR volume expected <500/month at launch; scales linearly.
+- **DPIA process**: Each DPIA requires 2–4 days of @data-privacy-officer time. For 5 new sensitive-data features per year at 3 days each = 15 person-days/year. Budget for this in the compliance operating plan.
+- **A05 Overseas Transfer dossier**: One-time legal effort per data flow (~3 days @legal-vietnam). Update required within 10 days of material change to the transfer (Art. 13). Budget 2 dossier updates/year.
+- **Cost of non-compliance**: Art. 38–41 administrative fines up to VND 5 billion (~USD 200k) per violation. Criminal liability (up to 7 years imprisonment) for wilful mass breaches. A single undisclosed breach involving 100k+ customers could trigger criminal investigation. The DSR portal and breach runbook cost <USD 1k/year to operate.
+
+## Threat Model
+
+- **Consent bypass — biometric feature enabled without written consent (Repudiation)**: Engineer deploys biometric login feature without triggering the consent capture flow; millions of customers enrolled without consent. Mitigation: `ConsentService.verifyIdentity()` is called in the DSR API before any biometric operation; ArchUnit test asserts all `@BiometricOperation` annotated methods call `consentService.verifyWrittenConsent()`; CI pipeline fails on violation.
+- **Cross-border transfer without A05 dossier (Information Disclosure / Regulatory)**: Analytics pipeline sends customer transaction data to Singapore region without filing the Overseas Transfer Impact Assessment with A05 first. Mitigation: OPA `deny_cross_border` policy blocks data pipeline writes to non-Vietnam destinations if `a05_dossier_filed[transfer_id]` is absent; data pipeline CI gate checks OPA policy before deploying to international regions.
+
+## Operational Runbook Stub
+
+**Alert: `dsr_deadline_approaching`** (DSR fulfillment deadline within 5 business days)
+- p50 baseline: DSR fulfilled within 20 days | SLA: 30 days (Art. 11.2)
+- Remediation: (1) Check DSR record status in compliance portal. (2) Contact T24 team and analytics team to confirm purge job scheduled. (3) If T24 or analytics are blocked, escalate to @data-privacy-officer for manual coordination. (4) If deadline will be missed: contact @head-of-compliance; assess whether Art. 11.3 extension (additional 30 days with notice) applies.
+
+**Alert: `data_breach_detected`** (SIEM breach indicator triggered)
+- SLA: notify MPS A05 within 72h from discovery
+- Remediation: (1) Classify breach scope: data categories affected, number of data subjects, likely consequences. (2) Draft A05 notification using template at `governance/runbooks/decree13-a05-breach-template.md`. (3) @head-of-compliance reviews and submits. (4) Retain evidence for 5 years (Art. 28). (5) Update DPIA for affected processing activities.
+
+## Test Strategy Stub
+
+### Unit Tests
+- `ConsentServiceTest`: `verifyWrittenConsent(customerId, BIOMETRIC_LOGIN)` with no consent record → assert `ConsentRequiredException`. With withdrawn consent → assert `ConsentWithdrawnException`. With valid written consent → assert passes.
+- `OpaPurposeLimitationTest`: request data for purpose not in consent record → assert OPA returns `allow=false`. Request with matching purpose and active consent → assert `allow=true`.
+
+### Integration Tests
+- Spring Boot Test with Testcontainers (PostgreSQL): submit DSR erasure request → assert DsrRecord created with `deadline_at = now() + 30 days`; assert purge jobs scheduled in T24 and Analytics; assert DSR fulfilled within mock 25-day window.
+- Consent table constraint: attempt INSERT with `data_category=SENSITIVE` and `consent_medium=CHECKBOX` → assert constraint violation.
+
+### Compliance Tests
+- Annual DPIA review: @data-privacy-officer validates all DPIAs in registry have `review_date < 1 year`; update DPIA records for all active sensitive-data processing features.
+- A05 dossier audit: quarterly review of cross-border data flow registry; assert each active international transfer has dossier reference number and filing date < 60 days after transfer commencement.
+- Penetration test (annual): after DSR erasure, penetration tester checks all storage systems (T24, analytics, backups, logs) for residual PII matching the erased customer; assert zero matches.
+
+## Related Patterns
+
+- [COMP-001 Compliance Mapping Matrix](compliance-mapping-matrix.md) — cross-reference of all Decree 13 data category obligations
+- [SEC-008 Data Masking](../patterns/security/data-masking.md) — masks PII in logs and non-production environments per Art. 8 data minimisation
+- [SEC-013 PII Tokenization](../patterns/security/pii-tokenization-format-preserving.md) — tokenizes sensitive personal data reducing Decree 13 scope in downstream systems
+- [SEC-009 Fraud Signal Collection](../patterns/security/fraud-signal-collection.md) — behavioral data (device hash, IP hash) is personal data under Art. 3; this pattern ensures hash-only storage satisfies Decree 13
+- [PRIN-007 Data Residency](../principles/data-residency.md) — enforces Vietnamese vault storage for sensitive personal data per Art. 9 + 13
 
 ## References
 
 - Decree 13/2023/ND-CP (Vietnamese): thuvienphapluat.vn (URL pending librarian fetch)
-- Research notes: `knowledge-base/_research-notes.md#decree-132023nd-cp--personal-data-protection-decree`
-- Related patterns: PRIN-007, SEC-004, SEC-005, REF-003, REF-004, BP-002
-- Companion regulation: `knowledge-base/compliance/sbv-circular-09-2020.md` (COMP-002)
-
----
-
-**Key Takeaway**: Biometric authentication data, financial standing, and location data are **sensitive personal data** under Decree 13/2023 — requiring explicit written consent, DPIA, and Vietnamese vault storage. Data breach notification to the Ministry of Public Security within 72 hours is mandatory.
+- Research notes: `knowledge-base/_research-notes.md`
+- MPS A05 Cybersecurity Department: contact details at `governance/runbooks/sbv-a05-contacts.md` (internal)
+- Catalog reference: `governance/standards/enterprise-architecture-catalog.md`
