@@ -502,6 +502,38 @@ class AclArchitectureTest {
 
 Inject random OFS field reordering and new unexpected fields into WireMock T24 responses. Verify that `T24OfsResponse.parse()` handles field order changes gracefully (it does — the parser is field-name based, not positional). Inject T24 response with a new unknown error code and verify the ACL returns a `FAILED` status with a generic domain message rather than throwing an uncaught exception.
 
+## Context
+
+The Anti-Corruption Layer pattern is the translation boundary between Techcombank's modern microservices and legacy or external systems — primarily T24 Temenos core banking (OFS protocol), NAPAS (ISO 8583), and SWIFT (MT/MX). Apply this pattern whenever a modern bounded context must call or receive data from a system that uses a different data model, serialization format, or error vocabulary. It is especially critical during T24 modernization via the Strangler Fig pattern (INT-006), where the ACL insulates each migrated service from the T24 model until T24 is fully replaced.
+
+## When to Use
+
+- Any service that must call T24 OFS, NAPAS ISO 8583, or SWIFT MT/MX: the foreign data model must never leak into the modern domain; the ACL is the only component allowed to speak the foreign protocol.
+- During incremental system replacement (Strangler Fig — INT-006): the ACL remains stable while the underlying system changes; only the ACL's internal translator needs updating when T24 is replaced.
+- When the external system's error vocabulary is unstable or opaque (T24 numeric error codes, SWIFT NAK codes): translate at the ACL boundary so domain services work exclusively with typed domain exceptions.
+
+## When Not to Use
+
+- Two modern microservices in the same bounded context communicating over REST or gRPC — they share the same domain model; a translation layer adds latency and complexity without benefit.
+- Read-through caching from a well-modelled external API where no translation is required — if the external API returns the exact data shape the domain needs, a simple HTTP client is sufficient.
+- Greenfield services with no legacy dependency — the ACL is justified by model mismatch; if there is no legacy system to corrupt from, there is nothing to protect against.
+
+## Variants
+
+| Variant | When to prefer | Trade-off |
+|---------|----------------|-----------|
+| In-process translation layer (this pattern) | T0/T1 synchronous calls to T24; low latency required; single service owns the T24 relationship | ACL is co-located with the service; if multiple services need T24 access, each gets its own ACL (no shared state) |
+| Shared ACL microservice | Multiple services need the same T24 capability (e.g., balance enquiry); network hop acceptable | The shared ACL becomes a T0 dependency; single point of failure; requires separate HA deployment |
+| Event-based ACL (INT-002 Outbox + CDC) | Async translation acceptable; T24 events trigger domain events via CDC; latency > 500 ms OK | No synchronous response path; only suitable for async flows (e.g., T24 EOD journal feed to event log) |
+
+## Related Patterns
+
+- [INT-006 Strangler Fig](strangler-fig.md) — the migration pattern that the ACL enables by isolating the T24 surface area
+- [BSP-001 Double-Entry Ledger](../banking-solutions/double-entry-ledger.md) — the ledger that receives translated OFS journal postings from the ACL
+- [BSP-004 End-of-Day Batch Window](../banking-solutions/end-of-day-batch-window.md) — the EOD batch uses the ACL for all T24 OFS message construction
+- [RES-002 Circuit Breaker](../resilience/circuit-breaker.md) — wraps the T24 OFS gateway call within the ACL to prevent cascade failure
+- [INT-012 Error Code Mapping](error-code-mapping.md) — the ACL's error translation responsibility, formalized as a catalog pattern
+
 ## References
 
 - [INT-006 Strangler Fig Migration](strangler-fig.md)
