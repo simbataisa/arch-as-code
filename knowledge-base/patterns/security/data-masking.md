@@ -456,6 +456,36 @@ STRIDE analysis against the data masking pattern:
 - Inject a `RuntimeException` in `MaskingSerializer.serialize()`; assert the field is omitted from the response (null) and no raw value is returned.
 - Force-disable the Logback filter and run `PiiInLogChaosTest`; assert the CI pipeline log-scan gate catches the violation.
 
+## Context
+
+Data masking at Techcombank operates across four layers: persistence views (PostgreSQL column masking for analytics roles), API serialisation (Jackson `@JsonSerialize` with masking serialisers), log scrubbing (Logback `PatternLayout` with regex replacement), and UI rendering (React display components). The pattern is applied defensively — masking is applied as close to the data source as possible, not relied upon at a single downstream boundary. This defence-in-depth approach ensures that a misconfigured API gateway or a new logging statement cannot accidentally expose PII even before the log scrubber fires.
+
+## When to Use
+
+- API responses to non-privileged consumers: customer support agents viewing account details (show last 4 digits only), analytics dashboards (masked PAN), or external partner APIs where the full value is not required.
+- Application logging pipelines capturing request/response payloads — apply `PatternLayout` masking before write so that PII never reaches the ELK stack, reducing the scope of SIEM access controls.
+- Non-production data copy workflows: apply static masking at snapshot-restore time so that staging, UAT, and developer environments never hold real PAN, NRIC, or phone numbers.
+
+## When Not to Use
+
+- Authoritative storage — do not mask the source-of-truth database. Instead, store the raw value encrypted (or tokenized via SEC-013) and apply masking only at read time for non-privileged consumers. Masking at rest destroys data irreversibly.
+- Regulatory submissions and audit evidence — regulators (SBV, PCI QSA) require the full unmasked data in specific reporting contexts. Masking before submission is a compliance violation.
+- Ultra-high-throughput hot paths where masking regex execution overhead is measurable at scale — profile first; if masking adds more than 1 ms p99 on the critical path, consider pre-computed masked shadow fields or move masking to an async audit trail layer.
+
+## Variants
+
+| Variant | Use when | Trade-off |
+|---------|----------|-----------|
+| Dynamic masking at read time (this pattern) | API responses, logs, UI display; original data preserved for authorised consumers and regulators | Masking logic must be applied consistently across all read paths; a missing annotation exposes PII |
+| Static masking at copy time | Non-production environments; analytics snapshots where the masked value is the only version ever created | Irreversible — cannot recover original data from a statically masked copy; suitable only when the copy's purpose never requires full values |
+| Format-Preserving Encryption (SEC-013) | Downstream systems that must process values in original format but must not see plaintext PII; reversible by authorised callers | Requires key management infrastructure; higher compute cost than masking; use when reversibility is required |
+
+## Related Patterns
+
+- [SEC-013 PII Tokenization (Format-Preserving)](pii-tokenization-format-preserving.md) — reversible alternative to masking where downstream systems need to process the original value
+- [COMP-003 Decree 13/2023 (Personal Data)](../../compliance/decree-13-2023-personal-data.md) — the data minimisation and purpose limitation requirements that mandate masking
+- [DATA-009 Data Lineage](../data/data-lineage.md) — tracks which downstream consumers receive masked vs unmasked fields for compliance evidence
+
 ## References
 
 - PCI-DSS v4.0 §3.3 — Protection of stored account data
