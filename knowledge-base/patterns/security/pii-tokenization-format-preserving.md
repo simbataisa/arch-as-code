@@ -454,6 +454,36 @@ STRIDE analysis against the FPE tokenisation pattern:
 - Kill one Vault node during a tokenise load test; assert FPE service error rate remains 0% (Vault HA takes over) and P95 latency stays below 15ms.
 - Inject a Vault timeout (500ms artificial delay); assert circuit breaker (RES-002) opens and the ingestion pipeline fails-closed (rejects the record, does not store plaintext).
 
+## Context
+
+Format-preserving tokenisation (FPE) at Techcombank replaces PAN, CCCD national ID numbers, and phone numbers with tokens that are indistinguishable in format from the originals. This allows downstream analytics, T24 core banking interfaces, and partner fixed-format files to consume tokenised data without schema changes — the token is the same length, character class, and checksum structure as the plaintext. The Vault Transit secrets engine with AES-FF1 (NIST SP 800-38G) provides the HSM-backed key management, while de-tokenisation is gated by OPA-backed ABAC (SEC-010) and logged for audit.
+
+## When to Use
+
+- Reducing PCI-DSS Cardholder Data Environment (CDE) scope for downstream analytics, reporting, and BI systems that process PAN but do not need the real value for their function.
+- Storing customer PII (NRIC, phone number, tax code) in data warehouses or audit logs where the original value is not required — tokenisation preserves searchability (equality matching on the token) while eliminating PCI and Decree 13 obligations.
+- Contexts where downstream systems must search or join on tokenised values — FPE preserves the format so indexes, joins, and regex validations remain valid without modification.
+
+## When Not to Use
+
+- Authoritative PII storage — keep the raw value in the source-of-truth database (encrypted at rest) and tokenise only at the API boundary; never store only the token in the system of record where the raw value may be needed for regulatory reporting or fraud investigation.
+- Regulatory submissions and card-scheme protocol handshakes requiring the full plaintext value — de-tokenise before submission via the authorised de-tokenisation API, never pass tokenised values to regulators as real values.
+- Throughput exceeding 1M tokenisations/second without HSM acceleration — software-mode AES-FF1 at more than 1M ops/s requires significant CPU; evaluate dedicated HSM appliances or Vault Enterprise with HSM backend before adopting at extreme throughput.
+
+## Variants
+
+| Variant | Use when | Trade-off |
+|---------|----------|-----------|
+| AES-FF1 (FPE) via Vault Transit (this pattern) | Downstream systems expecting original format; PCI-DSS CDE scope reduction; NIST SP 800-38G compliance | Vault Transit dependency; format preservation narrows token search space vs random tokenisation |
+| Vault Transit random tokenisation (opaque token) | Downstream systems that accept opaque surrogates; higher token entropy; no format constraint | Breaks legacy schema validations expecting specific field format; requires downstream migration |
+| HSM tokenisation appliance | Ultra-high throughput (more than 1M ops/s); FIPS 140-3 Level 3 hardware requirement; offline key custody | High capex for HSM hardware; operational complexity; typically used for card-scheme primary PAN tokenisation |
+
+## Related Patterns
+
+- [SEC-008 Data Masking](data-masking.md) — irreversible alternative for display and logging where the raw value never needs to be recovered
+- [SEC-004 Tokenization HSM](tokenization-hsm.md) — hardware-backed tokenisation for the highest throughput and FIPS 140-3 requirements
+- [COMP-004 PCI-DSS 4.0](../../compliance/pci-dss-4-0.md) — the PCI-DSS CDE scope reduction requirements that make FPE tokenisation mandatory for PAN in analytics systems
+
 ## References
 
 - NIST SP 800-38G — Recommendation for Block Cipher Modes of Operation: Format-Preserving Encryption (FF1 and FF3-1)
