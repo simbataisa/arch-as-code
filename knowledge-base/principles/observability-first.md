@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2, T3
 - Transaction audit trails are both an operational requirement (root-cause analysis of failed payments) and a legal obligation (SBV §IV.3 incident logging); implementing them as an afterthought produces patchy coverage that fails audit.
 - EOD batch processing (reconciliation, position-keeping, regulatory reporting) requires telemetry specifically tailored to long-running jobs — throughput rates, record counts, error buckets — that standard request-response metrics do not cover.
 
+## Context
+
+A distributed banking platform running across multiple services, regions, and runtimes is impossible to debug reactively; structured telemetry emitted at creation time is the only reliable path to root-cause analysis under regulatory time pressure. OpenTelemetry-compatible traces, metrics, and logs must be designed in from the first line of code rather than retrofitted after the first production incident. In the Techcombank context, BCBS 239 mandates data timeliness and consistency of reporting — requirements that cannot be met unless the platform has continuous, structured visibility into every payment, reconciliation, and KYC state transition. Observability is therefore both a DevOps practice and a regulatory obligation, making it a non-negotiable definition-of-done gate for all tiers.
+
 ## Solution
 
 Every service emits the LMTR telemetry stack — structured Logs, Prometheus Metrics, distributed Traces, and Alerts — before any feature is declared production-ready. Observability is a definition-of-done gate, not a follow-up ticket.
@@ -493,6 +497,24 @@ Kill the OTel Collector sidecar mid-test and verify: (a) the application continu
 - **One-off administrative scripts that run once and are discarded**: a migration script run once by an engineer does not need a Prometheus metric. Add a progress log line to stdout; that is sufficient.
 - **Developer-local tooling with no production footprint**: local mock servers, seed-data generators, and integration-test helpers that never run in a shared environment are exempt from full instrumentation.
 - **As a replacement for alerting design**: Observability-First ensures the signals exist; the SRE team still needs to design SLOs and alert thresholds per NFR-005. Metrics without alerts are necessary but not sufficient.
+
+## Variants & Trade-offs
+
+- **Full four-golden-signals (T0/T1)** — mandatory latency, traffic, errors, and saturation metrics for all public service methods; highest operational fidelity but adds approximately 10–30 MiB heap per JVM for the OTel agent.
+- **Reduced instrumentation (T2/T3)** — error rate and latency only, with 10% head-sample tracing; acceptable for low-risk internal services; reduces observability storage costs by approximately 60–70%.
+- **Pull-based metrics (Prometheus)** — simplifies service instrumentation (expose `/actuator/prometheus`); the trade-off is that a pod that disappears between scrape intervals loses its final metric values; use push-based counters for critical business events as a complement.
+- **Centralised vs. sidecar OTel Collector** — sidecar per pod provides isolation and buffer during collector outages; a single centralised collector is cheaper but creates a single point of failure for the entire telemetry pipeline; Techcombank uses sidecar + HA gateway topology for T0/T1 services.
+- **Sampling trade-offs** — 100% trace sampling for T0 provides complete trace coverage for audit but increases Tempo storage costs proportionally; tail-based sampling (always capture errors and slow calls) is the cost-effective alternative for T2/T3 high-RPS services.
+
+## Related Patterns
+
+- [BP-007 Golden Signals (SRE)](../best-practices/golden-signals-sre.md)
+- [BP-004 Observability Standards](../best-practices/observability-standards.md)
+- [PRIN-006 Idempotency by Default](idempotency-by-default.md)
+- [SEC-012 Tamper-Evident Audit Log](../patterns/security/audit-logging-tamper-evident.md)
+- [NFR-001 Service Tiering RTO/RPO](../nfr/service-tiering-rto-rpo.md)
+- [NFR-002 Latency Budget Model](../nfr/latency-budget-model.md)
+- [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md)
 
 ## References
 

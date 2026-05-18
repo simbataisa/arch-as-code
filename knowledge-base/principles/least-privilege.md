@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2, T3
 - T24 core banking OFS roles are coarse-grained by legacy design; without an explicit least-privilege mapping layer, modern services inherit T24's broad role set and expose unnecessary operations to any authenticated caller.
 - Payment-initiation scope must be narrower than account-read scope — a service that can read balances must not implicitly be able to initiate transfers. Without explicit OAuth2 scope design, implicit scope inheritance creates privilege creep across microservices.
 
+## Context
+
+Service accounts, human operators, and automated jobs in banking systems routinely accumulate entitlements over time; a compromised account with excess rights is a lateral-movement escalation path to core banking assets including the T24 ledger, PAN vault, and customer PII stores. Least-privilege is the operational discipline that minimises this blast radius by ensuring each principal holds only the rights needed for its current, documented function. In the Techcombank context, PCI-DSS Requirement 7 mandates need-to-know access restriction and SBV Circular 09/2020 §III requires formal access management controls — both of which this principle directly operationalises through scoped OAuth2 tokens, JIT elevation, and quarterly entitlement reviews.
+
 ## Solution
 
 Apply default-deny IAM across every principal type — human, service, and batch. Use just-in-time (JIT) elevation for sensitive operations with automatic revocation. Enforce scoped OAuth2 tokens per operation, not per service.
@@ -395,19 +399,21 @@ catalog_references:
 
 ## Operational Runbook
 
-1. **Grant JIT elevated access**: Operator submits a JIT request via the `#jit-access-requests` Slack channel (form bot). The bot creates a Jira ticket, notifies the CISO-delegate (or delegate-on-call). On approval, AWS Identity Center issues a 15-minute session with the elevated permission set. The session expires automatically; no manual revocation is needed.
+1. **Alert: JITElevationAbuse** — If more than 3 JIT elevation requests are approved for the same principal within a 24-hour window, page the CISO-delegate. Investigate whether the requests are legitimate (planned maintenance) or indicative of credential abuse.
 
-2. **Emergency break-glass procedure**: If the JIT approval workflow is unavailable and immediate production access is required (P1 incident only), the on-call SRE can use the break-glass IAM role (`arn:aws:iam::ACCOUNT:role/breakglass-sre`). Break-glass use is logged to CloudTrail and triggers an automatic PagerDuty page to the CISO-delegate. A post-incident review is mandatory within 48 hours.
+2. **Grant JIT elevated access**: Operator submits a JIT request via the `#jit-access-requests` Slack channel (form bot). The bot creates a Jira ticket, notifies the CISO-delegate (or delegate-on-call). On approval, AWS Identity Center issues a 15-minute session with the elevated permission set. The session expires automatically; no manual revocation is needed.
 
-3. **Rotate a compromised service client secret**: Update the secret in AWS Secrets Manager. Trigger a rolling restart of the affected service deployment. Revoke the old client ID in the OAuth2 IDP. Monitor `oauth2_token_validation_failures_total` for a spike that would indicate services still using the old secret.
+3. **Emergency break-glass procedure**: If the JIT approval workflow is unavailable and immediate production access is required (P1 incident only), the on-call SRE can use the break-glass IAM role (`arn:aws:iam::ACCOUNT:role/breakglass-sre`). Break-glass use is logged to CloudTrail and triggers an automatic PagerDuty page to the CISO-delegate. A post-incident review is mandatory within 48 hours.
 
-4. **Quarterly entitlement review**: Run `scripts/entitlement-review.sh` which generates a report of all IAM roles, OAuth2 client registrations, and Vault policies with their last-used timestamps. Any entitlement unused for 90+ days receives an auto-generated Jira ticket to the owner. Owners have 14 days to acknowledge or the entitlement is revoked.
+4. **Rotate a compromised service client secret**: Update the secret in AWS Secrets Manager. Trigger a rolling restart of the affected service deployment. Revoke the old client ID in the OAuth2 IDP. Monitor `oauth2_token_validation_failures_total` for a spike that would indicate services still using the old secret.
 
-5. **Add a new OAuth2 scope**: Update the scope registry YAML in the `iam-config` repo. Submit a change record. The IDP picks up the new scope on next config reload. Update the relevant `@PreAuthorize` annotations in the target service. Verify in staging that only holders of the new scope can call the protected endpoint.
+5. **Quarterly entitlement review**: Run `scripts/entitlement-review.sh` which generates a report of all IAM roles, OAuth2 client registrations, and Vault policies with their last-used timestamps. Any entitlement unused for 90+ days receives an auto-generated Jira ticket to the owner. Owners have 14 days to acknowledge or the entitlement is revoked.
 
-6. **Investigate an AC-6 audit finding**: If an audit flags a service with broader-than-needed permissions, pull the service's OAuth2 client registration from the IDP and compare the requested scopes against the actual API endpoints called (from OTel trace data). Remove unused scopes from the client registration and submit a change record documenting the remediation.
+6. **Add a new OAuth2 scope**: Update the scope registry YAML in the `iam-config` repo. Submit a change record. The IDP picks up the new scope on next config reload. Update the relevant `@PreAuthorize` annotations in the target service. Verify in staging that only holders of the new scope can call the protected endpoint.
 
-7. **T24 OFS role audit**: Quarterly, export the T24 user profile for each OFS integration account. Compare the allowed OFS functions against the `SCOPE_TO_OFS_FUNCTIONS` mapper. Any T24 function in the profile but not in the mapper constitutes a privilege gap; raise a security finding and remove the function from the T24 profile.
+7. **Investigate an AC-6 audit finding**: If an audit flags a service with broader-than-needed permissions, pull the service's OAuth2 client registration from the IDP and compare the requested scopes against the actual API endpoints called (from OTel trace data). Remove unused scopes from the client registration and submit a change record documenting the remediation.
+
+8. **T24 OFS role audit**: Quarterly, export the T24 user profile for each OFS integration account. Compare the allowed OFS functions against the `SCOPE_TO_OFS_FUNCTIONS` mapper. Any T24 function in the profile but not in the mapper constitutes a privilege gap; raise a security finding and remove the function from the T24 profile.
 
 ## Test Strategy
 
@@ -476,6 +482,24 @@ Revoke a service's OAuth2 client credentials mid-test and verify the service ret
 - Developer sandbox environments with no customer data: apply sensible defaults but do not require the full JIT approval workflow — it blocks developer velocity without reducing real risk.
 - As a substitute for network segmentation: least-privilege on credentials does not replace firewall rules, security groups, or service mesh mTLS — apply both.
 - Applied retroactively without impact analysis: tightening permissions on a live service without auditing current usage first risks silent breakage; run a 30-day CloudTrail / Vault audit log review before scoping down any production role.
+
+## Variants & Trade-offs
+
+- **Just-in-time (JIT) elevation** — preferred for sensitive operations; requires an approval workflow and adds 0–5 minutes of human latency for urgent access; appropriate for T0 operations roles where standing access is prohibited.
+- **Time-bounded standing access** — for batch jobs and scheduled tasks that need access within a defined maintenance window; permissions are granted for the window duration and auto-revoked on expiry; lower human overhead than full JIT but wider exposure window.
+- **Role-based access control (RBAC) vs. ABAC** — RBAC is simpler to implement and audit; ABAC (attribute-based, via OPA) enables context-aware decisions (tenant, time, device) but adds latency (3–8ms p95 per OPA call) and policy complexity; Techcombank uses both in combination.
+- **Vault dynamic credentials vs. static secrets** — dynamic database credentials (1-hour TTL, auto-revoked) are the gold standard but require Vault HA and add 200ms p95 to initial connection setup; static secrets are acceptable only for T3 dev/test environments with no customer data.
+- **Entitlement sprawl management** — quarterly automated review is the baseline; continuous entitlement intelligence (real-time unused-access detection) is a higher-maturity option at additional tooling cost (approximately USD 50–100k/year for enterprise PAM products).
+
+## Related Patterns
+
+- [PRIN-003 Zero-Trust Security](zero-trust-security.md)
+- [PRIN-008 Defense-in-Depth](defense-in-depth.md)
+- [PRIN-010 Fail-Safe Defaults](fail-safe-defaults.md)
+- [SEC-002 OAuth2/OIDC Authorization](../patterns/security/oauth2-authorization.md)
+- [SEC-003 Vault Dynamic Secrets](../patterns/security/vault-secret-management.md)
+- [SEC-010 ABAC Policy Engine](../patterns/security/attribute-based-access-control.md)
+- [INT-005 Anti-Corruption Layer](../patterns/integration/anti-corruption-layer.md)
 
 ## References
 

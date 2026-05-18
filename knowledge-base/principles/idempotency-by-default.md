@@ -274,7 +274,7 @@ class PaymentClient(private val client: OkHttpClient) {
 | Ring 0 (generic) | EIP §10.1 (Hohpe/Woolf) — Idempotent Receiver | Pattern catalog defining idempotent message handling | EIP-024 is the messaging-side implementation of this principle |
 | Ring 1 (international banking) | Basel BCBS 239 — Principle 3 (Accuracy) | Risk data must be accurate; aggregation must avoid double-counting | Idempotent posting prevents duplicate ledger entries → accurate risk-data aggregation |
 | Ring 1 (international banking) | ISO 20022 — `EndToEndId` | Each message carries a unique end-to-end identifier | Used as the natural key for Strategy B (server-derived) |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Required behaviour for retried transactions during EOD batch and network instability |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2; Decree 13/2023 | Operational continuity and personal data processing integrity ⚠️ (working summary — pending Legal review) | Required behaviour for retried transactions during EOD batch and network instability; idempotent processing prevents duplicate personal data records |
 
 ## Cost / FinOps Notes
 
@@ -295,19 +295,19 @@ class PaymentClient(private val client: OkHttpClient) {
 STRIDE: idempotency primarily addresses **Repudiation** and **Tampering**.
 
 - **Top 3 threats addressed**:
-  1. *Replay attacks* — same key returns same response, no double-effect. Combined with HMAC of the idempotency key (anti-forgery), defends against replay.
-  2. *Race-condition double-posting* during fail-fast retry — IN_FLIGHT state with 409 prevents the second concurrent attempt from re-executing.
-  3. *Tail-event duplicate* on DR failover — replayed events with same natural key are silently absorbed.
+  1. *Replay attacks* (Tampering) — same key returns same response, no double-effect. Combined with HMAC of the idempotency key (anti-forgery), defends against replay.
+  2. *Race-condition double-posting* (Repudiation) during fail-fast retry — IN_FLIGHT state with 409 prevents the second concurrent attempt from re-executing.
+  3. *Tail-event duplicate* on DR failover (Repudiation) — replayed events with same natural key are silently absorbed.
 - **Top 3 residual threats**:
-  1. *Idempotency-key forgery* — attacker sends another user's key. Mitigation: bind key to user/session via HMAC; reject mismatched keys.
-  2. *Key collision* (UUID v4 collision is astronomically unlikely; clients reusing keys across operations is the real risk). Mitigation: client-side review at code-review; CI lint that flags hardcoded UUIDs.
-  3. *TTL-too-short* causing a real retry to be treated as new. Mitigation: 24h default; tunable per endpoint.
+  1. *Idempotency-key forgery* (Spoofing) — attacker sends another user's key. Mitigation: bind key to user/session via HMAC; reject mismatched keys.
+  2. *Key collision leading to information disclosure* (Information Disclosure) — clients reusing keys across operations is the real risk. Mitigation: client-side review at code-review; CI lint that flags hardcoded UUIDs.
+  3. *TTL-too-short* causing a real retry to be treated as new (Denial of Service). Mitigation: 24h default; tunable per endpoint.
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
-  - `IdempotencyDedupeRate`: % of requests served from dedupe cache. Sustained anomaly (>10% sudden change) → investigate client retry logic. Severity: Warning.
-  - `IdempotencyInFlightCount`: count of IN_FLIGHT entries older than 60 s. Severity: Critical (suggests stuck request or crashed handler).
+  - **Alert: IdempotencyDedupeRate** — % of requests served from dedupe cache. Sustained anomaly (>10% sudden change) → investigate client retry logic. Severity: Warning.
+  - **Alert: IdempotencyInFlightCount** — count of IN_FLIGHT entries older than 60 s. Severity: Critical (suggests stuck request or crashed handler).
 - **Dashboards**: Grafana — `idempotency-overview` (rate, dedupe %, store size, in-flight count).
 - **Recovery**: stale IN_FLIGHT rows older than 60 s can be force-failed; subsequent retries with same key will re-execute.
 

@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2
 - Fraud enrichment added to the synchronous payment path adds its latency directly to the customer-facing response time, incentivising teams to skip enrichment or set dangerously short timeouts to preserve UX — a security trade-off driven by the architecture, not the threat model.
 - Systems designed around synchronous chains are harder to throttle independently: a burst of payment requests also bursts the fraud scoring service, the NAPAS connector, and the account posting service simultaneously, requiring all of them to be scaled in lockstep.
 
+## Context
+
+Synchronous payment processing chains in banking create tightly coupled failure domains: a 200ms NAPAS network blip propagates directly into the customer UI, and a slow fraud-scoring service exhausts the entire payment service thread pool through head-of-line blocking. The async-by-default principle decouples these failure domains using Kafka as the durable event backbone, so that each consumer scales and fails independently without cascading upstream. In the Techcombank context, the move to async-first also satisfies BCBS 239 Principle 2 (data architecture auditability) and enables the EOD batch and real-time reconciliation pipelines that SBV operational continuity requirements mandate.
+
 ## Solution / Principle Statement
 
 Services communicate asynchronously via events and messages by default; synchronous request-response is an exception reserved for interactions where the caller cannot proceed until it has the response, and must be justified in the service's ADR.
@@ -373,9 +377,9 @@ acceptance_criteria:
 STRIDE: Denial of Service, Tampering, Information Disclosure
 
 - **Top threats addressed:**
-  - Denial of Service via synchronous cascade: a slow or failing downstream service (NAPAS, fraud scoring) cannot exhaust the thread pool of the payment service when the two are decoupled by Kafka — each consumer scales and fails independently.
-  - Tampering of payment state via synchronous response spoofing: payment state is derived from immutable Kafka events rather than from synchronous return values, making it impossible to inject a false "confirmed" status without writing to the Kafka topic (which requires Kafka ACL write permission).
-  - Information Disclosure via polling endpoint enumeration: replacing polling with push eliminates the status polling endpoint that could be probed to enumerate payment states across customer accounts.
+  - Denial of Service via synchronous cascade (Denial of Service): a slow or failing downstream service (NAPAS, fraud scoring) cannot exhaust the thread pool of the payment service when the two are decoupled by Kafka — each consumer scales and fails independently.
+  - Tampering of payment state via synchronous response spoofing (Tampering): payment state is derived from immutable Kafka events rather than from synchronous return values, making it impossible to inject a false "confirmed" status without writing to the Kafka topic (which requires Kafka ACL write permission).
+  - Information Disclosure via polling endpoint enumeration (Information Disclosure): replacing polling with push eliminates the status polling endpoint that could be probed to enumerate payment states across customer accounts.
 - **Residual risks:**
   - Event ordering cannot be guaranteed across Kafka partitions. Payment state machines must be designed to handle out-of-order events using event timestamps and idempotent state transitions. Mitigated by partitioning on `customerId` to ensure per-customer ordering.
   - Dead-letter queue events contain sensitive payment data and must be subject to the same encryption and access controls as the primary topics. Mitigated by applying Kafka ACLs and field-level encryption at the schema level.

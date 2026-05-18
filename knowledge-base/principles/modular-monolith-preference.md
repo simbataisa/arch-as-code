@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2, T3
 - Distributed systems are fundamentally harder to test, debug, and reason about than well-structured modular codebases. Network partitions, partial failures, serialization gaps between service versions, and distributed tracing overhead are all problems that do not exist within a single process — introducing them early sacrifices the very developer velocity that microservices are supposed to deliver.
 - Operational incident response is slower across many services: correlating a customer-reported payment failure across five microservices (each with its own log stream, its own trace IDs, and its own deployment history) takes materially longer than isolating the same failure within a single structured codebase.
 
+## Context
+
+Teams building new digital banking features reflexively create microservices before the domain is understood, encoding incorrect boundaries into the system topology at high cost to correct later. The modular monolith preference delays that boundary decision until domain understanding and team structure justify it, allowing the team to refactor module boundaries cheaply within a single codebase rather than migrating data and versioning APIs across service boundaries. In the Techcombank context, T24 Temenos is itself a well-structured monolith and the correct integration pattern is an anti-corruption layer module, not a proliferation of wrapper microservices that each add operational overhead without delivering team autonomy.
+
 ## Solution / Principle Statement
 
 New features and bounded contexts are built as well-structured modules within the existing backend monolith; a feature is extracted into an independent microservice only when a specific, documented scaling or team-boundary problem demands it and the team structure supports a dedicated ownership model.
@@ -322,6 +326,11 @@ No extraction proceeds without S1. S1 alone is not sufficient — at least one o
 
 ## NFR Acceptance Criteria
 
+Measurable thresholds:
+- Monolith full build + test cycle p99 < 8 min on the standard CI runner (4 vCPU, 8 GB RAM); verified by MMP-3.
+- Module boundary violations detected in CI: target 0 per sprint; ArchUnit enforces zero-tolerance.
+- New microservice repositories created without a merged ADR: target 0%; blocked by repository provisioning script.
+
 ```yaml
 service_name: "tcb-banking-service-modular-compliance"
 tier: T0
@@ -388,9 +397,9 @@ acceptance_criteria:
 STRIDE: Elevation of Privilege, Tampering, Information Disclosure
 
 - **Top threats addressed:**
-  - Elevation of Privilege via misconfigured inter-service trust: when microservices call each other, they must establish mTLS trust relationships; a misconfigured trust relationship can grant one service access to another's data. Module-level calls within a single JVM eliminate this attack surface entirely for intra-monolith communication.
-  - Tampering via network injection between services: in-process module calls cannot be intercepted by a network-layer attacker. Reducing the number of network hops between banking domains reduces the surface for man-in-the-middle injection attacks.
-  - Information Disclosure via overly broad service-to-service credentials: microservices often receive broad credentials to call other services; a compromised service can exploit these credentials. Module-level calls use the same JVM security context and never require external credentials for intra-module access.
+  - Elevation of Privilege via misconfigured inter-service trust (Elevation of Privilege): when microservices call each other, they must establish mTLS trust relationships; a misconfigured trust relationship can grant one service access to another's data. Module-level calls within a single JVM eliminate this attack surface entirely for intra-monolith communication.
+  - Tampering via network injection between services (Tampering): in-process module calls cannot be intercepted by a network-layer attacker. Reducing the number of network hops between banking domains reduces the surface for man-in-the-middle injection attacks.
+  - Information Disclosure via overly broad service-to-service credentials (Information Disclosure): microservices often receive broad credentials to call other services; a compromised service can exploit these credentials. Module-level calls use the same JVM security context and never require external credentials for intra-module access.
 - **Residual risks:**
   - A bug in one module can affect the stability of the entire monolith (shared heap, shared thread pool). Mitigated by module-level bulkheads (separate thread pools for I/O-bound operations) and structured logging that attributes failures to the originating module.
   - Module boundary violations (a developer directly instantiating an internal class from another module) silently bypass the architectural control. Mitigated by ArchUnit enforcement in CI — the build fails if a boundary violation is introduced.

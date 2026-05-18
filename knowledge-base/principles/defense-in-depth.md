@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2, T3
 - Implicit trust between internal services is the most common post-breach pivot path: once inside the mesh, a compromised pod should still encounter identity, authorization, and data-layer controls that limit lateral movement.
 - Regulatory bodies (SBV, PCI-DSS) prescribe multi-layer controls explicitly; a flat security model fails audit and leaves the bank exposed to regulatory sanction following an incident.
 
+## Context
+
+Banking systems face sophisticated adversaries who target the perimeter, application, data, and supply-chain layers simultaneously; no single control is sufficient to prevent a breach across all attack vectors. Defense-in-depth layers preventive, detective, and corrective controls at each tier so that a breach of one layer does not grant access to the next. In the Techcombank context, the six-layer stack maps directly to the PCI-DSS and SBV audit control requirements, meaning each layer is both a security measure and a documented compliance artefact. Implementing the principle from the start of a service's design — rather than retrofitting it after a penetration test — is significantly cheaper and produces more cohesive control coverage.
+
 ## Solution
 
 Implement a six-layer defense stack where each layer is independently enforced and fails secure (deny by default) when it degrades.
@@ -424,7 +428,7 @@ catalog_references:
 
 4. **HSM key rotation**: Initiate key rotation via the tokenisation service admin API (`POST /admin/v1/keys/rotate`). The service performs dual-key reads (old key + new key) for the rotation window (24 hours), then drops the old key. Monitor `tokenisation_decrypt_failures_total` during the window.
 
-5. **Layer failure alert response**: If `defense_layer_health_check` Grafana alert fires for any layer, follow the layer-specific runbook (SEC-001 for mTLS, SEC-002 for OAuth2, SEC-004 for HSM). Do not disable a layer without an active change record and CISO approval — a layer bypass creates a compliance gap that must be documented.
+5. **Alert: DefenseLayerHealthCheck** — If this Grafana alert fires for any layer, follow the layer-specific runbook (SEC-001 for mTLS, SEC-002 for OAuth2, SEC-004 for HSM). Do not disable a layer without an active change record and CISO approval — a layer bypass creates a compliance gap that must be documented.
 
 6. **Quarterly layer penetration review**: Schedule a quarterly pen test targeting one layer at a time. Verify that the next layer catches the simulated breach. Document results in `governance/decisions/PENTTEST-{year}-Q{quarter}.md`.
 
@@ -485,6 +489,25 @@ Disable each layer in turn in a chaos environment (kill the WAF rule, rotate to 
 - **Isolated developer tooling with no production data**: internal CLI tools, seed-data generators, and local dev environments operated by vetted engineers need not implement the full six-layer stack. Apply Layer 1 (network restriction to corporate VPN) and Layer 3 (SSO) only.
 - **Batch jobs with no external interface**: nightly ETL jobs that run inside a VPC with no inbound traffic surface require Layers 1, 5, and 6 but not Layers 2–4 (no inter-service mTLS or application-layer auth needed).
 - **As a substitute for threat modelling**: Defense-in-Depth is a structural principle, not a threat-modelling exercise. Run STRIDE against each layer separately; this principle tells you where to place controls, not which controls to choose.
+
+## Variants & Trade-offs
+
+- **Zero-trust architecture** — extends defense-in-depth by eliminating implicit trust even inside the perimeter; higher operational complexity but stronger lateral-movement containment for T0 banking services.
+- **Compensating controls** — when a control layer is impractical (e.g., legacy mainframe T24 without mTLS support), detective controls at adjacent layers compensate; accepted as a formal exception with a documented risk acceptance and CISO approval.
+- **Cost vs. coverage** — each additional control layer adds latency and maintenance burden; prioritise by asset criticality tier (T0 > T1 > T2 > T3) and apply the full six-layer stack only to T0/T1 CDE services.
+- **Perimeter-only model (rejected)** — a WAF-and-firewall-only approach is cheaper initially but leaves interior services unprotected once the perimeter is breached; incompatible with PCI-DSS Requirement 7 and SBV §III requirements.
+- **Runtime policy vs. compile-time policy** — OPA runtime ABAC allows dynamic policy updates without redeployment; the trade-off is added latency (3–8ms p95 per call) and a dependency on the OPA sidecar availability.
+
+## Related Patterns
+
+- [PRIN-003 Zero-Trust Security](zero-trust-security.md)
+- [PRIN-010 Fail-Safe Defaults](fail-safe-defaults.md)
+- [PRIN-011 Least-Privilege](least-privilege.md)
+- [SEC-001 mTLS Service Mesh](../patterns/security/mtls-service-mesh.md)
+- [SEC-002 OAuth2/OIDC Authorization](../patterns/security/oauth2-authorization.md)
+- [SEC-004 Tokenisation / HSM](../patterns/security/tokenization-hsm.md)
+- [SEC-010 ABAC Policy Engine](../patterns/security/attribute-based-access-control.md)
+- [SEC-012 Tamper-Evident Audit](../patterns/security/audit-logging-tamper-evident.md)
 
 ## References
 

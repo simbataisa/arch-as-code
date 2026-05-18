@@ -185,19 +185,19 @@ Clients carry minimal PII (only what's needed for the current screen, decrypted 
 STRIDE: residency primarily addresses **Information Disclosure** (jurisdictional access).
 
 - **Top 3 threats addressed**:
-  1. *Foreign government data-disclosure request* on PII — bounded by residency.
-  2. *Vendor breach affecting customers globally* — bounded if data is region-isolated.
-  3. *Inadvertent cross-border copy via vendor backup* — caught by residency-lint at deploy time.
+  1. *Foreign government data-disclosure request* on PII (Information Disclosure) — bounded by residency.
+  2. *Vendor breach affecting customers globally* (Information Disclosure) — bounded if data is region-isolated.
+  3. *Inadvertent cross-border copy via vendor backup* (Tampering) — caught by residency-lint at deploy time.
 - **Top 3 residual threats**:
-  1. *Mis-classification of data* — a field flagged Ring-1 that is actually Ring-0. Mitigation: annual data-classification review; Phase 4 lint catches obvious mismatches.
-  2. *Aggregation re-identification* — anonymised data combined cross-region re-identifies. Mitigation: differential-privacy where feasible; periodic re-identification testing.
-  3. *Vendor sub-processor without DPA* — the vendor's vendor moves data. Mitigation: DPA + sub-processor disclosure required.
+  1. *Mis-classification of data* (Elevation of Privilege) — a field flagged Ring-1 that is actually Ring-0. Mitigation: annual data-classification review; Phase 4 lint catches obvious mismatches.
+  2. *Aggregation re-identification* (Information Disclosure) — anonymised data combined cross-region re-identifies. Mitigation: differential-privacy where feasible; periodic re-identification testing.
+  3. *Vendor sub-processor without DPA* (Spoofing) — the vendor's vendor moves data. Mitigation: DPA + sub-processor disclosure required.
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
-  - `Residency_Violation_Detected`: lint-pipeline detects a Ring-0 entity deploying outside Vietnam. Severity: Critical (block merge).
-  - `CrossBorder_TransferRate_Anomaly`: cross-border data egress rate up > 3× baseline for an unexpected destination. Severity: High.
+  - **Alert: ResidencyViolationDetected** — lint-pipeline detects a Ring-0 entity deploying outside Vietnam. Severity: Critical (block merge).
+  - **Alert: CrossBorderTransferRateAnomaly** — cross-border data egress rate up > 3× baseline for an unexpected destination. Severity: High.
 - **Dashboards**: Grafana — `data-residency-overview` (egress destinations, data-class breakdown, vendor-region matrix).
 - **New-vendor onboarding**: residency review checklist; runbook in `governance/runbooks/new-vendor-residency.md`.
 

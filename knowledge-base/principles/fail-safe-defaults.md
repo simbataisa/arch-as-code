@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2, T3
 - Certificate validation failures for DPoP tokens and mTLS connections that are silently accepted instead of dropped open a channel for connection-level impersonation that is invisible to application-layer audit logs.
 - Spring Security configurations that omit an explicit `.anyRequest()` rule inherit framework defaults that vary across versions; without an explicit `.denyAll()` sentinel new endpoints are inadvertently exposed as each route is added.
 
+## Context
+
+In a banking platform, the consequences of a permissive failure are asymmetric and severe: a fraudulent payment approved because the fraud-scoring service was momentarily unreachable creates regulatory exposure, customer harm, and potential SBV investigation — while a declined payment creates a retriable inconvenience. This asymmetry means the correct failure mode is always the most restrictive safe state, not the most convenient one. Fail-safe defaults operationalise the Saltzer-Schroeder security principle in every Spring Boot service, API gateway, and feature flag at Techcombank, ensuring that degraded infrastructure never silently expands the attack surface.
+
 ## Solution / Principle Statement
 
 When a system component is uncertain, degraded, or lacks sufficient information to make a safe decision, it must default to the most restrictive state available — denial, rejection, or disconnection — rather than the most convenient permissive state.
@@ -380,9 +384,9 @@ acceptance_criteria:
 STRIDE: Spoofing, Elevation of Privilege, Information Disclosure
 
 - **Top threats addressed:**
-  - Elevation of Privilege via degraded authorisation: an attacker deliberately overwhelms the OPA or IAM service to bypass authorisation checks — fail-closed API gateway eliminates this attack surface.
-  - Spoofing via certificate downgrade: a man-in-the-middle suppresses mTLS certificate validation errors to inject itself into a service mesh connection — mandatory connection termination on cert failure closes this path.
-  - Information Disclosure via permissive feature flag defaults: an unfinished banking feature shipped in a permissive default state exposes incomplete business logic or data access paths — disabled-by-default flags eliminate this exposure.
+  - Elevation of Privilege via degraded authorisation (Elevation of Privilege): an attacker deliberately overwhelms the OPA or IAM service to bypass authorisation checks — fail-closed API gateway eliminates this attack surface.
+  - Spoofing via certificate downgrade (Spoofing): a man-in-the-middle suppresses mTLS certificate validation errors to inject itself into a service mesh connection — mandatory connection termination on cert failure closes this path.
+  - Information Disclosure via permissive feature flag defaults (Information Disclosure): an unfinished banking feature shipped in a permissive default state exposes incomplete business logic or data access paths — disabled-by-default flags eliminate this exposure.
 - **Residual risks:**
   - A locally cached permission set that has not yet expired may grant access to a principal whose permissions were revoked within the TTL window. Mitigated by keeping the TTL at or below 60 seconds and wiring revocation events to cache invalidation via Kafka.
   - A misconfigured circuit breaker threshold that is set too low may cause excessive fail-closed responses during normal transient latency spikes, creating an availability issue that operations teams may be tempted to resolve by raising the threshold unsafely. Mitigated by requiring CISO Delegate approval for any circuit breaker threshold change on T0 services.
