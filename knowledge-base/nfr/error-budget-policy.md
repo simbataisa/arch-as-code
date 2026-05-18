@@ -11,6 +11,10 @@ Tier Applicability: T0, T1
 - Banking regulators (BCBS 230, SBV Circular 09/2020) require demonstrable impact tolerance commitments and operational resilience metrics; an error budget provides the quantitative foundation for these regulatory conversations.
 - Without multi-window burn-rate alerting, an SLO breach can go undetected for hours as a "slow burn" — depleting 10% of the annual budget in a week before any alert fires.
 
+## Context
+
+The error budget framework translates an SLO target into a governance mechanism that connects feature-delivery velocity to reliability investment. For a T0 Payment Gateway at 99.99%, the annual budget is 52 minutes — smaller than a single major incident. Without explicit accounting, teams exhaust this budget invisibly through incremental deploys, each carrying a small regression probability. The policy formalises three operational states (Green/Amber/Red), each with defined deployment permissions and remediation obligations, and enforces them programmatically via a CI/CD deployment gate. BCBS 230 Principle 1 and SBV §IV require demonstrable impact-tolerance commitments; the error budget is the quantitative evidence artefact for those conversations.
+
 ## Solution
 
 Per-tier error budgets tracked as rolling-30-day burn rates; Prometheus recording rules derive budget consumption; three policy bands (Green / Amber / Red) govern feature deployment velocity. All thresholds are enforced via a deployment gate in the CI/CD pipeline.
@@ -393,6 +397,34 @@ STRIDE applied to the error budget system itself — a governance mechanism that
 ### Chaos Tests
 - Prometheus unavailable: bring Prometheus down; verify the deployment gate defaults to GREEN (allow) rather than blocking all deployments during the outage; verify an alert fires for the Prometheus scrape failure.
 - Recording rule regression: introduce an intentional change to the SLI recording rule expression; run `promtool test rules`; assert the test suite catches the regression before the change is merged.
+
+## When to Use
+
+- Every T0 and T1 service that carries a customer-facing availability SLO — the error budget policy turns the SLO from a target into an operational contract with deployment consequences.
+- When the engineering organisation needs a data-driven forcing function to balance feature velocity against reliability investment, replacing subjective risk debates with objective policy bands.
+- When regulators (BCBS 230, SBV §IV) require demonstrable impact-tolerance commitments backed by quantitative evidence and audit trails.
+- When a service has experienced recurring SLO breaches and the team needs a structured reliability-sprint mechanism to invest in fixing root causes.
+
+## When Not to Use
+
+- T2/T3 services with a best-effort availability posture and no contractual SLO — the overhead of burn-rate alerting and deployment gates is not justified; basic error-rate alerting is sufficient.
+- Pre-production or alpha services where the SLI definition has not yet been validated against real user traffic — run in shadow mode for 2+ weeks before activating the deployment gate.
+- Services where the SLI cannot be expressed as a ratio of good-to-total events (e.g., pure batch pipelines) — use a completion-rate and latency-percentile NFR instead.
+
+## Variants & Trade-offs
+
+- **Rolling 30-day window (default)** — smooths out short outages; the most commonly cited SLO compliance window for BCBS reporting; risk: a concentrated bad week stays in the window for four weeks and may trigger extended Amber/Red policy.
+- **Calendar-month window** — aligns with business reporting; simpler stakeholder communication; risk: a bad event at the start of the month creates a long policy restriction period.
+- **Multi-SLI composite budget** — combines availability and latency SLIs into a single budget (a request counts as "bad" if it fails OR is slow); most accurately represents user experience; harder to diagnose — budget depletion may be from either dimension.
+- **Separate SLI budgets per endpoint** — per-endpoint error budgets provide the highest-resolution signal (e.g., `/payments/authorise` vs `/payments/status`); highest operational complexity; recommended only for mature T0 services with well-differentiated endpoint criticality.
+
+## Related Patterns
+
+- [NFR-001 Service Tiering + RTO/RPO Matrix](service-tiering-rto-rpo.md) — tier determines which SLO target applies and therefore the error budget size
+- [NFR-002 Latency Budget Model](latency-budget-model.md) — latency SLI thresholds feed the latency component of the composite error budget
+- [BP-007 Golden Signals (SRE)](../best-practices/golden-signals-sre.md) — golden signals provide the raw metrics that feed SLI recording rules
+- [BP-008 Error Budgets](../best-practices/error-budgets.md) — operational companion to this policy document; describes the engineering practice of consuming and recovering budgets
+- [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — circuit breaker OPEN events are a leading indicator of fast-burn conditions
 
 ## References
 

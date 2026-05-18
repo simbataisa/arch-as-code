@@ -191,9 +191,10 @@ STRIDE for this *meta-doc*: there is no direct threat surface to the tiering mat
 Tier-related alerts and dashboards are inherited by every service per its declared tier.
 
 - **Alerts**:
-  - `Tier-Mismatch`: service deployment manifest tier ≠ `@ServiceTier` annotation. Severity: Critical (CI lint).
-  - `Tier-Drift`: T0 service exceeds 5-min unavailability in observability data. Severity: Critical (PagerDuty).
-  - `Tier-Cost-Anomaly`: service exceeds 130% of expected tier-cost-multiple over 7-day window. Severity: Warning (FinOps Slack).
+  - Alert: `ServiceTierSLOBreach` — T0 service availability drops below 99.99% over the rolling 5-minute window; PagerDuty critical; runbook: `runbooks/tier-t0-slo-breach.md`.
+  - Alert: `TierMismatch` — service deployment manifest tier ≠ `@ServiceTier` annotation; severity Critical (CI lint gate blocks merge).
+  - Alert: `TierDrift` — T0 service exceeds 5-min unavailability in observability data; severity Critical (PagerDuty).
+  - Alert: `TierCostAnomaly` — service exceeds 130% of expected tier-cost-multiple over 7-day window; severity Warning (FinOps Slack).
 - **Dashboards**: Grafana panels per tier — `dashboard/tier-T0-services-availability`, `dashboard/tier-T0-rto-tracking`.
 - **On-call escalation**: tier defines escalation chain (T0: page in 5 min → SRE primary → SRE secondary → SRE Lead).
 - **Recovery steps**: pattern-specific; see [REF-001 Multi-Region Active-Active](../reference-architectures/multi-region-active-active.md) for T0 / T1 recovery; [BP-002 DR Playbook](../best-practices/disaster-recovery-playbook.md) for T2 / T3.

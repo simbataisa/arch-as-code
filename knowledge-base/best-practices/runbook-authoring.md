@@ -187,15 +187,15 @@ Runbooks live in two places and must be kept in sync:
 
 The Confluence page title follows the format: `[RB-PAY-001] Payment Gateway — Latency High`. This makes it findable by alert name within seconds.
 
-## When to Apply / When NOT to Apply
+## When to Apply
 
-**Apply when:**
 - Creating any PagerDuty alert for a T0, T1, T2, or T3 service — all alerts need runbooks.
 - Onboarding a new service to the on-call rotation.
 - An incident postmortem ([BP-010](incident-postmortem.md)) identifies a missing or inadequate runbook.
 - A quarterly DR drill flags a runbook as stale.
 
-**Do NOT apply when:**
+## When NOT to Apply
+
 - An alert is informational only (no action required by the on-call engineer) — use a comment in the alert annotation instead of a full runbook.
 - A runbook would be a single line ("restart the pod") — embed that as an annotation note and save the full runbook format for alerts requiring judgement.
 
@@ -272,10 +272,10 @@ acceptance_criteria:
 
 ## Threat Model Summary
 
-- **Runbook drift**: the system changes; the runbook does not. Commands fail. Mitigation: 90-day staleness policy and mandatory DR drill exercise.
-- **Runbook unavailability**: Confluence is down during an incident. Mitigation: runbooks committed to the service repository in `runbooks/`; on-call engineers have local git clones.
-- **Incorrect escalation path**: the runbook names a person who has left the team. Mitigation: escalation paths reference PagerDuty policy names (stable) not individual names (volatile).
-- **Automation runbook misfire**: automated runbook triggers in the wrong environment. Mitigation: all automation runbooks check `CLUSTER_ENV` before executing; T0 automation requires human confirmation.
+- **Runbook content tampered in version control (Tampering)**: a malicious commit replaces a production rollback command with a destructive one; an on-call engineer executes it under incident pressure. Mitigation: protected branches require SRE-lead approval for changes to `runbooks/`; GitLab pipeline compares the `runbook_url` SHA against the Confluence page SHA on each publish.
+- **Runbook unavailability during an incident (Denial of Service)**: Confluence is down during an incident; engineers cannot access the runbook. Mitigation: runbooks committed to the service repository in `runbooks/`; on-call engineers have local git clones.
+- **Runbook drift masking a latent failure (Information Disclosure)**: a stale runbook includes old system topology (removed service, renamed endpoint) that reveals decommissioned infrastructure details and misleads the responder. Mitigation: 90-day staleness policy, mandatory DR drill exercise, and automated Confluence diff check on each publish.
+- **Automation runbook misfire (Elevation of Privilege)**: automated runbook triggers in the wrong environment, executing privileged operations (scale down, delete PV) outside its intended scope. Mitigation: all automation runbooks check `CLUSTER_ENV` before executing; T0 automation requires human confirmation with a named approver logged in the audit trail.
 
 ## Operational Runbook (stub)
 

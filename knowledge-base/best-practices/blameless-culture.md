@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2, T3
 - Without psychological safety, engineers do not surface architectural risks during design reviews. Risks go undiscussed, are not mitigated, and emerge as production incidents.
 - DORA research demonstrates that high-performing engineering organisations have significantly higher incident reporting rates than low performers — not lower. Blameless culture is a leading indicator of reliability, not a lagging one.
 
+## Context
+
+Banking operations teams under high-pressure environments tend toward blame when incidents occur, suppressing near-miss reporting and creating silent risks that accumulate until a major outage forces them into the open. Psychological safety — where engineers can report errors without career consequences — is the foundation for learning from failures before they become systemic. SBV Circular 09/2020 and Decree 13/2023 impose explicit timelines on breach notification; a culture that discourages reporting makes those timelines structurally impossible to meet. DORA research (2022, 2023) demonstrates that high-performing engineering organisations have significantly higher incident reporting rates than low performers, confirming that blameless culture is a leading indicator of reliability.
+
 ## Solution / Practice Description
 
 Blameless culture is an organisational practice — reinforced by leadership behaviour, process design, and measurable safety metrics — in which production incidents and near-misses are treated as system failures to be understood and fixed, not as individual errors to be punished, creating the psychological safety that makes reliable systems possible.
@@ -151,16 +155,20 @@ DORA metrics (tracked in Grafana, sourced from GitLab CI and PagerDuty) are moni
 
 DORA metrics are reviewed in the quarterly engineering health check, alongside the psychological safety survey results.
 
-## When to Apply / When NOT to Apply
+## When to Apply
 
-**Apply when (always — this is a cultural baseline, not a feature):**
+Always — this is a cultural baseline, not a feature:
+
 - Conducting any incident postmortem for any tier.
 - Reviewing near-miss reports.
 - Running retrospectives on chaos engineering drills.
 - Onboarding engineers to the on-call rotation — blameless culture orientation is part of the onboarding checklist.
 - Leadership training and manager calibration sessions.
 
-**Do NOT confuse blameless with:**
+## When NOT to Apply
+
+Do NOT confuse blameless with:
+
 - Absence of accountability — reckless behaviour has consequences; blameless culture is precise about the distinction.
 - Absence of urgency — reporting near-misses without fixing them is not blameless culture; it is noise. Every near-miss triggers at minimum a triage decision.
 - Protecting poor performance — blameless culture focuses on systems; it does not exempt individuals from performance management on dimensions unrelated to incident response.
@@ -175,6 +183,13 @@ DORA metrics are reviewed in the quarterly engineering health check, alongside t
 | **Learning reviews instead of postmortems** | Teams where "postmortem" language carries baggage | Same content, different framing; useful when the word "postmortem" triggers blame associations |
 
 ## NFR Acceptance Criteria
+
+Measurable thresholds:
+
+- Mean Time To Detect (MTTD) p50 < 5 min for T0 services (on-call response latency from alert fire to first action).
+- Blameless post-mortem completed ≤ 72 h after every P1/P2 incident.
+- Near-miss report rate ≥ 2 per team per quarter (leading indicator of psychological safety).
+- Psychological safety survey average ≥ 4.0 / 5.0 across all five questions, measured quarterly.
 
 ```yaml
 service_name: "[team]-blameless-culture-compliance"
@@ -226,7 +241,7 @@ acceptance_criteria:
 | Ring 0 | NIST SP 800-55 Rev 1 (Security Metrics) | Measurement of security program effectiveness | Psychological safety survey and near-miss reporting rate are leading indicators of the security reporting culture |
 | Ring 0 | DORA State of DevOps Research | Psychological safety as a key predictor of software delivery performance | DORA metrics tracked as cultural health indicators, reviewed quarterly |
 | Ring 1 | BCBS 230 Principle 1 ⚠️ (working summary — pending PDF fetch) | Board and senior management set the governance and risk culture tone | Leadership behaviour guidelines and the prohibition on referencing postmortems in performance reviews implement the governance culture requirement |
-| Ring 2 | SBV Circular 09/2020 §IV ⚠️ (working summary — pending Legal review) | Operational risk culture and incident reporting obligations | Blameless culture directly enables timely incident and breach reporting required by the circular, by removing the disincentive to report |
+| Ring 2 | SBV Circular 09/2020 §IV; Decree 13/2023 | Operational risk culture and incident reporting obligations ⚠️ (working summary — pending Legal review) | Blameless culture directly enables timely incident and breach reporting required by the circular and Decree 13 Art. 26 72-hour notification obligation, by removing the disincentive to report |
 
 ## Cost / FinOps Notes
 
@@ -241,17 +256,18 @@ acceptance_criteria:
 
 ## Threat Model Summary
 
-- **Culture regression after leadership change**: a new manager with blame-oriented instincts can undo months of cultural work. Mitigation: blameless policy is written into the SRE team charter; new managers complete Just Culture training within 90 days; psychological safety survey detects regression within a quarter.
-- **Blameless used to avoid accountability**: an engineer engages in genuinely reckless behaviour and references blameless culture as a shield. Mitigation: Just Culture framework provides a clear definition of reckless behaviour; the SRE lead and HR apply the framework consistently.
-- **Survey fatigue**: quarterly surveys go unanswered; metrics become meaningless. Mitigation: 5-question maximum; results are visibly acted on — engineers see the connection between survey results and leadership changes.
-- **Near-miss reports not actioned**: engineers report near-misses; nothing happens; they stop reporting. Mitigation: every near-miss receives a triage response within 24 hours; significant near-misses get public recognition.
+- **Culture regression after leadership change (Tampering)**: a new manager with blame-oriented instincts overrides blameless postmortem language, inserting individual attribution into published documents. Mitigation: blameless policy is written into the SRE team charter; new managers complete Just Culture training within 90 days; psychological safety survey detects regression within a quarter.
+- **Blameless used to avoid accountability (Elevation of Privilege)**: an engineer engages in genuinely reckless behaviour and references blameless culture as a shield to avoid the consequences that the Just Culture framework reserves for reckless acts. Mitigation: Just Culture framework provides a clear definition of reckless behaviour; the SRE lead and HR apply the framework consistently with documented evidence.
+- **Near-miss report data reveals breach before official notification (Information Disclosure)**: a near-miss report submitted via the #near-misses Slack channel is publicly accessible and reveals a payment anomaly that has not yet been assessed for SBV notification requirements. Mitigation: #near-misses is a private channel accessible only to the SRE team and engineering leads; reports are triaged within 24 hours and assessed for regulatory notification obligations.
+- **Spoofing psychological safety metrics**: a team artificially inflates near-miss report counts by submitting trivial noise reports, masking a genuine decline in real safety signals. Mitigation: SRE lead triages all near-miss reports and categorises them; the meaningful-report rate (categorised as `actioned` or `logged`) is the tracked metric, not the raw submission count.
 
 ## Operational Runbook (stub)
 
 - **Onboarding**: new on-call engineers complete blameless orientation in their first week; link to training materials in `governance/culture/blameless-orientation.md`.
 - **Quarterly survey**: SRE lead sends survey link in first week of each quarter; results reviewed in SRE team meeting; presented (aggregated) to engineering all-hands.
 - **Near-miss triage**: SRE lead reviews `#near-misses` daily; labels each as `actioned`, `logged`, or `escalated`; monthly review of patterns.
-- **Cultural regression alert**: if psychological safety survey drops > 0.5 points in a single quarter, SRE lead escalates to engineering director within 5 business days.
+- Alert: `BlamelessCultureRegressionDetected` — psychological safety survey average drops > 0.5 points in a single quarter or falls below 3.5 on any individual question; PagerDuty low-urgency to SRE lead; escalate to engineering director within 5 business days.
+- Alert: `NearMissReportRateLow` — near-miss meaningful-report rate falls below 1 per team per month for two consecutive months; PagerDuty low-urgency to SRE lead; triggers cultural health review.
 - **Postmortem language audit**: conducted by SRE lead in the first week of each quarter for the prior quarter's postmortems.
 
 ## Test Strategy (stub)

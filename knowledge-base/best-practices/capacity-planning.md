@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2
 - Cloud resource waste accumulates silently. Without modelled targets, teams overprovision "to be safe," and that cost compounds across dozens of microservices across two AWS regions.
 - Capacity decisions made without a documented forecast model are invisible to auditors and cannot satisfy BCBS 239 timeliness requirements for risk data reporting that depends on infrastructure availability.
 
+## Context
+
+Banking transaction volumes follow predictable intraday cycles (morning peak, lunch trough, end-of-day batch) with unpredictable spikes from rate announcements, salary-disbursement windows, and Tết surges that reach 3–5× baseline; under-provisioning causes SLO breaches while over-provisioning wastes 40–60% of cloud spend. Capacity models translate traffic forecasts into resource reservations before load arrives. This practice sits between the high-level tier definitions ([NFR-001](../nfr/service-tiering-rto-rpo.md)) and the low-level provisioning tooling (Terraform, HPA), providing the quantitative bridge that converts business growth projections into infrastructure commitments reviewed quarterly at the Capacity Review Board.
+
 ## Solution / Practice Description
 
 Capacity planning is the six-phase discipline of establishing baselines, modelling demand, translating models into provisioning targets, validating those targets against live traffic, and reviewing the cycle quarterly — producing documented, auditable capacity forecasts that keep every service within its SLO while respecting external quotas (NAPAS TPS, T24 sessions) and controlling cloud spend.
@@ -144,16 +148,16 @@ A structured review is conducted within the first two weeks of each quarter:
 5. Present findings at the Capacity Review Board (SRE lead, Product, Finance, Procurement).
 6. Publish the updated forecast to `governance/capacity/forecasts/` and link from `.bmad/handoff-log.md`.
 
-## When to Apply / When NOT to Apply
+## When to Apply
 
-**Apply when:**
 - Onboarding any T0 or T1 service — a capacity baseline is a Day 1 requirement.
 - Preparing for a known peak event (Tết, salary day, product launch, marketing campaign).
 - Observing > 70% sustained utilisation on any resource dimension for two consecutive weeks.
 - Planning a Kafka topic that will carry > 10 MB/s throughput.
 - Renewing a T24 license or NAPAS quota negotiation cycle.
 
-**Do NOT apply when:**
+## When NOT to Apply
+
 - T3 internal tooling with < 100 users and no SLO — lightweight right-sizing is sufficient.
 - The service is being decommissioned within the forecast horizon.
 - The capacity question is about a single batch job that runs once a month — use a dedicated job-sizing analysis instead of the full six-phase cycle.
@@ -215,7 +219,7 @@ acceptance_criteria:
 | Ring 0 | NIST SP 800-53 SA-8 (Security Engineering Principles) | System capacity sizing | Capacity model documents resource sizing decisions with auditable rationale |
 | Ring 1 | BCBS 230 Principle 2 ⚠️ (working summary — pending PDF fetch) | Operational risk data infrastructure must be sufficient for peak demand | Capacity forecasts ensure infrastructure can sustain risk data flows during peak periods |
 | Ring 1 | BCBS 239 §3 Timeliness | Risk data must be available on demand, especially during stress | Proven capacity headroom ensures risk reporting pipelines are not starved during Tết peak |
-| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Operational continuity resourcing | Quarterly capacity review and documented NAPAS quota management evidence operational continuity planning |
+| Ring 2 | SBV Circular 09/2020 §IV.2; Decree 13/2023 | Operational continuity resourcing ⚠️ (working summary — pending Legal review) | Quarterly capacity review and documented NAPAS quota management evidence operational continuity planning; Decree 13 Art. 26 72-hour notification timeliness requires that T0 capacity never degrades below the incident-detection threshold |
 
 ## Cost / FinOps Notes
 
@@ -231,11 +235,11 @@ acceptance_criteria:
 
 ## Threat Model Summary
 
-- **Forecast drift**: the forecast is accurate at creation but not updated as product growth accelerates. Mitigation: quarterly mandatory review with product owner sign-off on growth figures.
-- **NAPAS quota breach**: burst traffic exceeds TPS quota, causing payment rejections. Mitigation: 80% alerting threshold, automated throttling of non-critical retry queues, pre-negotiated quota uplift for Tết window.
-- **T24 session starvation**: concurrent users exceed licensed sessions; new logins rejected. Mitigation: 90% utilisation alert, 30-day procurement lead time buffer, session pooling for internal automation.
-- **Kafka consumer lag cascade**: under-partitioned topic cannot absorb peak throughput; lag grows until messages expire. Mitigation: partition plan reviewed quarterly; lag alert at 60-second threshold triggers consumer group scale-out.
-- **Region capacity asymmetry**: active-active failover sends all traffic to Region B, which was sized for only 60% of total traffic. Mitigation: both regions provisioned to 100% capacity target; validated annually in chaos engineering game-day ([BP-005](chaos-engineering.md)).
+- **Forecast drift (Tampering)**: the capacity forecast file is updated with artificially low growth projections to avoid a procurement request; actual traffic then exceeds capacity, causing SLO breaches. Mitigation: quarterly mandatory review with product owner sign-off; capacity-plan CLI validates declared `peak_tps` against observed P95 TPS from Prometheus before accepting the forecast.
+- **NAPAS quota breach (Denial of Service)**: burst traffic exceeds contractual TPS quota, causing payment rejections at the NAPAS gateway and triggering SBV breach notification. Mitigation: 80% alerting threshold, automated throttling of non-critical retry queues, pre-negotiated quota uplift for Tết window.
+- **T24 session starvation (Denial of Service)**: concurrent users exceed licensed sessions; new logins are rejected, blocking customer access during peak periods. Mitigation: 90% utilisation alert, 30-day procurement lead time buffer, session pooling for internal automation.
+- **Kafka consumer lag cascade (Denial of Service)**: under-partitioned topic cannot absorb peak throughput; lag grows until messages expire or DLQ fills, causing data loss in payment-event pipelines. Mitigation: partition plan reviewed quarterly; lag alert at 60-second threshold triggers consumer group scale-out.
+- **Region capacity asymmetry (Elevation of Privilege)**: active-active failover sends all traffic to Region B, which was sized for only 60% of total traffic, allowing an attacker to trigger a regional outage by exploiting the under-provisioned failover path. Mitigation: both regions provisioned to 100% capacity target; validated annually in chaos engineering game-day ([BP-005](chaos-engineering.md)).
 
 ## Operational Runbook (stub)
 

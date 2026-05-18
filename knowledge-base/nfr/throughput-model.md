@@ -184,6 +184,21 @@ class NapasPaymentGatewaySimulation extends Simulation {
 
 **Why 65% CPU for normal, 70% for peak**: the gap provides headroom for HPA to react (60-second stabilisation window) before a normal-load spike breaches the Tết-peak boundary. Services that sit at 70% during normal load have no HPA headroom and will breach SLOs before the first new pod starts.
 
+## Implementation Guidelines
+
+1. Baseline the service's current throughput profile using 30 days of Prometheus `job:payment_tps:rate1m` recording-rule data; identify the observed peak TPS, normal TPS, and the P99 latency at those utilisation levels.
+2. Run Gatling benchmarks at the four standard levels (50%, 70%, 85%, 95% CPU utilisation) in the staging environment before DAB submission; record goodput and P99 latency at each level to identify the knee of the curve.
+3. Set the HPA `targetCPUUtilizationPercentage` at 70% for T0 and 75% for T1; set `minReplicas` so that the baseline load lands at ≤ 50% CPU, leaving the 50–70% band as the scale-out trigger zone.
+4. Document the `consumer_throughput_per_partition` benchmark result in the service's `capacity-profile.yaml`; ensure the CI `capacity-plan validate` step cross-references this value against the declared `peak_tps`.
+5. For services approaching their USL contention point (α > 0.05 measured from N = 1, 2, 4, 8 pod benchmarks), investigate lock contention and shared DB connection pool bottlenecks before adding more replicas.
+
+## Variants & Trade-offs
+
+- **Single goodput target (default)** — declare a single `peak_tps` target (e.g., 1,500 TPS for Tết) and size for it; simple to govern, easy to test, sufficient for the majority of T0 services with a known peak shape.
+- **Dual normal/peak targets** — separate `normal_tps` and `peak_tps` declared in `capacity-profile.yaml`; enables finer HPA tuning and cost optimisation between peaks but requires two benchmark runs per release.
+- **Goodput + latency composite target** — combine throughput and latency SLIs into a single DAB acceptance criterion (e.g., "≥ 1,500 TPS at p99 < 200 ms"); best represents user experience but makes it harder to isolate which dimension is failing during an incident.
+- **USL-based ceiling declaration** — explicitly model the theoretical throughput ceiling using USL curve fitting from the N = 1–16 pod benchmarks; provides a hard limit to prevent over-scaling; adds engineering effort but prevents capacity waste on services that have hit a serialisation ceiling.
+
 ## NFR Acceptance Criteria
 
 ```yaml
@@ -236,7 +251,7 @@ nfr_acceptance_criteria:
 | Ring 0 | NIST SP 800-53 | SA-8 Security Engineering Principles; SC-5 Denial of Service Protection | Utilisation law and USL analysis are formal engineering principles applied to every T0 deployment; operating below the knee of curve (U < 70%) provides inherent DoS resistance by ensuring the system degrades gracefully under load rather than collapsing. |
 | Ring 1 | BCBS 239 | §3 Timeliness | NAPAS payment goodput targets (500 TPS normal, 1,500 TPS peak) with p99 < 200 ms ensure risk-data flows (payment confirmations, settlement records) complete within supervisory timeliness expectations at all load levels. |
 | Ring 1 | BCBS 230 | Principle 2 — Data Architecture and IT Infrastructure ⚠️ (working summary — pending PDF fetch) | Throughput benchmarking demonstrates that the IT infrastructure supporting payment-data aggregation is sized to meet peak demand without degradation, satisfying the infrastructure-adequacy dimension of Principle 2. |
-| Ring 2 | SBV Circular 09/2020 | §IV.2 Operational continuity — performance standards ⚠️ (working summary — pending Legal review) | Documented throughput targets, Gatling benchmark results, and utilisation-law justifications constitute the performance-standard evidence required for Techcombank's operational continuity obligations under SBV supervision. |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Operational continuity — performance standards ⚠️ (working summary — pending Legal review) | Documented throughput targets, Gatling benchmark results, and utilisation-law justifications constitute the performance-standard evidence required for Techcombank's operational continuity obligations under SBV supervision; Decree 13 Art. 26 72-hour incident reporting requires that T0 throughput capacity never prevents timely breach detection or notification. |
 
 ## Cost / FinOps Notes
 
@@ -256,9 +271,9 @@ STRIDE applied to the throughput measurement and target-setting process:
 
 ## Operational Runbook (stub)
 
-- **Alert `ThroughputGoodputDrop`**: goodput drops > 20% from baseline within 5 minutes. Check: recent deployment (ArgoCD), downstream health (circuit breaker state), Kafka consumer lag. Primary action: compare current TPS to benchmark curve; if load is below the safe operating region, the issue is a service degradation, not an overload.
-- **Alert `ConsumerLagCritical`**: lag > 5,000 on a T0 topic for > 5 min. Check: consumer pod count vs partition count; consumer error rate (`consumer-group-errors` metric). Scale consumer pods if under-replicated; investigate DLQ for poison messages.
-- **Alert `UtilisationKneeApproach`**: CPU > 65% (T0) for > 5 min during non-peak periods. Trigger: quarterly capacity review ahead of schedule. Pre-provision for the next expected peak.
+- Alert: `ThroughputGoodputDrop` — goodput drops > 20% from baseline within 5 minutes; PagerDuty high-urgency. Check: recent deployment (ArgoCD), downstream health (circuit breaker state), Kafka consumer lag. Primary action: compare current TPS to benchmark curve; if load is below the safe operating region, the issue is a service degradation, not an overload.
+- Alert: `ConsumerLagCritical` — lag > 5,000 on a T0 topic for > 5 min; PagerDuty high-urgency. Check: consumer pod count vs partition count; consumer error rate (`consumer-group-errors` metric). Scale consumer pods if under-replicated; investigate DLQ for poison messages.
+- Alert: `UtilisationKneeApproach` — CPU > 65% (T0) for > 5 min during non-peak periods; PagerDuty warning. Trigger: quarterly capacity review ahead of schedule. Pre-provision for the next expected peak.
 - **Dashboards**: Grafana — `throughput-goodput-by-service`, `utilisation-law-scatter`, `kafka-throughput-per-partition`, `gatling-benchmark-history`.
 
 ## Test Strategy (stub)

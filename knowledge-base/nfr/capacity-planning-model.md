@@ -240,6 +240,21 @@ spec:
 3. **Week 3**: raise a capacity change request if any resource is running above 80% of its provisioned maximum during non-peak periods (indicates growth is consuming headroom faster than planned).
 4. **Week 4**: apply approved changes before the start of the next quarter; validate with a synthetic load test at 1.5× the new capacity target.
 
+## Implementation Guidelines
+
+1. Baseline current utilisation with 30-day Prometheus/Datadog metrics before modelling — use the `job:http_requests:rate5m` recording rules from [BP-006 Capacity Planning](../best-practices/capacity-planning.md) as the primary data source.
+2. Apply the traffic patterns from [NFR-002 Latency Budget Model](latency-budget-model.md) for per-tier load estimates; use p99 latency as the service time W in Little's Law for conservative sizing.
+3. Size for p95 sustained traffic plus a 30% headroom buffer; define HPA auto-scale triggers at 70% of reserved CPU capacity (T0) or 75% (T1).
+4. Codify all calculated values in the service's `capacity-profile.yaml` and validate via the `capacity-plan validate` CLI step in CI before each production deployment.
+5. Review the model quarterly or after any change that shifts traffic volume by > 20% (new product launch, marketing campaign, payment partner addition).
+
+## Variants & Trade-offs
+
+- **Static reservation** — pre-allocate fixed instance counts (`minReplicas = peak_capacity`); simplest to reason about and fastest to recover from a cold start; wastes resources during off-peak hours (typically 30–50% idle for T0 at 02:00–06:00 UTC+7).
+- **Auto-scaling with forecasting** — predictive scale-out using ML-based forecasting (AWS Predictive Scaling, KEDA Cron trigger for known Tết dates); reduces idle waste but adds operational complexity and requires 8+ weeks of historical data to train.
+- **Over-subscription model** — share burst headroom across services within a node pool; acceptable for T2/T3 batch tiers but unsuitable for T0 critical payment paths where a noisy neighbour can cause latency jitter that consumes the P99 budget.
+- **Reserved + on-demand hybrid** — run T0 baseline on Reserved Instances (3-year commitment, 40% saving) and scale-out layers on On-Demand; recommended for Techcombank's T0 services where the baseline replicas are predictable and the Tết surge is time-bounded.
+
 ## NFR Acceptance Criteria
 
 ```yaml
@@ -287,7 +302,7 @@ nfr_acceptance_criteria:
 | Ring 0 | NIST SP 800-53 | SC-5 Denial of Service Protection; SA-8 Security Engineering Principles | Headroom provisioning (1.5×) and HPA scale-out policies protect against resource-exhaustion DoS; Little's Law sizing is a formal engineering principle applied before production deployment. |
 | Ring 1 | BCBS 230 | Principle 2 — Data Architecture and IT Infrastructure ⚠️ (working summary — pending PDF fetch) | Capacity planning model ensures the IT infrastructure supporting risk-data aggregation can sustain peak transaction volumes without degradation, satisfying the infrastructure-adequacy dimension of Principle 2. |
 | Ring 1 | BCBS 239 | §3 Timeliness | T0 services sized to sustain 1,500 TPS at p99 < 200 ms ensure risk data flows (payment confirmations, ledger postings) are aggregated and available within regulatory timeliness expectations even at peak event load. |
-| Ring 2 | SBV Circular 09/2020 | §IV.2 Operational continuity — capacity and performance ⚠️ (working summary — pending Legal review) | Quarterly capacity reviews and pre-peak provisioning provide the documented operational continuity planning required for Techcombank's system performance obligations under the circular. |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Operational continuity — capacity and performance ⚠️ (working summary — pending Legal review) | Quarterly capacity reviews and pre-peak provisioning provide the documented operational continuity planning required for Techcombank's system performance obligations under the circular; Decree 13 breach-notification timelines require that T0 capacity never degrades below the 72-hour incident-reporting threshold. |
 
 ## Cost / FinOps Notes
 
@@ -311,9 +326,9 @@ STRIDE applied to the capacity model itself:
 
 ## Operational Runbook (stub)
 
-- **Alert `CapacityHeadroomWarning`**: CPU > 80% for 10 min on any T0 service. Check current pod count vs max_replicas. If at max_replicas, escalate to SRE lead for emergency node-pool expansion. Else: verify HPA is functioning (`kubectl describe hpa napas-payment-gateway`).
-- **Alert `KafkaConsumerLagCritical`**: lag > 10,000 on a T0 topic for > 5 min. Increase partition count (requires topic recreation or partition reassignment) or add consumer pods.
-- **Alert `HikariConnectionTimeout`**: any HikariCP timeout on T0. Immediately check RDS Proxy connection count, RDS CPU, and active connections. If pool is exhausted, restart the saturated pod to release stale connections.
+- Alert: `CapacityHeadroomWarning` — CPU > 80% for 10 min on any T0 service; PagerDuty high-urgency. Check current pod count vs max_replicas. If at max_replicas, escalate to SRE lead for emergency node-pool expansion; else verify HPA is functioning (`kubectl describe hpa napas-payment-gateway`).
+- Alert: `KafkaConsumerLagCritical` — lag > 10,000 on a T0 topic for > 5 min; PagerDuty high-urgency. Increase partition count (requires topic recreation or partition reassignment) or add consumer pods.
+- Alert: `HikariConnectionTimeout` — any HikariCP connection timeout on T0; PagerDuty critical. Immediately check RDS Proxy connection count, RDS CPU, and active connections. If pool is exhausted, restart the saturated pod to release stale connections.
 - **Pre-peak runbook trigger**: 72h before each identified peak event, SRE lead runs `capacity-plan provision --event tet-peak --tier T0` which scales T0 deployments to the headroom column values and validates via a synthetic 5-minute load test.
 - **Dashboards**: Grafana — `capacity-overview`, `kafka-lag-by-topic`, `hikari-pool-by-service`, `hpa-scaling-events`.
 

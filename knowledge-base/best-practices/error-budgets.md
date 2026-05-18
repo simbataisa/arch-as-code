@@ -14,6 +14,10 @@ Reliability and feature velocity are in tension — and without a quantitative f
 - **Reliability work unfunded by policy**: when the budget is depleted, engineering teams continue feature work because there is no formal freeze policy. Reliability improvements are perpetually deferred.
 - **Velocity-blame cycle**: a post-mortem names a specific deployment as the cause of a budget-consuming incident. Developers distrust the SLO system; SRE distrusts deployment velocity. The error budget model, properly implemented, replaces blame with shared accountability.
 
+## Context
+
+Reliability and feature velocity are in tension on every T0 payment service: each new deployment carries a small regression probability, while the entire annual error budget for a 99.99% SLO is only 52 minutes. Without quantitative budget accounting, this tension resolves through politics — seniority and intuition rather than data. The error budget framework converts the SLO from an aspirational target into an operational contract: budget is earned by reliability, and budget consumption governs deployment velocity. This practice is the operational layer on top of [NFR-005 Error Budget Policy](../nfr/error-budget-policy.md), which defines the policy bands; this document describes the engineering implementation.
+
 ## Solution
 
 The error budget is `1 - SLO target`. It is the maximum allowable unreliability per rolling window. Burn-rate alerts detect budget consumption early — fast burn catches an active incident; slow burn catches a gradual drift. When the budget is exhausted, a deployment freeze is activated per NFR-005. Reliability sprints fund the work to recover.
@@ -429,6 +433,34 @@ STRIDE analysis against the error budget practice:
 ### Chaos Tests
 - Inject a sustained 2% error rate into the Payment Gateway for 5 minutes (simulating a fast burn at 20x rate); assert PagerDuty receives a Critical alert within 3 minutes; assert the Grafana budget gauge drops to reflect the consumed budget; assert the CI pipeline rejects a test deploy within 10 minutes of the alert.
 - Inject a Prometheus outage for 30 minutes; assert the CI pipeline fails safe (rejects deploys when budget status is unknown, rather than defaulting to ACCUMULATING); verify Prometheus recovers and recording rules back-fill correctly from WAL.
+
+## When to Use
+
+- Every T0 and T1 service that has a customer-facing availability or latency SLO — the error budget converts the SLO from a number into an operational contract.
+- When the organisation needs a quantitative basis for deployment freeze decisions (prevents the velocity/reliability debate from becoming political).
+- When SLO breaches are recurrent and the team needs a forcing function to prioritise reliability work over feature velocity.
+- As the primary evidence artefact for BCBS 230 impact tolerance and SBV §IV operational continuity regulatory conversations.
+
+## When Not to Use
+
+- T3 internal tooling with no SLO or informal best-effort availability — error budget overhead is not justified; use basic alerting instead.
+- Services in pre-production or alpha where the SLI definition has not yet been validated against real user behaviour — shadow-mode data collection for 2 weeks before activating budget enforcement.
+- One-off migration jobs where the completion rate matters but burn-rate alerting has no operational value.
+
+## Variants & Trade-offs
+
+- **Rolling 28-day window (default)** — smooths out short incidents; good for comparing service reliability month-over-month; the 28-day window means a bad week can stay in the window for four weeks.
+- **Calendar-month window** — aligns with business reporting cycles and SBV monthly compliance reports; simpler to explain to stakeholders; susceptible to gaming (bad event at end of month falls out of window faster).
+- **Availability + latency composite SLI** — combines the success ratio and the latency ratio into a single budget; more complete representation of user experience but harder to debug which dimension is consuming budget.
+- **Separate availability and latency budgets** — simplest to reason about; easier to triage (budget drain is unambiguously from errors or from latency); the approach used in this practice document.
+
+## Related Patterns / Best Practices
+
+- [NFR-005 Error Budget Policy](../nfr/error-budget-policy.md) — policy companion: defines Green/Amber/Red bands and the deployment freeze enforcement mechanism
+- [BP-007 Golden Signals (SRE)](golden-signals-sre.md) — error signal is the primary feed into the error budget burn-rate calculation
+- [NFR-002 Latency Budget Model](../nfr/latency-budget-model.md) — per-tier P95/P99 thresholds used in latency SLI definitions
+- [BP-010 Incident Postmortem](incident-postmortem.md) — post-incident budget reconciliation feeds back into reliability sprint prioritisation
+- [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — fast-burn alerts often coincide with CB OPEN events; CB state is a leading signal
 
 ## References
 

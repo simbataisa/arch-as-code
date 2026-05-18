@@ -180,15 +180,15 @@ SRE lead reviews open postmortem action items weekly in the SRE team meeting. Ov
 - **Monthly engineering all-hands**: SRE lead presents 2–3 postmortem summaries — focus on lessons learned, not incident details.
 - **Cross-service pattern tracking**: postmortems tagged with root-cause category (e.g., `missing-circuit-breaker`, `config-not-validated`, `alert-threshold-too-high`). Quarterly review of tag frequency identifies systemic patterns.
 
-## When to Apply / When NOT to Apply
+## When to Apply
 
-**Apply when:**
 - Any SEV-1 (T0) or SEV-2 (T1) incident has occurred — postmortem is mandatory.
 - A SEV-3 incident has a novel root cause that other teams could learn from.
 - A chaos engineering drill ([BP-005](chaos-engineering.md)) reveals a gap that needs systemic remediation.
 - SBV breach notification is required — the postmortem document is the primary evidence artefact.
 
-**Do NOT apply when:**
+## When NOT to Apply
+
 - An alert was a confirmed monitoring false positive with no customer impact — log it in the alert configuration backlog instead.
 - The event was a planned maintenance window — use a maintenance review form, not a postmortem.
 
@@ -264,11 +264,11 @@ acceptance_criteria:
 
 ## Threat Model Summary
 
-- **Incomplete timeline**: chat logs and alert history are not collected within 24h and are lost. Mitigation: incident commander is responsible for immediately archiving Slack thread and alert timeline before the postmortem meeting.
-- **Shallow root cause**: 5 Whys stops at "human error." Mitigation: facilitator is trained to redirect; the template requires the root cause to be a system/process condition.
+- **Post-mortem data reveals internal system topology (Information Disclosure)**: a published postmortem that names internal hostnames, IP ranges, or service dependency chains is accessible to external parties via a misconfigured Confluence space. Mitigation: postmortems are published to the internal-only Confluence space; the postmortem template instructs authors to use service names (not hostnames or IPs); Confluence space permissions are reviewed quarterly.
+- **Postmortem timeline tampered after publication (Tampering)**: a postmortem author edits the timeline after publication to remove their own action from the causal chain, undermining the blameless process. Mitigation: Confluence page version history is preserved; any edit after approval requires SRE-lead sign-off; the original approved version is archived in the governance repository.
+- **SBV deadline breach (Repudiation)**: the team claims the 72-hour SBV notification was sent but no evidence record exists. Mitigation: Compliance team stores a sent-confirmation email with timestamp; the postmortem template has a mandatory "SBV Notification" field that must be filled before the document is marked complete.
+- **Shallow root cause (Spoofing)**: 5 Whys stops at "human error," producing a root-cause statement that falsely attributes systemic failure to an individual. Mitigation: facilitator is trained to redirect; the template requires the root cause to be a system/process condition.
 - **Action item drift**: Jira tickets are created but never worked. Mitigation: SRE lead reviews open postmortem action items weekly; overdue tickets trigger PagerDuty notification.
-- **Postmortem used punitively**: management references postmortem documents in performance reviews. Mitigation: blameless policy ([BP-011](blameless-culture.md)) explicitly prohibits this; postmortems are HR-neutral documents.
-- **SBV deadline breach**: 72-hour notification window missed because postmortem was not started until after the window. Mitigation: Compliance team is notified within 1 hour of incident resolution when SBV notification may be required; initial notification is sent immediately with a full report to follow.
 
 ## Operational Runbook (stub)
 

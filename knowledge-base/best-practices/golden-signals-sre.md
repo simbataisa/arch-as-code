@@ -14,6 +14,10 @@ Observability without a standard framework produces either observability debt or
 - **Missing saturation signals**: thread pool exhaustion, connection pool starvation, and queue back-pressure are the leading indicators of impending outage. Services that only emit request-level metrics give no warning before a hard failure.
 - **Compliance gap**: BCBS 239 §5 requires that risk data be available in a timely manner. Golden signals are the operational definition of "timely" — they must be present and alerting before a human detects the issue.
 
+## Context
+
+Distributed banking services on Kubernetes and multi-AZ cloud infrastructure fail in ways that cannot be predicted from code review alone: thread pool exhaustion, connection pool saturation, and downstream latency spikes are all invisible without a standard measurement framework. The Google SRE Four Golden Signals (Latency, Traffic, Errors, Saturation) provide the minimum viable observability vocabulary for every service — consistent metric names and label schemas allow Grafana dashboards to be templated once and reused across all tiers. BCBS 239 §5 requires risk data to be available in a timely manner; Golden Signals are the operational definition of "timely" — they must be alerting before a human detects a degradation.
+
 ## Solution
 
 Every Techcombank service must emit exactly the four Google SRE Golden Signals — **Latency**, **Traffic**, **Errors**, **Saturation** — using the standard Micrometer metric names and label set defined below. Prometheus collects them; Grafana dashboards are templated per tier; SLO alerts are defined for each signal per tier threshold from NFR-002 and NFR-005.
@@ -395,6 +399,34 @@ STRIDE analysis against the golden signals observability stack:
 ### Chaos Tests
 - Inject 10% error rate into a T0 service (Toxiproxy); measure the time from injection to PagerDuty notification; assert it is within 5 minutes (BP-007-TIM-01).
 - Stop the Prometheus pod; restart after 5 minutes; assert that no metric data is permanently lost (Prometheus WAL recovery) and that all dashboards return data for the gap period.
+
+## When to Use
+
+- Any service with user-facing latency SLOs where operator response time matters — the four signals give the fastest path to identifying which dimension is degrading.
+- Services whose health cannot be inferred from a single metric alone (payment gateways, API BFFs, Kafka consumers).
+- Post-incident reviews to identify which signal first detected the failure and whether it fired before customers noticed.
+- When instrumenting a new service for production — Golden Signals are the minimum viable observability set required before launch.
+
+## When Not to Use
+
+- Ultra-low-traffic batch jobs (< 1 request/min) where signal rates are meaningless at low cardinality — use job-completion and error-count metrics instead.
+- Exploratory development environments where signal drift is expected and unactionable — instrument only when the service carries production SLOs.
+- T3 internal tooling with no SLO — basic health checks are sufficient; full Golden Signals add cardinality overhead without operational value.
+
+## Variants & Trade-offs
+
+- **USE method** (Utilisation, Saturation, Errors) — preferred for infrastructure/resource-centric observability (e.g., Kafka brokers, database nodes); Golden Signals are preferred for service-centric (user-facing) observability.
+- **RED method** (Rate, Errors, Duration) — a subset of Golden Signals focused on request-driven services; simpler but omits Saturation, missing thread-pool and connection-pool exhaustion signals that precede hard failures.
+- **Full OpenTelemetry instrumentation** — adds distributed tracing on top of the four signals; higher overhead and cardinality but enables root-cause correlation across service boundaries; recommended for T0 services after baseline Golden Signals are stable.
+- **Synthetic probes (Blackbox Exporter)** — complement Golden Signals with external availability checks; detects cases where internal metrics look healthy but the service is unreachable from outside the cluster.
+
+## Related Patterns / Best Practices
+
+- [BP-008 Error Budgets](error-budgets.md) — error budget burn rate is computed directly from the golden error signal
+- [NFR-001 Service Tiering + RTO/RPO Matrix](../nfr/service-tiering-rto-rpo.md) — tier determines which thresholds apply to each signal
+- [NFR-002 Latency Budget Model](../nfr/latency-budget-model.md) — latency budget thresholds feed the Prometheus alert rules
+- [NFR-005 Error Budget Policy](../nfr/error-budget-policy.md) — policy bands (Green/Amber/Red) are driven by the error signal
+- [RES-002 Circuit Breaker](../patterns/resilience/circuit-breaker.md) — CB state transitions are a supplementary saturation signal
 
 ## References
 

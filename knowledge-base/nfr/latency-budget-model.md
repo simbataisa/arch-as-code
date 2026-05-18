@@ -229,7 +229,7 @@ groups:
 | Ring 0 (generic) | Google SRE Book Chapter 4 (Service Level Objectives) | SLO/SLI/error-budget framework | Latency budgets are the SLI side of T0/T1 SLOs |
 | Ring 1 (international banking) | Basel BCBS 239 — §3 (Timeliness) | "Risk data must be aggregated and reported on a timely basis" | T0/T1 P95 budgets ensure risk-data flows complete within minute-level supervisory expectations |
 | Ring 1 (international banking) | ISO 20022 RTPS (Real-Time Payment Scheme) | Settlement timestamp expectations | T0 sync-API P95 < 200 ms supports same-second response per RTPS norms |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Latency budgets are part of "operational service quality" obligations |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2; Decree 13/2023 | Operational continuity ⚠️ (working summary — pending Legal review) | Latency budgets are part of "operational service quality" obligations; Decree 13 Art. 26 breach-notification timeliness requires that T0 response latency never degrades to the point where incident detection is delayed |
 
 ## Cost / FinOps Notes
 
@@ -254,20 +254,21 @@ Tighter latency budgets cost more — primarily through over-provisioning to abs
 STRIDE: latency budgets primarily address **Denial of Service** and **Operational Excellence**.
 
 - **Top 3 threats addressed**:
-  1. Slow-roll DoS — sustained latency degradation that doesn't trip availability alerts. Budget breach alerts catch this.
-  2. Dependency creep — new downstream silently expands budget. Annual review + per-component budgets catch this.
-  3. Cold-start latency on autoscaling events — P95 budgets force pre-warming or sufficient over-provisioning.
+  1. Slow-roll Denial of Service — sustained latency degradation that doesn't trip availability alerts; budget breach alerts catch this before customers notice.
+  2. Dependency creep (Tampering) — a new downstream service is added to the call path without updating the latency budget declaration; the `@LatencyBudget` annotation review in the DAB gate and annual per-component budget review catch this.
+  3. Cold-start latency spike (Denial of Service) — autoscaling adds new pods that have not JIT-compiled critical paths; P95 budgets force pre-warming or sufficient over-provisioning to absorb cold-start tails.
 - **Top 3 residual threats**:
-  1. Network anomalies upstream of edge — outside our control. Mitigation: client-side resilience patterns (RES-007 fallback).
-  2. External-dependency variance (NAPAS, fraud) — circuit breaker (RES-002) and timeout-budget (RES-006) cap exposure.
-  3. Long-tail GC pauses — Java tuning (G1GC / ZGC) addresses; explicit GC SLO per tier in [BP-007 Golden Signals SRE](../best-practices/golden-signals-sre.md).
+  1. Network anomalies upstream of edge (Denial of Service) — outside our control; client-side resilience patterns (RES-007 fallback) absorb the impact.
+  2. External-dependency variance — NAPAS, fraud-screening latency spikes; circuit breaker (RES-002) and timeout-budget (RES-006) cap exposure (Information Disclosure risk if raw NAPAS error messages are surfaced to clients — mitigated by error masking in the BFF layer).
+  3. Long-tail GC pauses — Java tuning (G1GC / ZGC) addresses; explicit GC SLO per tier tracked in [BP-007 Golden Signals SRE](../best-practices/golden-signals-sre.md).
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
-  - `T0_P95_BudgetBreach`: sustained > 200 ms over 5 min. Severity: Critical.
-  - `Component_Budget_Breach`: per-component (DB, Cache, Service-logic) breach over 10 min. Severity: Warning, escalating to Critical at 30 min.
-  - `Latency_Trend`: 7-day moving P95 trending up by > 10%. Severity: Warning (FinOps Slack — possibly capacity issue).
+  - Alert: `LatencyBudgetExceeded_P99` — T0 service P99 latency > 500 ms sustained for > 2 min; PagerDuty critical; runbook: `runbooks/t0-latency-p99-breach.md`.
+  - Alert: `T0_P95_BudgetBreach` — sustained P95 > 200 ms over 5 min; severity Critical.
+  - Alert: `ComponentBudgetBreach` — per-component (DB, Cache, Service-logic) budget breach over 10 min; severity Warning, escalating to Critical at 30 min.
+  - Alert: `LatencyTrend` — 7-day moving P95 trending up by > 10%; severity Warning (FinOps Slack — possibly a capacity issue requiring quarterly review).
 - **Dashboards**: Grafana — `latency-budget-overview`, `latency-by-component-T0`, `latency-by-region`.
 - **Recovery steps**: see service-specific runbook; common steps are (1) check downstream health (2) verify cache hit rate (3) check GC / CPU saturation (4) consider region failover if regional issue.
 

@@ -177,7 +177,7 @@ Client-side chaos: simulate poor network conditions on a percentage of customer 
 | Ring 0 | NIST SP 800-53 CP-4 (Contingency Plan Testing) | "Test the contingency plan" | Chaos drills are the active verification of contingency plans |
 | Ring 0 | Google SRE Book Chapter 17 (Testing for Reliability) | "Disaster role-playing" / DiRT | Same idea; same intent |
 | Ring 1 | Basel BCBS 230 Principle 3 (BCP and Testing) | Operational resilience requires regular continuity testing ⚠️ (working summary — pending Legal review) | Drill cadence directly satisfies the testing requirement |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Drill artefacts evidence Techcombank exercises continuity |
+| Ring 2 | SBV Circular 09/2020 §IV.2; Decree 13/2023 | Operational continuity ⚠️ (working summary — pending Legal review) | Drill artefacts evidence Techcombank exercises continuity; Decree 13 breach-notification preparedness is validated by game-day drills |
 
 ## Cost / FinOps Notes
 
@@ -199,9 +199,9 @@ STRIDE: chaos engineering is itself a threat *vector* — a misused chaos tool c
   2. *Atrophied muscle memory* — drills keep on-call playbooks current.
   3. *Hidden coupling* — drills surface unexpected cross-cell or cross-region dependencies.
 - **Top 3 residual threats (introduced by chaos itself)**:
-  1. *Drill mis-targets production accidentally* — mitigation: feature-flag gating; environment guards; explicit drill identifiers in tooling.
-  2. *Insufficient blast-radius bounding* — mitigation: 5-minute hard-stop on every drill; on-call observer authority to abort.
-  3. *Drills that don't reflect real failure modes* — mitigation: drill scenarios derived from real incidents (BP-010 postmortems) and from declared failure modes (TPL-001).
+  1. *Malicious traffic injection that mimics normal steady-state (Tampering)* — a crafted payload targets the chaos tooling's feature-flag gating, causing unintended fault injection in production outside a drill window. Mitigation: feature-flag allow-list restricted to named environments; CI enforces the allow-list as code.
+  2. *Experiment results leak blast-radius topology (Information Disclosure)* — drill artefacts (pod names, region identifiers, failure modes) stored in CI logs that are accessible to unauthorized parties. Mitigation: drill artefacts are stored in the private governance repository with role-based access; CI log masking hides cluster topology details.
+  3. *Insufficient blast-radius bounding (Denial of Service)* — a misconfigured chaos CRD targets a broader scope than intended, triggering a real customer-facing outage. Mitigation: 5-minute hard-stop on every drill; on-call observer has abort authority; CRDs are validated by admission webhook before execution.
 
 ## Operational Runbook
 
@@ -220,9 +220,10 @@ STRIDE: chaos engineering is itself a threat *vector* — a misused chaos tool c
   2. File any new findings as bugs / runbook updates.
   3. Schedule the next drill.
 - **Alerts**:
-  - `Chaos_Drill_Scheduled`: 24 h before; PagerDuty informational.
-  - `Chaos_Drill_Active`: drill is running; mute non-critical alerts in the affected scope.
-  - `Chaos_AbortCriteria_Triggered`: drill auto-aborted; severity High (suggests real fragility).
+  - Alert: `ChaosExperimentSteadyStateViolated` — golden-signal threshold breached during a drill; PagerDuty high-urgency; triggers drill abort and incident assessment.
+  - Alert: `Chaos_Drill_Scheduled` — 24 h before; PagerDuty informational.
+  - Alert: `Chaos_Drill_Active` — drill is running; mute non-critical alerts in the affected scope.
+  - Alert: `Chaos_AbortCriteria_Triggered` — drill auto-aborted; severity High (suggests real fragility).
 
 ## Test Strategy
 
