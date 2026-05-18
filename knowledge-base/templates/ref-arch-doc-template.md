@@ -193,6 +193,32 @@ Tier Applicability: [T0 | T1 | T2 | T3 — list applicable tiers]
 
 **Chaos engineering**: [PLACEHOLDER: Describe which chaos experiments are run quarterly to validate this DR strategy — pod kill, AZ blackout simulation, NAPAS stub timeout injection.]
 
+## Threat Model Summary
+
+> **Authoring note**: Apply STRIDE to this reference architecture. Name the top 3 threats the architecture addresses and the top 2–3 residual threats with mitigations. Be specific — name the attack vector, the component it targets, and how the architecture mitigates it.
+
+STRIDE applied to [PLACEHOLDER: reference architecture name]:
+
+| Threat | STRIDE | Component Targeted | Mitigation |
+|--------|--------|--------------------|------------|
+| [PLACEHOLDER: e.g., "Payment message intercepted and modified in transit between mobile app and API Gateway"] | (Tampering) | [PLACEHOLDER: API Gateway / BFF] | [PLACEHOLDER: e.g., "TLS 1.3 mandatory on all channels; JWT signature verified at gateway"] |
+| [PLACEHOLDER: e.g., "Attacker forges customer identity to initiate a payment on behalf of another customer"] | (Spoofing) | [PLACEHOLDER: Authentication layer] | [PLACEHOLDER: e.g., "AAL2 authentication required per SEC-005; session tokens scoped to customer ID"] |
+| [PLACEHOLDER: e.g., "Flood of synthetic payment requests exhausts NAPAS API quota, blocking legitimate payments"] | (Denial of Service) | [PLACEHOLDER: NAPAS integration] | [PLACEHOLDER: e.g., "Rate limiting at API Gateway; circuit breaker (RES-002) protects NAPAS interface"] |
+| [PLACEHOLDER: e.g., "Transaction log deleted or tampered with, making reconciliation impossible"] | (Repudiation) | [PLACEHOLDER: Ledger Service] | [PLACEHOLDER: e.g., "Append-only Aurora ledger table; CloudTrail audit log; immutable Kafka event log"] |
+
+- **Residual threats**: [PLACEHOLDER: describe 1–2 residual threats not fully mitigated and the accepted risk]
+
+## Operational Runbook (stub)
+
+> **Authoring note**: List the primary operational alerts for this reference architecture, with first-response steps. Include at minimum one alert per major SLO (availability, latency, throughput). Link to the full runbook in the internal wiki once written.
+
+**Alert: RefArchSLOBreach** — fires when the end-to-end p99 latency or availability SLO for this reference architecture is breached. Steps: (1) check Grafana `[PLACEHOLDER: dashboard-name]` for the degraded component; (2) verify circuit-breaker states on NAPAS and downstream integrations; (3) escalate to on-call SRE if the breach is not self-healing within 5 minutes.
+
+- **Alert: [PLACEHOLDER: CapacityAlert]** — fires when CPU or memory utilisation exceeds [PLACEHOLDER: threshold]% sustained for [PLACEHOLDER: duration]. Steps: (1) [PLACEHOLDER] (2) [PLACEHOLDER] (3) [PLACEHOLDER].
+- **Alert: [PLACEHOLDER: DataLagAlert]** — fires when Kafka consumer lag exceeds [PLACEHOLDER: threshold]. Steps: (1) [PLACEHOLDER] (2) [PLACEHOLDER] (3) [PLACEHOLDER].
+- **Dashboards**: Grafana — `[PLACEHOLDER: dashboard-name]`; CloudWatch — `[PLACEHOLDER: dashboard-name]`.
+- **Full runbook**: [PLACEHOLDER: link to wiki.techcombank.local/runbook/...]
+
 ## Deployment Topology
 
 > **Authoring note**: Describe the physical/logical deployment: cloud provider, regions, availability zones, Kubernetes cluster topology, network segmentation. A table or a brief prose description is acceptable. For T0 flows, describe the multi-AZ and multi-region topology explicitly.

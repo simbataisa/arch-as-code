@@ -236,10 +236,12 @@ STRIDE applied to [PLACEHOLDER: pattern name]:
 
 ## Operational Runbook (stub)
 
-> **Authoring note**: List the alerts this pattern produces and the first 3 steps for each. Link to the full runbook in the internal wiki once it is written.
+> **Authoring note**: List the alerts this pattern produces and the first 3 steps for each. Link to the full runbook in the internal wiki once it is written. Replace the example alert names below with the real alert names for your pattern.
 
-- **Alert `[PLACEHOLDER: AlertName]`**: [PLACEHOLDER: condition]. Steps: (1) [PLACEHOLDER] (2) [PLACEHOLDER] (3) [PLACEHOLDER].
-- **Alert `[PLACEHOLDER: AlertName2]`**: [PLACEHOLDER: condition]. Steps: (1) [PLACEHOLDER] (2) [PLACEHOLDER] (3) [PLACEHOLDER].
+**Alert: PatternDocComplianceCheck** — example template alert; fires when a pattern doc is promoted to Approved without a verified 3-ring compliance mapping. Steps: (1) run `python3 scripts/check-compliance-rows.py --doc <file>`; (2) resolve any missing Ring 2 ⚠️ rows; (3) re-submit for EA-Board review.
+
+- **Alert: [PLACEHOLDER: AlertName]** — [PLACEHOLDER: condition]. Steps: (1) [PLACEHOLDER] (2) [PLACEHOLDER] (3) [PLACEHOLDER].
+- **Alert: [PLACEHOLDER: AlertName2]** — [PLACEHOLDER: condition]. Steps: (1) [PLACEHOLDER] (2) [PLACEHOLDER] (3) [PLACEHOLDER].
 - **Dashboards**: Grafana — `[PLACEHOLDER: dashboard-name]`.
 - **Full runbook**: [PLACEHOLDER: link to wiki.techcombank.local/runbook/...]
 

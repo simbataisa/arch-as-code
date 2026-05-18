@@ -269,17 +269,22 @@ This template *is* the format. Self-application:
 
 ## Threat Model Summary
 
-STRIDE: this template addresses **Repudiation** (recovery commitments are explicit) and **Operational Excellence** (continuous traceability of NFRs to compliance).
+STRIDE applied to the NFR Acceptance Criteria template:
 
-- Top threats addressed:
-  1. *NFR drift* — values change in code without doc update. Mitigation: CI annotation-vs-doc coherence check.
-  2. *Implicit assumptions* — "we'll fix it later". Mitigation: required fields with no defaults.
-- Residual:
-  1. *Lying* — author writes 99.99% but service genuinely can't deliver. Mitigation: chaos drills (BP-005) and DR drills (BP-002) verify against drill outcomes.
+| Threat | STRIDE | Mitigation |
+|--------|--------|------------|
+| NFR thresholds altered post-DAB approval in commit history (Tampering) | (Tampering) | CI lint-nfr-ac.py validates YAML block on every MR; annotation-vs-doc coherence check prevents silent divergence |
+| Forged DAB approval — committer claims EA-Board signed off without a recorded review (Repudiation) | (Repudiation) | `reviewed_by` field in YAML block is mandatory; sign-off must be recorded in MR comments; audit trail in GitLab |
+| DAB NFR block missing required fields — service goes live without RTO/RPO commitment (Denial of Service) | (Denial of Service) | CI lint fails the MR if any `REQUIRED_KEYS` are absent; no merge without complete block |
+
+- **Top threats addressed**: Tampering via CI coherence check; Repudiation via mandatory reviewed_by field.
+- **Residual**: *Lying* — author writes 99.99% but service genuinely can't deliver. Mitigation: chaos drills (BP-005) and DR drills (BP-002) verify against drill outcomes.
 
 ## Operational Runbook (stub)
 
 This is a template not a runtime artefact, so runbook is for the *governance process*:
+
+**Alert: DABSubmissionNFRGapDetected** — fires when CI lint detects a DAB MR with a missing or incomplete NFR-AC YAML block. Steps: (1) identify the missing keys from the lint output; (2) assign the DAB author to complete the block within 1 business day; (3) re-run `python3 scripts/lint-nfr-ac.py` to verify all required fields are present before re-opening the MR.
 
 - **Quarterly NFR review** (per [§11 Maintenance](../../governance/standards/enterprise-architecture-catalog.md#11-maintenance) of the catalog): EA-Board reviews each T0 service's NFR-AC against actual measurements; recommends adjustments.
 - **Drift alerts**: nightly job compares declared `latency.p95_ms` to observed P95 over rolling 7d; alerts > 20% drift to FinOps Slack.

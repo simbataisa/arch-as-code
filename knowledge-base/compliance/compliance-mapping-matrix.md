@@ -181,15 +181,20 @@ Building and maintaining the matrix consumes ~0.5 FTE-day per quarter (review cy
 
 ## Threat Model Summary
 
-STRIDE: this matrix addresses **Repudiation** of compliance commitments — every claim is traced to a specific control.
+STRIDE applied to the Compliance Mapping Matrix:
 
-- Top threats addressed:
-  - Mapping drift between code and compliance — synced via the nightly job.
-  - Stale Vietnamese citations — `⚠️ (working summary — pending Legal review)` flag forces Legal review before Approved status.
-- Residual:
-  - Regulator may interpret a control differently than our cell text — mitigated by including the actual control text from `_research-notes.md`.
+| Threat | STRIDE | Mitigation |
+|--------|--------|------------|
+| Stale compliance mapping edited without review cycle (Tampering) | (Tampering) | nightly `sync-compliance-matrix.py` job detects drift; CI gate blocks merge if matrix row is out of sync with pattern doc |
+| Unauthorised access to draft Legal opinions in Ring 2 rows (Information Disclosure) | (Information Disclosure) | ⚠️ rows are working summaries only; Legal sign-off required before Approved status; row text must not include confidential Legal advice |
+| Compliance team unable to claim they reviewed the matrix (Repudiation) | (Repudiation) | every cell is traced to a specific control in `_research-notes.md`; quarterly review sign-off recorded in PR comments |
+
+- **Top threats addressed**: Tampering via nightly sync job; Repudiation via explicit cell-to-control traceability.
+- **Residual**: Regulator may interpret a control differently than our cell text — mitigated by including the actual control text from `_research-notes.md`.
 
 ## Operational Runbook (stub)
+
+**Alert: ComplianceMatrixStaleness** — fires when any Approved-status pattern row in `_compliance-matrix.yml` has not been reviewed in > 90 days. Steps: (1) identify stale rows via `scripts/check-compliance-rows.py --stale-days 90`; (2) assign the row owner from the pattern's `Owner:` field; (3) schedule Legal review if Ring 2 cell is affected.
 
 - **Quarterly review**: Compliance team walks the matrix, samples 20 cells, verifies pattern docs match.
 - **Regulator-driven update**: when a regulation changes (e.g., PCI-DSS 4.0 → 4.1 or new SBV circular), all affected cells flagged for review and a tracking issue opened.

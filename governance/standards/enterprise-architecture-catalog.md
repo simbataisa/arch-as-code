@@ -150,7 +150,7 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | BSP-003 | Sanction Screening Pipeline | banking-solutions | Draft | radii | @risk-management-domain-owner | `knowledge-base/patterns/banking-solutions/sanction-screening-pipeline.md` | T0 | FATF Rec. 6 | 2026-05-16 | 2 | Wave 5A — full write complete |
 | BSP-004 | End-of-Day Batch Window | banking-solutions | Draft | radii | @core-banking-domain-owner | `knowledge-base/patterns/banking-solutions/end-of-day-batch-window.md` | T0, T1 | — | 2026-05-16 | 2 | Wave 5A — full write complete |
 | BSP-005 | Reversal and Chargeback | banking-solutions | Draft | radii | @payments-domain-owner | `knowledge-base/patterns/banking-solutions/reversal-and-chargeback.md` | T0 | Card-scheme rules; ISO 20022 pacs.007 | 2026-05-16 | 2 | Wave 5A — full write complete |
-| COMP-001 | Compliance Mapping Matrix (master) | compliance | Draft | spine | @head-of-compliance | `knowledge-base/compliance/compliance-mapping-matrix.md` | — | ISO 27001; ALL Ring-1 sources; ALL Ring-2 sources | 2026-05-09 | 0 | Spine — Wave 0 starter set; master cross-reference matrix |
+| COMP-001 | Compliance Mapping Matrix (master) | compliance | Approved | spine | @head-of-compliance | `knowledge-base/compliance/compliance-mapping-matrix.md` | — | ISO 27001; ALL Ring-1 sources; ALL Ring-2 sources | 2026-05-18 | 1 | Wave 6F — self-review complete |
 | COMP-002 | SBV Circular 09/2020/TT-NHNN — Deep Dive | compliance | Draft | radii | @head-of-compliance | `knowledge-base/compliance/sbv-circular-09-2020.md` | — | SBV Circ. 09/2020 (UNOFFICIAL) | 2026-05-16 | 3 | Wave 5D — full write complete |
 | COMP-003 | Decree 13/2023 (Personal Data) — Deep Dive | compliance | Draft | radii | @head-of-compliance | `knowledge-base/compliance/decree-13-2023-personal-data.md` | — | Decree 13/2023 (UNOFFICIAL) | 2026-05-16 | 3 | Wave 5D — full write complete |
 | COMP-004 | PCI-DSS 4.0 — Deep Dive | compliance | Draft | radii | @ciso-delegate | `knowledge-base/compliance/pci-dss-4-0.md` | — | PCI-DSS 4.0 | 2026-05-16 | 3 | Wave 5D — full write complete |
@@ -271,10 +271,10 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | SEC-011 | Session Revocation | security | Draft | radii | @ciso-delegate | `knowledge-base/patterns/security/session-revocation.md` | T0, T1, T2 | PCI-DSS §8 | 2026-05-16 | 1 | Wave 5E — full write complete |
 | SEC-012 | Tamper-Evident Audit Logging | security | Draft | radii | @ciso-delegate | `knowledge-base/patterns/security/audit-logging-tamper-evident.md` | T0, T1 | PCI-DSS §10 | 2026-05-16 | 1 | Wave 5E — full write complete |
 | SEC-013 | PII Tokenization (Format-Preserving) | security | Draft | radii | @ciso-delegate | `knowledge-base/patterns/security/pii-tokenization-format-preserving.md` | T0, T1 | NIST SP 800-38G; Decree 13/2023 (UNOFFICIAL) | 2026-05-16 | 1 | Wave 5E — gap-fill complete |
-| TPL-001 | NFR Acceptance Criteria — DAB Submission Template | templates | Draft | spine | @dab-chair | `knowledge-base/templates/nfr-acceptance-criteria-dab.md` | — | — | 2026-05-09 | 0 | Spine — Wave 0 starter set |
-| TPL-002 | Pattern Doc Template | templates | Draft | radii | @ea-board | `knowledge-base/templates/pattern-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| TPL-003 | Stub Doc Template | templates | Draft | radii | @ea-board | `knowledge-base/templates/stub-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
-| TPL-004 | Reference Architecture Doc Template | templates | Draft | radii | @ea-board | `knowledge-base/templates/ref-arch-doc-template.md` | — | — | 2026-05-09 | 1 | Stub — Wave 1 |
+| TPL-001 | NFR Acceptance Criteria — DAB Submission Template | templates | Approved | spine | @dab-chair | `knowledge-base/templates/nfr-acceptance-criteria-dab.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
+| TPL-002 | Pattern Doc Template | templates | Approved | radii | @ea-board | `knowledge-base/templates/pattern-doc-template.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
+| TPL-003 | Stub Doc Template | templates | Approved | radii | @ea-board | `knowledge-base/templates/stub-doc-template.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
+| TPL-004 | Reference Architecture Doc Template | templates | Approved | radii | @ea-board | `knowledge-base/templates/ref-arch-doc-template.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
 
 ## 5. Gap Analysis
 
