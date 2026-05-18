@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - At Techcombank's SWIFT throughput peak (end-of-business, 16:00–17:00 VNT), up to 3,000 SWIFT messages per minute arrive. A naively synchronous resequencer that blocks until all gaps are filled would become a bottleneck. The resequencer must buffer and release messages as soon as contiguous sequences are available, without waiting for the full window to close.
 - The resequencer must handle permanent gaps: if a SWIFT message with sequence N is lost (no SWIFT delivery guarantee at the transport level in a disaster scenario), the resequencer must not block indefinitely. A configurable `gapTimeout` triggers release of the next contiguous block starting from N+1 after a threshold — with an alert and a DLT entry for the missing sequence — so downstream processing is not permanently stalled.
 
+## Context
+
+Kafka partitions guarantee ordering within a partition but not across partitions; SWIFT GPI routing and network partitions cause multi-leg messages to arrive out of sequence even within a single partition's logical flow. Techcombank's resequencer uses a Redis sorted set keyed by `(uetr, sequenceNumber)` as the external sequence buffer, with a configurable `gapTimeout` (default 30 seconds) to release the next contiguous block when a gap exceeds its threshold. This external state store ensures the buffer survives pod restarts and supports horizontal scaling where multiple resequencer pods share the same Redis state.
+
 ## Solution
 
 A Resequencer buffers incoming out-of-order SWIFT messages in a `SequenceBuffer` keyed by `(uetr, sequenceNumber)`. When contiguous sequences from the next expected sequence number onward are present in the buffer, the Resequencer releases them in order to the downstream `LedgerPoster`. A configurable `gapTimeout` (default 30 seconds) triggers release of the next contiguous block even if a gap exists, emitting a `SEQUENCE_GAP_DETECTED` event to the Dead Letter Channel for the missing sequence.
@@ -287,15 +291,15 @@ sequenceDiagram
 
 6. **Emit structured log entries at each lifecycle event.** Every buffer, release, gap detection, and gap timeout must produce a log entry containing `uetr`, `sequenceNumber`, `nextExpected`, and `correlationId`. These logs form the audit trail for sequence integrity under BCBS 239 §6 and must be forwarded to the SIEM via the ELK pipeline.
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - Messages carry monotonic sequence numbers that represent a meaningful processing order (ledger entries, transaction legs, event sourcing streams).
 - The downstream consumer is order-sensitive and incorrect ordering produces incorrect results (balance computation, audit trail reconstruction).
 - Out-of-order delivery is an expected operational reality (network partitions, adapter restarts, multi-path routing).
 - The expected out-of-order window is bounded (i.e., gaps are seconds to minutes, not hours to days).
 
-**Do NOT use when:**
+## When Not to Use
+
 - Message ordering is not semantically meaningful for the downstream consumer — the overhead of buffering and ordering is waste.
 - The sequence number space is sparse or non-monotonic — the resequencer cannot determine when a gap is permanent vs. delayed.
 - Messages are large and buffering many out-of-order messages would exhaust Redis memory — use a streaming reorder algorithm instead.

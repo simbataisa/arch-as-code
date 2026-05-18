@@ -12,6 +12,10 @@ Tier Applicability: T0, T1
 - Regulatory reporting under BCBS 230 Principle 3 (Business Continuity Planning) requires periodic testing of critical payment channels. Manual testing is infrequent, labour-intensive, and does not provide continuous evidence of channel health. An automated, recurring synthetic probe satisfies the continuous-testing requirement and produces a machine-readable compliance record.
 - P95 latency degradation — where the pipeline is processing payments but taking 10× longer than normal — is an early warning signal for capacity exhaustion, NAPAS throttling, or database contention. This degradation is not visible to binary up/down health checks; only a probe that measures end-to-end round-trip time can surface it before customer SLAs are breached.
 
+## Context
+
+Standard Kubernetes liveness/readiness probes verify process health and dependency reachability but cannot detect silent processing failures — a stuck Kafka consumer, a mis-configured serialiser, or a locked database row can pass all infrastructure checks while silently failing every customer payment. The Test Message pattern addresses this gap by injecting a labelled synthetic payment into the live NAPAS pipeline every 60 seconds. The synthetic payment is intercepted by a `CanaryFilter` at the NAPAS gateway boundary before reaching NAPAS, measuring end-to-end round-trip latency across every internal processing stage without incurring settlement fees or creating real ledger entries.
+
 ## Solution
 
 The Test Message pattern injects a synthetic, clearly-labelled payment instruction into the live NAPAS pipeline every 60 seconds. The synthetic message travels through every processing stage (normalisation, fraud scoring, ledger posting, NAPAS submission) identically to a real payment, but is intercepted before final settlement by a canary-aware filter. Latency from injection to interception is measured and alerted on; failures to complete within the SLA trigger a PagerDuty alert.
@@ -275,15 +279,15 @@ sequenceDiagram
    kafkaTemplate.send("payments.canary.result", correlationId, canaryResult);
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A T0/T1 integration channel must be continuously verified for end-to-end correctness, not just infrastructure liveness.
 - Silent failures (the pipeline appears up but is not processing correctly) must be detected before customers report them.
 - Regulatory or BCP requirements mandate periodic, auditable testing of payment channels.
 - Latency degradation must be surfaced as a leading indicator before SLA breaches.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The channel does not support a reliable mechanism for intercepting and discarding synthetic messages — injecting real-looking test messages into a channel that cannot distinguish them from real messages risks financial harm.
 - The system under test has no reserved/blocked account concept — do not synthesise against real account numbers even for small amounts.
 - The probe frequency is so high that it meaningfully consumes system capacity — the probe should be < 0.1% of total throughput. At 1 probe/minute and 3,000 real TPS, the canary is 0.0006% of traffic.
@@ -371,10 +375,10 @@ nfr:
 
 ## Threat Model Summary
 
-- **Canary escape to NAPAS (CRITICAL risk)**: A `CanaryFilter` bug or misconfiguration (e.g., missing `x-synthetic` header propagation after a service refactor) allows a synthetic payment to reach NAPAS, triggering real settlement and a real VND 1 debit/credit on the reserved accounts. Mitigation: belt-and-suspenders — both `CanaryFilter` (header-based) and `LedgerPoster` (account-number-based) block synthetic processing; reserved synthetic accounts in T24 have `BLOCKED` status preventing OFS posting; automated test verifies interception on every CI run.
-- **Canary suppression (security bypass)**: An insider adds `x-synthetic: true` to a real payment to bypass fraud scoring and ledger posting. Mitigation: `x-synthetic` header is stripped and rejected at the API gateway for any request originating from an external source; only `SyntheticProbeService` (with a dedicated service account) is authorised to set this header, enforced by a signed JWT claim checked in the PaymentProcessor.
-- **Alert fatigue from canary noise**: Transient NAPAS slowdowns (e.g., 2am batch settlement) cause frequent canary latency alerts, desensitising the on-call team. Mitigation: the latency alert has a 5-minute `for` window (not instant); latency thresholds are tuned per time-of-day using Prometheus recording rules; planned NAPAS maintenance windows suppress the canary alert.
-- **Canary result data misinterpretation**: An analyst queries `payments.canary.result` and concludes the pipeline is healthy based on canary success, while real customer payments are failing due to a bug that only affects non-synthetic messages (e.g., a null check that the canary's minimal payload never triggers). Mitigation: the canary is necessary but not sufficient — it is paired with real-payment error rate metrics (`payment_processor_error_rate`) on the same Grafana dashboard.
+- **Canary escape to NAPAS — Tampering (CRITICAL risk)**: A `CanaryFilter` bug or misconfiguration (e.g., missing `x-synthetic` header propagation after a service refactor) allows a synthetic payment to reach NAPAS, triggering real settlement and a real VND 1 debit/credit on the reserved accounts. Mitigation: belt-and-suspenders — both `CanaryFilter` (header-based) and `LedgerPoster` (account-number-based) block synthetic processing; reserved synthetic accounts in T24 have `BLOCKED` status preventing OFS posting; automated test verifies interception on every CI run.
+- **Canary suppression — Elevation of Privilege (security bypass)**: An insider adds `x-synthetic: true` to a real payment to bypass fraud scoring and ledger posting. Mitigation: `x-synthetic` header is stripped and rejected at the API gateway for any request originating from an external source; only `SyntheticProbeService` (with a dedicated service account) is authorised to set this header, enforced by a signed JWT claim checked in the PaymentProcessor.
+- **Alert fatigue from canary noise — Denial of Service**: Transient NAPAS slowdowns (e.g., 2am batch settlement) cause frequent canary latency alerts, desensitising the on-call team. Mitigation: the latency alert has a 5-minute `for` window (not instant); latency thresholds are tuned per time-of-day using Prometheus recording rules; planned NAPAS maintenance windows suppress the canary alert.
+- **Canary result data misinterpretation — Spoofing**: An analyst queries `payments.canary.result` and concludes the pipeline is healthy based on canary success, while real customer payments are failing due to a bug that only affects non-synthetic messages (e.g., a null check that the canary's minimal payload never triggers). Mitigation: the canary is necessary but not sufficient — it is paired with real-payment error rate metrics (`payment_processor_error_rate`) on the same Grafana dashboard.
 
 ## Operational Runbook (stub)
 

@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Processing 1,000 individual transfers sequentially at 50ms per transfer takes 50 seconds. By splitting the batch and processing transfers in parallel across multiple consumers, the wall-clock time collapses to approximately `50ms × ceil(1000 / parallel_consumers)`. At 20 consumers, that is 50ms × 50 = 2.5 seconds — a 20× improvement required to meet the corporate SLA of < 5 seconds for batch status acknowledgement.
 - Correlation is critical: every individual transfer must carry a reference back to its parent batch so that the reassembler can collect exactly the right set of outcomes. Losing or duplicating the correlation reference causes either an incomplete or an inflated status report — a financial data-integrity defect.
 
+## Context
+
+Corporate batch payment files at Techcombank contain hundreds to thousands of ISO 20022 `pacs.008` credit-transfer instructions that must be decomposed before submission to NAPAS (which requires individual transfers) and T24 (which accepts one OFS transaction at a time). The CMP pattern chains a Splitter, parallel per-transfer processors, and an Aggregator to collapse the sequential 50-second processing wall-clock time to under 5 seconds at 20 parallel consumers. A Redis-backed `MessageGroupStore` and `BatchRegistry` hold aggregation state durably across pod restarts, ensuring the `pain.002` status report is always generated even if an aggregator pod fails mid-batch.
+
 ## Solution
 
 A Composed Message Processor (CMP) chains three collaborating patterns: a **Splitter** decomposes the batch `pacs.008` file into individual transfer messages; downstream processors (validation, FraudEngine, rail-specific handlers) process each transfer independently in parallel; an **Aggregator** reassembles the individual outcomes into a single `pain.002` status report once all transfers in the batch have completed.
@@ -269,15 +273,15 @@ sequenceDiagram
    }
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A single incoming message is a composite of independently processable sub-items (batch files, multi-transfer envelopes, multi-leg transactions).
 - Sub-items can fail independently and a partial success must be reported rather than an all-or-nothing outcome.
 - Sub-items must be processed by different downstream services (different rails, different validators) based on their individual content.
 - The client expects a single consolidated response after all sub-items have been processed.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The composite message is small enough to be processed atomically in a single transaction — splitting adds overhead without benefit.
 - Sub-items must be processed strictly in order and the order cannot be restored after splitting — consider a Resequencer (EIP-013) if ordering can be restored, or avoid splitting if it cannot.
 - The sub-item count is unknown at split time and can be unbounded — the aggregator's completion condition must be definable; if the total is unknown, the aggregator cannot know when to release.
@@ -358,11 +362,11 @@ nfr:
 
 ## Threat Model Summary
 
-- **Malicious batch injection** — An attacker uploads a batch file containing 100,000 transfers to exhaust splitter throughput and flood downstream topics. Mitigation: the `BatchIngressService` enforces a maximum batch size (configurable, default 5,000 transfers) and a per-client daily batch-count limit. Batches exceeding limits are rejected at ingress with a `BATCH_SIZE_EXCEEDED` error before the splitter is invoked.
-- **Split-count forgery** — An attacker manipulates the `X-Batch-Size` header to a lower number so the aggregator releases prematurely with an incomplete `pain.002`. Mitigation: the aggregator does not trust the `X-Batch-Size` header; it reads the expected count from the `BatchRegistry` (written by the Splitter using the actual parsed transfer count, not a header). The header is informational only.
-- **Transfer payload tampering in transit** — A man-in-the-middle modifies individual transfer amounts after splitting. Mitigation: each `TransferCommand` carries a SHA-256 hash of the original `CreditTransferTransactionInformation` element; the validation service re-hashes and compares before processing.
-- **Aggregation group store poisoning** — An attacker injects fabricated `TransferStatusEvent` messages with a known `batchId` into the aggregation response topic, inflating the aggregate count and triggering premature release. Mitigation: the response topic has strict Kafka ACLs — only the rail gateway service accounts (NAPAS adapter, T24 adapter) can produce to `transfer.status.events`; events are signed with service-account HMAC keys.
-- **Redis aggregation store data exposure** — Aggregation groups contain in-flight payment data. Mitigation: Redis in TLS, encrypted at rest; group store TTL 24 hours; Redis access restricted to aggregator service account.
+- **Malicious batch injection (Denial of Service)** — An attacker uploads a batch file containing 100,000 transfers to exhaust splitter throughput and flood downstream topics. Mitigation: the `BatchIngressService` enforces a maximum batch size (configurable, default 5,000 transfers) and a per-client daily batch-count limit. Batches exceeding limits are rejected at ingress with a `BATCH_SIZE_EXCEEDED` error before the splitter is invoked.
+- **Split-count forgery (Tampering)** — An attacker manipulates the `X-Batch-Size` header to a lower number so the aggregator releases prematurely with an incomplete `pain.002`. Mitigation: the aggregator does not trust the `X-Batch-Size` header; it reads the expected count from the `BatchRegistry` (written by the Splitter using the actual parsed transfer count, not a header). The header is informational only.
+- **Transfer payload tampering in transit (Tampering)** — A man-in-the-middle modifies individual transfer amounts after splitting. Mitigation: each `TransferCommand` carries a SHA-256 hash of the original `CreditTransferTransactionInformation` element; the validation service re-hashes and compares before processing.
+- **Aggregation group store poisoning (Elevation of Privilege)** — An attacker injects fabricated `TransferStatusEvent` messages with a known `batchId` into the aggregation response topic, inflating the aggregate count and triggering premature release. Mitigation: the response topic has strict Kafka ACLs — only the rail gateway service accounts (NAPAS adapter, T24 adapter) can produce to `transfer.status.events`; events are signed with service-account HMAC keys.
+- **Redis aggregation store data exposure (Information Disclosure)** — Aggregation groups contain in-flight payment data. Mitigation: Redis in TLS, encrypted at rest; group store TTL 24 hours; Redis access restricted to aggregator service account.
 
 ## Operational Runbook (stub)
 

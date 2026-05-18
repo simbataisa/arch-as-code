@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Audit requirements demand a full per-applicant trail showing which services processed the application, in what order, with timestamps and outcomes. This trail must be derivable from the message's routing slip header — not reconstructed from distributed logs across five services.
 - At peak digital onboarding periods (campaigns, Tết season), Techcombank sees 2,000 concurrent KYC applications. Each step has different SLA times (sanctions: < 5s, biometric: < 8s). The pipeline must be asynchronous to avoid thread exhaustion; each step executes independently when its turn arrives.
 
+## Context
+
+Techcombank's KYC onboarding pipeline requires five compliance steps — sanctions screening, document verification, biometric matching, credit scoring, and account activation — owned by different domain teams, executed in mandatory regulatory sequence, and potentially varying by applicant risk tier. The Routing Slip pattern encodes the processing sequence as a HMAC-signed JSON array in a Kafka message header, giving each step service only the information it needs (its own logic + slip-forwarding protocol) and making the full pipeline sequence auditable from the message itself.
+
 ## Solution
 
 A Routing Slip is a list of processor addresses attached to the message as a header. When a KYC application arrives, the `KYCOrchestratorService` stamps a routing slip — an ordered list of processing step queue addresses — derived from the applicant's risk tier. Each step's handler reads the slip header, executes its logic, writes its outcome back into the message, removes itself from the front of the slip, and forwards the message to the next address in the slip. When the slip is empty, the final step (account activation) posts the completed application to T24 Core Banking.
@@ -249,16 +253,14 @@ sequenceDiagram
 
 6. **Handle step failures by routing to a compensation channel with the current slip state preserved.** If the sanctions service times out, the message is published to `com.techcombank.kyc.sanctions.failed` with the original routing slip intact. A retry/compensation service can replay the message back to the sanctions queue without losing the rest of the slip.
 
-## When to Use / When NOT to Use
-
-**Use when:**
+## When to Use
 
 - A message must visit multiple processors in a defined sequence and the sequence may vary by message type or business rule.
 - Each step is owned by a different team or deployed independently, and you want to avoid a centralised orchestrator that all teams must coordinate on.
 - The pipeline must be resumable from the last completed step without re-running earlier steps.
 - You want per-message audit of the processing sequence embedded in the message itself.
 
-**Do NOT use when:**
+## When Not to Use
 
 - The processing sequence is identical for all messages and never varies — a simple chain of services with hard-coded topic forwarding is simpler and equally correct.
 - Processing steps must execute in parallel — use Scatter-Gather (EIP-015) instead; Routing Slip is inherently sequential.
@@ -289,14 +291,14 @@ nfr:
     recovery: "pod restart < 60s; Kafka consumer group rebalance < 15s; pipeline resumes without data loss"
 
   performance:
-    end_to_end_kyc_p95_seconds: 25 # sum of all step SLAs + Kafka overhead
+    end_to_end_kyc_p95_seconds: 25 # sum of all step SLAs + Kafka overhead; p99 < 40s
     per_step_latency_p95_ms:
-      sanctions: 5000
-      doc_verify: 8000
-      biometric: 8000
-      credit: 3000
-      activate: 2000
-    concurrent_applications: 2000
+      sanctions: 5000         # p99 < 8000ms
+      doc_verify: 8000        # p99 < 12000ms
+      biometric: 8000         # p99 < 12000ms
+      credit: 3000            # p99 < 5000ms
+      activate: 2000          # p99 < 3000ms
+    throughput_concurrent_applications: 2000  # ≥ 2000 concurrent KYC applications
 
   correctness:
     step_sequence_integrity: "steps must execute in slip-defined order; no step may execute before its prerequisite"
@@ -342,10 +344,10 @@ nfr:
 
 ## Threat Model Summary
 
-- **Slip manipulation** — An attacker modifies the Kafka message header to remove the sanctions step from the routing slip, causing a high-risk applicant to skip AML screening. Mitigation: the `KYCOrchestratorService` signs the original slip with an HMAC using a secrets-manager-held key; each step verifies the HMAC against the full original slip before processing. Header modification invalidates the HMAC and routes to the DLT with `SLIP_TAMPERED`.
-- **Step bypass via direct topic publish** — An attacker with Kafka producer credentials publishes directly to `com.techcombank.kyc.activate.queued`, bypassing all prior steps. Mitigation: the activation step verifies that all prerequisite step results are present in the payload and HMAC-signed by their respective services; any missing or unsigned outcome causes rejection. Kafka ACLs restrict who can publish to each step topic (only the immediately prior step's service account).
-- **PII in routing slip headers** — The slip header contains topic names, not applicant PII. Applicant data is in the payload, which is encrypted at rest by the Kafka broker (AES-256). Log entries must not include payload content — only `applicantId` (internal UUID, not CCCD number) and step metadata.
-- **Infinite pipeline loop** — A misconfigured slip could include a topic that routes back to an earlier step, creating an infinite loop. Mitigation: the `RoutingSlipPolicy` validator checks for duplicate entries at startup and refuses to start if a slip contains cycles.
+- **Slip manipulation (Tampering)** — An attacker modifies the Kafka message header to remove the sanctions step from the routing slip, causing a high-risk applicant to skip AML screening. Mitigation: the `KYCOrchestratorService` signs the original slip with an HMAC using a secrets-manager-held key; each step verifies the HMAC against the full original slip before processing. Header modification invalidates the HMAC and routes to the DLT with `SLIP_TAMPERED`.
+- **Step bypass via direct topic publish (Elevation of Privilege)** — An attacker with Kafka producer credentials publishes directly to `com.techcombank.kyc.activate.queued`, bypassing all prior steps. Mitigation: the activation step verifies that all prerequisite step results are present in the payload and HMAC-signed by their respective services; any missing or unsigned outcome causes rejection. Kafka ACLs restrict who can publish to each step topic (only the immediately prior step's service account).
+- **PII in routing slip headers (Information Disclosure)** — The slip header contains topic names, not applicant PII. Applicant data is in the payload, which is encrypted at rest by the Kafka broker (AES-256). Log entries must not include payload content — only `applicantId` (internal UUID, not CCCD number) and step metadata.
+- **Infinite pipeline loop (Denial of Service)** — A misconfigured slip could include a topic that routes back to an earlier step, creating an infinite loop. Mitigation: the `RoutingSlipPolicy` validator checks for duplicate entries at startup and refuses to start if a slip contains cycles.
 
 ## Operational Runbook (stub)
 

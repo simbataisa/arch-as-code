@@ -12,6 +12,10 @@ Tier Applicability: T0, T1
 - The mobile client must not be exposed to the asynchronous nature of the NAPAS integration. Leaking internal retry state, correlation identifiers, or intermediate NAPAS statuses to the mobile API creates an inconsistent contract that changes as the backend integration evolves. The abstraction boundary must be at the payment service level.
 - In the event of a NAPAS timeout (no callback within the SLA window), the payment service must return a deterministic response to the mobile client — either a timeout error or a pending status — without leaving orphaned correlation entries that consume memory indefinitely. Correlation entries must have a TTL.
 
+## Context
+
+NAPAS real-time payment callbacks arrive asynchronously on a separate Kafka topic, potentially seconds or minutes after the original payment submission, using a NAPAS-assigned `transactionRef` that does not match the internal `correlationId`. The Smart Proxy solves the impedance mismatch between the mobile client's synchronous HTTP expectations and the asynchronous NAPAS integration channel, using either an in-process `ConcurrentHashMap` (single-pod) or a Redis `SETEX` store (multi-pod) keyed by `correlationId` to park and complete `CompletableFuture` instances as callbacks arrive.
+
 ## Solution
 
 A Smart Proxy sits between the mobile API layer and the asynchronous NAPAS integration channel. When the payment service sends a request to NAPAS, the Smart Proxy intercepts it, stores the original `correlationId` mapped to the NAPAS `transactionRef`, and parks the waiting HTTP response in a `CompletableFuture`. When the NAPAS callback arrives — on the async reply channel — the proxy looks up the parked future by `correlationId`, completes it with the callback result, and the HTTP response is returned to the mobile client. The mobile client sees a single synchronous request/response; the asynchronous NAPAS interaction is fully hidden.
@@ -255,15 +259,15 @@ sequenceDiagram
    }
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A client requires a synchronous-seeming response but the backend integration is inherently asynchronous.
 - Multiple in-flight requests may receive out-of-order replies that must be correlated to the correct originating request.
 - The async backend uses a different identifier scheme than the calling client (e.g., NAPAS `transactionRef` vs. internal `correlationId`).
 - You need a transparent abstraction so the client is unaware of the async/sync boundary.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The backend is fast enough to be synchronous — unnecessary complexity.
 - The client can handle asynchronous patterns natively (e.g., a background job that polls a status endpoint) — prefer the Polling Consumer or Event-Driven model.
 - The correlation store represents a single point of failure in a multi-pod deployment and Redis is not available — redesign for a fully async client contract instead.
@@ -338,7 +342,7 @@ nfr:
 | Ring 0 (global) | Enterprise Integration Patterns (Hohpe/Woolf) | Chapter 11 — Smart Proxy | Canonical pattern; this document applies it to Techcombank's NAPAS async payment confirmation flow |
 | Ring 0 (global) | OWASP ASVS V11.1 | Business Logic — Integrity of business logic flows | Correlation accuracy is a business logic integrity control; the Smart Proxy guarantees that each mobile client receives only the result of its own payment request |
 | Ring 1 (international) | BCBS 239 Principle 2 (Data Architecture and IT Infrastructure) | Accurate data aggregation infrastructure | The proxy's correlation store is the authoritative mapping between internal `correlationId` and NAPAS `transactionRef`; this mapping is required for reconciliation and audit |
-| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Operational continuity | Redis-backed correlation store survives pod failure; background reconciliation resolves payments whose correlation was lost during an outage |
+| Ring 2 (Vietnam) | SBV Circular 09/2020 §IV.2; Decree 13/2023 | Operational continuity; data localisation for payment correlation records | Redis-backed correlation store survives pod failure; background reconciliation resolves payments whose correlation was lost during an outage ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -350,10 +354,10 @@ nfr:
 
 ## Threat Model Summary
 
-- **Correlation store poisoning**: An attacker crafts a NAPAS callback with a forged `correlationId` mapping to a different customer's pending payment, causing the wrong customer's HTTP response to contain the attacker's payment result. Mitigation: the `correlationId` is a UUIDv4 generated server-side and is not present in any client-visible response until after resolution; it is transmitted to NAPAS over a mutually-authenticated (mTLS) channel; incoming callbacks are validated against the registered Schema Registry schema before the `onCallback` dispatch.
-- **Memory exhaustion via correlation flooding**: An attacker submits thousands of payments, parking thousands of `CompletableFuture` entries in the map, exhausting heap. Mitigation: rate limiting at the PaymentAPI layer (e.g., Resilience4j `RateLimiter`, 100 TPS per customer); `max_pending_per_pod` circuit breaker; TTL eviction ensures entries cannot accumulate beyond 30 seconds.
-- **Replay of expired callback**: A delayed NAPAS callback (arriving after TTL) is delivered to the proxy. The originating HTTP request has already timed out and returned `PENDING` to the mobile client. The orphan callback is logged with `smart_proxy.callback.orphan` counter. The background reconciliation job picks up the PENDING payment and resolves it using the NAPAS status query API.
-- **Pod restart during in-flight payment (in-process store)**: All pending correlations are lost on pod restart. Mitigation: for T0 workloads, use the Redis store variant. For the in-process variant, the mobile client receives a `PENDING` response on its next poll; the background reconciliation resolves the status.
+- **Correlation store poisoning (Spoofing)**: An attacker crafts a NAPAS callback with a forged `correlationId` mapping to a different customer's pending payment, causing the wrong customer's HTTP response to contain the attacker's payment result. Mitigation: the `correlationId` is a UUIDv4 generated server-side and is not present in any client-visible response until after resolution; it is transmitted to NAPAS over a mutually-authenticated (mTLS) channel; incoming callbacks are validated against the registered Schema Registry schema before the `onCallback` dispatch.
+- **Memory exhaustion via correlation flooding (Denial of Service)**: An attacker submits thousands of payments, parking thousands of `CompletableFuture` entries in the map, exhausting heap. Mitigation: rate limiting at the PaymentAPI layer (e.g., Resilience4j `RateLimiter`, 100 TPS per customer); `max_pending_per_pod` circuit breaker; TTL eviction ensures entries cannot accumulate beyond 30 seconds.
+- **Replay of expired callback (Tampering)**: A delayed NAPAS callback (arriving after TTL) is delivered to the proxy. The originating HTTP request has already timed out and returned `PENDING` to the mobile client. The orphan callback is logged with `smart_proxy.callback.orphan` counter. The background reconciliation job picks up the PENDING payment and resolves it using the NAPAS status query API.
+- **Pod restart during in-flight payment (in-process store) (Information Disclosure)**: All pending correlations are lost on pod restart. Mitigation: for T0 workloads, use the Redis store variant. For the in-process variant, the mobile client receives a `PENDING` response on its next poll; the background reconciliation resolves the status.
 
 ## Operational Runbook (stub)
 

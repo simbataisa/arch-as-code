@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2
 - During staging-to-production promotion incidents, test data occasionally flows into production topics. Without a fast-path purging mechanism, the only remediation today is an emergency Kafka topic deletion and recreation, which drops all messages including legitimate ones — a high-blast-radius, regulated-change-control operation lasting several hours.
 - Regulatory audit topics must not contain test message artefacts. If EIP-020 test messages accumulate in the `regulatory-audit` consumer group's backlog, they create spurious entries in the SBV audit log, requiring manual correction that itself requires an SBV notification under Circular 09/2020.
 
+## Context
+
+Kafka's `retention.ms` is a blunt instrument that applies a uniform TTL to all messages on a topic without regard to message type, business TTL, or whether a message is synthetic (injected by EIP-020 Test Message). In Techcombank's fraud alert channel, 24-hour-old alerts are harmful rather than merely stale — a consumer processing them may block a card unnecessarily. The Channel Purger solves this by running a Kafka Streams stateless filter topology that evaluates each message against a predicate (TTL check, `X-Test-Message` header flag) and routes valid messages to a clean topic while archiving discarded messages to a purged-audit topic with structured purge-reason metadata.
+
 ## Solution
 
 A Channel Purger selectively removes messages from a channel that have expired, are of a specific unwanted type, or match a predicate — without affecting other messages in the channel. In Techcombank's Kafka stack, the Channel Purger is implemented as a dedicated consumer service that reads the channel, evaluates each message against a purge predicate (TTL check, header flag, message type), and either forwards valid messages to a clean output topic or silently drops expired/test messages. For Kafka, which does not support mid-stream deletion, the purger re-publishes valid messages to a shadow topic and routes consumers to the shadow; or it operates in-line as a Kafka Streams topology that filters messages before they reach downstream consumers.

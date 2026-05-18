@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Without a Message Store, debugging a failed payment requires correlating logs across 6+ microservices (PaymentService, FraudEngine, LedgerPoster, NotificationService, T24 OFS Bridge, NAPAS Gateway) using only a correlation ID in log aggregation — a process that takes 30–90 minutes per incident. A Message Store enables sub-minute reconstruction of the full message flow for any correlation ID.
 - Integration testing and DR recovery procedures require the ability to replay specific sets of messages (e.g., "replay all payment events for account X between 14:00 and 15:00 yesterday"). Kafka's offset-based seek cannot target messages by business key without scanning the entire partition.
 
+## Context
+
+Distributed banking systems require persisting message state beyond Kafka's channel retention window for regulatory audit, disaster recovery replay, and cross-service message tracing. SBV Circular 09/2020 §IV.2 mandates a minimum 5-year transaction record retention that Kafka's 30-day retention cannot satisfy. The Message Store in Techcombank's stack is a PostgreSQL append-only table with annual partitioning and a cold-tier S3 archive after 2 years — queryable by `correlationId`, topic, and time range — serving as the authoritative source for DR replay and SBV audit inspection.
+
 ## Solution
 
 A Message Store is a durable, queryable repository that persists a copy of every message flowing through designated channels, capturing the full payload, headers, routing metadata, and timestamps. It enables long-term audit retention, ad hoc message lookup by business key, and targeted replay for DR and debugging. In Techcombank's stack, the Message Store is implemented as a Spring Boot service that consumes from Kafka topics as a Durable Subscriber (EIP-022) and persists each message to a PostgreSQL append-only audit table, with cold-tier archival to object storage after 2 years.

@@ -186,7 +186,7 @@ Not directly applicable — clients don't typically run message consumers. Howev
 | Ring 0 | Microservices.io — Idempotent Consumer | Consumer-side idempotency pattern | Same shape; same intent |
 | Ring 1 | Basel BCBS 239 — Principle 6 (Accuracy) | Risk-data aggregation must avoid double-counting | Idempotent reception prevents duplicate ledger postings → accurate aggregation |
 | Ring 1 | ISO 20022 — `EndToEndId` | Each interbank message carries a unique end-to-end ID | Used as natural key for Strategy B |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Required behaviour for retried messages during EOD batch and network instability |
+| Ring 2 | SBV Circular 09/2020 §IV.2; Decree 13/2023 | Operational continuity; data localisation for dedupe store | Required behaviour for retried messages during EOD batch and network instability ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -201,23 +201,23 @@ Not directly applicable — clients don't typically run message consumers. Howev
 
 ## Threat Model Summary
 
-STRIDE: addresses **Tampering** (replay attacks) and **Repudiation** (no double-effect).
+STRIDE: addresses Tampering (replay attacks) and Repudiation (no double-effect).
 
 - **Top 3 threats addressed**:
-  1. *Replay attack* — attacker re-publishes a captured message; same key returns no-side-effect.
-  2. *DR failover replay* — tail events replay from standby region; safely absorbed.
-  3. *Consumer-rebalance double-processing* — default Kafka behaviour, addressed.
+  1. *Replay attack (Tampering)* — attacker re-publishes a captured message; same key returns no-side-effect.
+  2. *DR failover replay (Repudiation)* — tail events replay from standby region; safely absorbed without producing duplicate ledger entries.
+  3. *Consumer-rebalance double-processing (Tampering)* — default Kafka at-least-once behaviour, addressed by dedupe store check before every side effect.
 - **Top 3 residual threats**:
   1. *Key collision* — UUID v4 collision is astronomically rare; natural-key collision is the real risk (verify EndToEndId is genuinely unique per the producing scheme).
-  2. *Dedupe-store outage during retry* — failure mode degrades to duplicate-process. Mitigation: pair with HTTP-level idempotency on downstream calls.
-  3. *TTL-too-short* — late retries (e.g., 30-day-old DR replay) treated as new. Mitigation: tune TTL per service; consider 30+ days for T0.
+  2. *Dedupe-store outage during retry (Denial of Service)* — failure mode degrades to duplicate-process. Mitigation: pair with HTTP-level idempotency on downstream calls.
+  3. *TTL-too-short (Tampering)* — late retries (e.g., 30-day-old DR replay) treated as new. Mitigation: tune TTL per service; consider 30+ days for T0.
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
-  - `IdempotentReceiver_DuplicateRate`: % of messages skipped as duplicates. Sustained >10% sudden change → investigate producer retry behaviour. Severity: Warning.
-  - `IdempotentReceiver_DedupeStoreDown`: dedupe queries failing. Severity: Critical (consumers will halt or duplicate-process per fallback config).
-  - `IdempotentReceiver_StoreSize`: store growing > 2× baseline. Severity: Warning (TTL purge may have stopped).
+  - **Alert: IdempotentReceiver_DuplicateRate** — % of messages skipped as duplicates. Sustained >10% sudden change → investigate producer retry behaviour. Severity: Warning.
+  - **Alert: IdempotentReceiver_DedupeStoreDown** — dedupe queries failing. Severity: Critical (consumers will halt or duplicate-process per fallback config).
+  - **Alert: IdempotentReceiver_StoreSize** — store growing > 2× baseline. Severity: Warning (TTL purge may have stopped).
 - **Dashboards**: Grafana — `idempotent-receiver-overview` (rate, skip %, store size, latency).
 - **Recovery**: stale entries purged automatically; if store corrupts, accept duplicate-process risk during recovery window.
 

@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - During product-launch campaigns, the underwriting platform receives bursts of 1,500 concurrent loan applications. Each application requires three parallel bureau calls. Sequential calling would require 1,500 × 8s = 12,000 CPU-seconds of blocking wait; parallel calling reduces this to 1,500 × 4s = 6,000 CPU-seconds — halving thread exhaustion risk.
 - Adding a fourth credit data source (e.g., NAPAS payment-behaviour scoring) must not require changes to the underwriting decision engine — only the scatter logic and aggregator should need updating.
 
+## Context
+
+Techcombank's loan underwriting platform must query CIC, PCB, and an internal risk model — three independent credit bureaus with heterogeneous schemas and independent availability characteristics — before making a credit decision. Sequential querying adds 8 seconds of latency that is unacceptable in a customer-facing retail flow. The Scatter-Gather pattern reduces this to a 5-second parallel window by broadcasting the credit-check request to all three bureaus simultaneously and aggregating responses via a Redis-backed `MessageGroupStore` that tolerates partial bureau failures with conservative fallback scoring.
+
 ## Solution
 
 A Scatter-Gather broadcasts the credit-check request simultaneously to CIC, PCB, and the internal risk model (Scatter). An `UnderwritingAggregatorService` collects all three responses within a configurable timeout window and produces a single consolidated `CreditDecisionReport` for the underwriting engine (Gather). Partial responses are included in the report with a `TIMEOUT` or `UNAVAILABLE` status; the underwriting engine applies conservative scoring rules when a bureau response is absent.
@@ -211,15 +215,15 @@ graph LR
 
 6. **Implement idempotent bureau adapters** so that Kafka retries do not produce duplicate bureau queries. Each adapter stamps the `applicationId` + `bureauQueryId` as an idempotency key in a Redis set (TTL 10 minutes). A duplicate query within the TTL window returns the cached bureau response without re-calling the bureau API — protecting against both double-charging and bureau rate-limit violations.
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A decision requires inputs from multiple independent services and all inputs should be fetched in parallel to minimise latency.
 - Individual data sources have independent availability; partial results must be handled gracefully rather than treated as a total failure.
 - The set of data sources may grow over time and adding a new source should not require changes to the downstream decision engine.
 - The combined response must be a single aggregated artifact for audit purposes.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The query to each recipient depends on the response from a previous recipient — use a Routing Slip (EIP-016) or Process Manager (EIP-019) for sequential, dependency-linked steps.
 - Only one response is needed (first-to-respond wins) and others can be discarded — use a competing-consumers pattern instead.
 - All recipients must succeed for the response to be valid and partial results cannot be used — a simpler synchronous fan-out with a circuit breaker may be more appropriate.
@@ -299,10 +303,10 @@ nfr:
 
 ## Threat Model Summary
 
-- **Bureau response spoofing** — An attacker sends a forged high-credit-score response on the aggregation response topic, causing the underwriting engine to approve a fraudulent loan. Mitigation: bureau adapter topics have strict Kafka ACLs (only the bureau adapter service accounts can produce to response topics); bureau responses are HMAC-signed by the adapter using a Secrets-Manager-held key; the aggregator validates the HMAC before including the response in the group.
-- **Correlation ID collision** — Two concurrent applications happen to generate the same `applicationId` as the correlation key, causing their bureau responses to be aggregated together into an incorrect decision. Mitigation: `applicationId` is a UUID v4 generated at loan application creation — collision probability is negligible. Nonetheless, the aggregator logs a warning if a group receives more responses than expected (> 3).
-- **Redis group store data leakage** — Bureau responses (containing applicant income, credit history) are stored temporarily in Redis. Mitigation: Redis is deployed with TLS in-transit and AES-256 encryption-at-rest (AWS ElastiCache with encryption enabled); bureau response data is stored for at most 30 seconds; the Redis instance is in a dedicated VPC subnet with no public access.
-- **Bureau denial-of-service** — Attacker triggers 10,000 loan applications simultaneously, exhausting CIC API quota. Mitigation: rate-limiting at the loan application intake layer (token bucket, max 200 applications/minute); bureau adapter circuit breakers (Resilience4j) trip if CIC error rate exceeds 20%; circuit-open causes the CIC bureau to be marked UNAVAILABLE immediately, avoiding further quota consumption.
+- **Bureau response spoofing (Spoofing)** — An attacker sends a forged high-credit-score response on the aggregation response topic, causing the underwriting engine to approve a fraudulent loan. Mitigation: bureau adapter topics have strict Kafka ACLs (only the bureau adapter service accounts can produce to response topics); bureau responses are HMAC-signed by the adapter using a Secrets-Manager-held key; the aggregator validates the HMAC before including the response in the group.
+- **Correlation ID collision (Tampering)** — Two concurrent applications happen to generate the same `applicationId` as the correlation key, causing their bureau responses to be aggregated together into an incorrect decision. Mitigation: `applicationId` is a UUID v4 generated at loan application creation — collision probability is negligible. Nonetheless, the aggregator logs a warning if a group receives more responses than expected (> 3).
+- **Redis group store data leakage (Information Disclosure)** — Bureau responses (containing applicant income, credit history) are stored temporarily in Redis. Mitigation: Redis is deployed with TLS in-transit and AES-256 encryption-at-rest (AWS ElastiCache with encryption enabled); bureau response data is stored for at most 30 seconds; the Redis instance is in a dedicated VPC subnet with no public access.
+- **Bureau denial-of-service (Denial of Service)** — Attacker triggers 10,000 loan applications simultaneously, exhausting CIC API quota. Mitigation: rate-limiting at the loan application intake layer (token bucket, max 200 applications/minute); bureau adapter circuit breakers (Resilience4j) trip if CIC error rate exceeds 20%; circuit-open causes the CIC bureau to be marked UNAVAILABLE immediately, avoiding further quota consumption.
 - **Aggregation timeout manipulation** — A misconfigured timeout (e.g., 100ms) causes almost all gather operations to be partial, causing the conservative fallback to systematically deny loans. Mitigation: timeout is configurable via Spring Cloud Config with a mandatory minimum of 2,000ms enforced by a `@Validated` constraint; changes require architecture review.
 
 ## Operational Runbook (stub)

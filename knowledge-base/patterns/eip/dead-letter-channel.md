@@ -121,8 +121,9 @@ T24 OFS calls that fail with permanent errors (account closed, insufficient fund
 ## NFR Acceptance Criteria
 
 - **HA**: DLT topic is HA per the source topic's tier. T0 → cross-region replication via MirrorMaker 2.
-- **HP**: DLT publish adds < 5ms P95 (one extra Kafka publish on failure path; not on success path).
+- **HP**: DLT publish adds < 5ms p95 latency (one extra Kafka publish on failure path; not on success path). Dead-letter processing latency p99 < 5 s under steady-state load. Triage API response p95 < 500 ms.
 - **HR**: prevents head-of-line blocking; explicit triage SLA per tier; no silent message loss.
+- **Throughput**: DLT topic must sustain ≥ 1 000 messages/second ingest during peak retry storms without consumer lag exceeding 10 000 messages.
 
 ## Compliance Mapping
 
@@ -131,7 +132,7 @@ T24 OFS calls that fail with permanent errors (account closed, insufficient fund
 | Ring 0 | EIP §10.5 (Hohpe/Woolf) | Messaging Channels — Dead Letter Channel | Canonical pattern |
 | Ring 0 | Microsoft Cloud Patterns — Publisher-Subscriber | Reliable async messaging | Underlying reliability assumption |
 | Ring 1 | Basel BCBS 239 — Principle 6 (Accuracy) | "All material risk exposures must be captured" | DLT prevents silent message loss → accuracy preserved |
-| Ring 2 | SBV Circular 09/2020 §IV.3 ⚠️ (working summary — pending Legal review) | Incident logging requirement | DLT entries are observable incident records |
+| Ring 2 | SBV Circular 09/2020 §IV.3; Decree 13/2023 | Incident logging requirement; data localisation for DLT storage | DLT entries are observable incident records; DLT topic data is stored in-country per Decree 13 localisation obligations ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -145,23 +146,23 @@ T24 OFS calls that fail with permanent errors (account closed, insufficient fund
 
 ## Threat Model Summary
 
-STRIDE: primarily **Denial of Service** (head-of-line blocking) and **Repudiation** (silent message loss).
+STRIDE: primarily Denial of Service (head-of-line blocking) and Repudiation (silent message loss).
 
 - **Top 3 threats addressed**:
-  1. *Poison-pill DoS* — single malformed message blocking a partition. DLT routes it out.
-  2. *Silent message loss* — DLT makes lost messages observable.
-  3. *Cascade from one bad upstream* — one downstream's outage doesn't stop other consumers if errors route to DLT after retry.
+  1. *Poison-pill (Denial of Service)* — single malformed message blocking a partition. DLT routes it out, unblocking all subsequent messages on the partition.
+  2. *Silent message loss (Repudiation)* — DLT makes lost messages observable and auditable; no message is silently discarded.
+  3. *Cascade from one bad upstream (Denial of Service)* — one downstream's outage doesn't stop other consumers if errors route to DLT after retry exhaustion.
 - **Top 3 residual threats**:
-  1. *DLT itself overflows* — alert on DLT depth growth; auto-pause source topic if DLT > N% of source rate.
-  2. *Replay loops* — if a DLT'd message is replayed but still fails the same way, it lands in DLT again. Mitigation: add `kafka_dlt-attempt-count` header; after 3 attempts mark for manual quarantine.
-  3. *PII in DLT entries* — DLT entries may contain customer data; retention windows must match data-protection rules per [PRIN-007 Data Residency](../../principles/data-residency.md).
+  1. *DLT itself overflows (Denial of Service)* — alert on DLT depth growth; auto-pause source topic if DLT > N% of source rate.
+  2. *Replay loops (Tampering)* — if a DLT'd message is replayed but still fails the same way, it lands in DLT again. Mitigation: add `kafka_dlt-attempt-count` header; after 3 attempts mark for manual quarantine.
+  3. *PII in DLT entries (Information Disclosure)* — DLT entries may contain customer data; retention windows must match data-protection rules per [PRIN-007 Data Residency](../../principles/data-residency.md).
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
-  - `DLT_Depth_T0`: T0 source topic's DLT > 0.1% of source rate over 5 min. Severity: High.
-  - `DLT_Depth_Sustained`: any DLT > 100 entries unprocessed for 4 hours. Severity: Warning escalating to High.
-  - `DLT_Triage_SLA_Breach`: oldest DLT entry > tier SLA. Severity: tier-dependent.
+  - **Alert: DLT_Depth_T0** — T0 source topic's DLT > 0.1% of source rate over 5 min. Severity: High.
+  - **Alert: DLT_Depth_Sustained** — any DLT > 100 entries unprocessed for 4 hours. Severity: Warning escalating to High.
+  - **Alert: DLT_Triage_SLA_Breach** — oldest DLT entry > tier SLA. Severity: tier-dependent.
 - **Dashboards**: Grafana `dlt-overview` per topic (depth, ingest rate, oldest entry age, exception-class breakdown).
 - **Triage procedure**:
   1. Open triage UI for the DLT.

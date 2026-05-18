@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - In a microservices deployment, pods are ephemeral: Kubernetes may reschedule a consumer pod to a different node at any time. Without durable subscription state persisted outside the pod, every pod reschedule loses the subscription position and creates a gap or a flood of redeliveries.
 - Rolling deployments of the audit service (zero-downtime upgrade) involve a brief period where old and new pod instances coexist. Without stable group membership and persisted offsets, the transition can cause double-delivery or missed-delivery of events.
 
+## Context
+
+In Techcombank's Kafka-based platform, the regulatory audit service must receive a complete, unbroken record of every transaction event — including those published during planned maintenance windows, rolling deployments, and DR failovers. Kafka's consumer group offset mechanism provides durability up to the channel's retention window (30 days for T0 topics); beyond that, an external PostgreSQL offset checkpoint serves as a safety net. Static group membership (`group.instance.id`) eliminates rebalance churn on pod restarts, and `AckMode.MANUAL_IMMEDIATE` with offset commit after successful AuditStore persist ensures zero gaps in the audit trail.
+
 ## Solution
 
 A Durable Subscriber maintains its subscription state and message position externally from the subscriber process, so that when the subscriber restarts it resumes exactly where it left off. In Techcombank's Kafka-based stack, durability is achieved through a persistent consumer group with committed offsets stored in Kafka's `__consumer_offsets` topic, combined with a sufficiently long channel retention period to cover the maximum expected downtime. The consumer group ID is stable across restarts; offset commits are manual and occur only after events are durably persisted to the audit store.

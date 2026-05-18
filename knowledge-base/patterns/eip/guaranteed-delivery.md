@@ -11,6 +11,10 @@ Tier Applicability: T0, T1
 - Consumer `enable.auto.commit=true` commits the offset on a background timer regardless of whether the side-effect (ledger post, T24 OFS call) succeeded. A JVM crash between offset commit and side-effect completion causes the message to appear processed but its effect to be absent — a silent loss indistinguishable from a successful process.
 - Without Guaranteed Delivery as an explicit architectural concern, each team configures Kafka independently. One team uses `acks=all`; another inherits the default `acks=1`; a third uses auto-commit. The result is inconsistent durability guarantees across a platform where every component must be consistent.
 
+## Context
+
+In a Kafka-based banking platform, the default producer acknowledgement setting (`acks=1`) and automatic offset commit (`enable.auto.commit=true`) expose every T0 financial channel to silent message loss on leader failure or consumer crash. Guaranteed Delivery in this context is not a single mechanism but a layered contract: the Transactional Outbox pattern ([INT-002](../integration/cdc-outbox-pattern.md)) atomises the event with the business write; `acks=all` with ISR quorum provides broker-level durability; manual offset commit after the side-effect confirms consumer-level durability; and the Idempotent Receiver ([EIP-024](idempotent-receiver.md)) makes the resulting at-least-once delivery safe for downstream banking operations.
+
 ## Solution
 
 Guaranteed Delivery ensures every message published by a producer is received by at least one consumer exactly once (from the consumer's perspective), even in the presence of broker failures, network partitions, consumer restarts, and DR failovers. The pattern combines four complementary mechanisms that together form a layered durability guarantee:
@@ -256,17 +260,27 @@ flowchart TD
 
 7. **Integrate T24 OFS calls within the manual-commit consumer pattern.** The OFS call must complete before the Kafka offset is committed. If the OFS call fails with a transient error (T24 timeout), the consumer exception causes the message to remain on the topic and be retried. If the OFS call fails with a permanent error (account closed), the message routes to the DLT for human triage — the ledger entry is NOT posted, and the customer's account remains consistent.
 
-## Banking Use Cases
+## When to Use
 
-1. **Payment event guaranteed delivery end-to-end** — A NAPAS credit transfer is initiated. The Payment Service writes the business record AND an outbox event in one PostgreSQL transaction. The CDC relay picks up the outbox event and publishes to `com.techcombank.payments.transaction.created` with `acks=all`. The Ledger Poster consumer deduplicates (EIP-024), posts to T24, commits the offset, and releases the outbox row. If T24 is slow, the Kafka offset is not committed; the message is retried up to 4 times with backoff. If T24 permanently fails, the message goes to the DLT (EIP-025) for manual posting. Zero message loss at every failure point.
+- Any T0 or T1 financial channel where message loss is unacceptable: payment events, fraud alerts, SWIFT instructions, settlement batches, KYC events.
+- The producing service must survive a crash after the business write but before publishing to Kafka — use Transactional Outbox (INT-002) combined with this pattern.
+- Cross-region DR failover must not lose in-flight events — pair with MirrorMaker 2 replication.
+- **Banking examples**: NAPAS credit transfer event delivery; SWIFT outbound payment command; fraud alert to Card Management; EOD settlement batch; KYC event stream during DR failover.
 
-2. **SWIFT outbound message guaranteed delivery** — A USD wire transfer command must reach the SWIFT adapter without loss. The Process Manager (EIP-017) writes the SWIFT submission command to the outbox. The CDC relay publishes it to `com.techcombank.rails.swift.payment.queued`. The SWIFT adapter is the consumer: it takes the message, submits to SWIFT gpi, and commits the Kafka offset only after SWIFT returns a successful acknowledgement (UETR confirmed). If SWIFT times out, the message is retried. If SWIFT rejects permanently (invalid BIC), the message goes to the DLT for the SWIFT operations team.
+## When Not to Use
 
-3. **Fraud alert guaranteed delivery** — A fraud engine raises an alert. The alert must be delivered to the Card Management service (to block the card) without fail. The fraud engine publishes to `com.techcombank.fraud.alert.raised` with `acks=all`. The Card Management consumer applies manual-commit: block the card in T24, then commit the offset. A consumer crash between card-block and offset-commit causes a redeliver; the Idempotent Receiver (EIP-024) absorbs the duplicate. No card blocking is missed; no card is blocked twice.
+- T2 or T3 internal channels (metrics, debug traces, heartbeats) where a small loss rate is tolerable and Kafka's default settings are sufficient.
+- The channel is low-volume and the cost of `acks=all` latency premium (2–3ms) would materially degrade a latency-critical path — profile first; in practice the premium is negligible even at T0.
+- The consumer side-effect is itself idempotent and stateless with no durable side-effect — the full layered contract is overkill; at minimum apply `acks=all` and manual commit.
 
-4. **KYC event guaranteed delivery during DR failover** — During a DR failover, Techcombank switches from the primary region to the DR region. MirrorMaker 2 has been replicating KYC events with < 5 seconds lag. Consumers in the DR region pick up from the replicated offset (or the last committed offset in the DR consumer group). Tail events from the primary that have not yet been replicated are replayed by the upstream service on reconnection. Idempotent receivers absorb any duplicates from the replay.
+## Variants & Trade-offs
 
-5. **EOD batch settlement guaranteed delivery** — The EOD settlement batch aggregator (EIP-011) releases a `SettlementBatch` event. This must reach the Reconciliation Service without loss — a missing EOD batch means an unreconciled day. The settlement channel uses T0 configuration (RF=3, acks=all, 30-day retention). The Reconciliation Service uses manual offset commit. The outbox pattern ensures the batch event is co-committed with the aggregator's MongoDB group deletion, so the event exists in Kafka if and only if the aggregation was finalised.
+| Variant | When | Trade-off |
+|---|---|---|
+| Full 6-layer contract (this doc) | T0 financial channels; zero message loss | Maximum durability; `acks=all` adds 2–3ms produce latency; Outbox adds CDC relay infrastructure |
+| `acks=all` + manual commit only (no Outbox) | T1 channels where producer crash risk is low | Simpler; residual risk if JVM crashes between business write and Kafka publish |
+| `acks=1` + Outbox | Legacy producers; latency-sensitive path | Producer-side durability via DB; broker durability reduced; not recommended for T0 |
+| MirrorMaker 2 only (DR) | Cross-region durability without full contract | Adds DR window but does not address single-region broker failure |
 
 ## Compliance Mapping
 
@@ -341,7 +355,7 @@ nfr:
         severity: Warning
 ```
 
-## Cost/FinOps
+## Cost / FinOps Notes
 
 - **Replication storage overhead** — RF=3 means every byte of data is stored 3× across brokers. For a 10M transactions/day T0 channel at 2KB/message × 30-day retention: 10M × 2KB × 30 × 3 = 1.8TB. At USD 0.023/GB-month, this is approximately USD 41/month per T0 topic. Compression (`lz4`) typically reduces this by 3–5×, bringing the effective cost to USD 8–14/month per T0 topic.
 - **Outbox relay infrastructure** — A Debezium connector running in Kafka Connect adds approximately 0.5 vCPU and 512MB RAM overhead per database. For Techcombank's expected 3–5 outbox databases, total Debezium cost is approximately USD 50/month in pod compute. This is the price of the zero-message-loss guarantee between the database transaction and Kafka.
@@ -349,15 +363,15 @@ nfr:
 - **`acks=all` latency premium** — Compared to `acks=1`, `acks=all` adds approximately 2–3ms to produce latency (time for ISR followers to acknowledge). This is within the T0 latency budget (< 8ms P95). The 2–3ms cost is non-negotiable: it is the cost of the durability guarantee. Any attempt to reduce this by switching to `acks=1` trades a small latency win for a real message-loss risk.
 - **DLT triage labour** — Messages that exhaust retries and land in the DLT require human triage. At 0.01% failure rate on 10M transactions/day = 1,000 DLT entries/day. At 5 minutes per entry and a VND 300,000/hour triage engineer cost, this is approximately VND 250,000/day. The primary cost reduction lever is improving upstream data quality to reduce the failure rate — not loosening durability.
 
-## Threat Model
+## Threat Model Summary
 
-- **Unclean leader election data loss** — With `unclean.leader.election.enable=true` (the Kafka default), a broker elected as leader without being in-sync may not have all messages, causing silent loss. Mitigation: `unclean.leader.election.enable=false` on all T0/T1 topics (IaC-enforced). Accept brief producer unavailability during leader election over silent message loss.
-- **Producer send-and-forget pattern** — A developer uses `kafkaTemplate.send(topic, payload)` without checking the `CompletableFuture` return value, silently swallowing send failures. Mitigation: a custom `KafkaTemplate` wrapper that wraps `send()` and throws if the future completes exceptionally; enforced via ArchUnit rule that bans `kafkaTemplate.send(...)` calls that discard the return value.
-- **Consumer auto-commit race** — `enable.auto.commit=true` (sometimes accidentally enabled by copying configuration from non-financial services) commits offsets before side-effects complete. Mitigation: ArchUnit rule bans `enable.auto.commit=true` in any configuration class annotated with `@KafkaConsumerConfig`; automated configuration scan in CI pipeline reports any broker-level auto-commit setting.
-- **Outbox relay stall** — The CDC relay (Debezium) stalls due to a Kafka Connect worker crash. Outbox rows accumulate in PostgreSQL indefinitely; no events are published. Mitigation: `GD_Outbox_Relay_Lag` alert fires within 2 minutes; Debezium workers run in a 3-node Kafka Connect cluster (HA); the alert runbook includes steps to restart the connector and verify the backlog clears.
-- **Replay without idempotency** — Guaranteed Delivery is at-least-once; without [EIP-024 Idempotent Receiver](idempotent-receiver.md) on every consumer, a redelivered payment event becomes a duplicate ledger entry. Mitigation: architecture review gate requires EIP-024 to be paired with EIP-023 on every financial channel consumer; ArchUnit rule asserts that any `@KafkaListener` on a financial-channel topic also references the `IdempotentReceiverService`.
+- **Unclean leader election data loss (Tampering)** — With `unclean.leader.election.enable=true` (the Kafka default), a broker elected as leader without being in-sync may not have all messages, causing silent loss. Mitigation: `unclean.leader.election.enable=false` on all T0/T1 topics (IaC-enforced). Accept brief producer unavailability during leader election over silent message loss.
+- **Producer send-and-forget pattern (Repudiation)** — A developer uses `kafkaTemplate.send(topic, payload)` without checking the `CompletableFuture` return value, silently swallowing send failures. Mitigation: a custom `KafkaTemplate` wrapper that wraps `send()` and throws if the future completes exceptionally; enforced via ArchUnit rule that bans `kafkaTemplate.send(...)` calls that discard the return value.
+- **Consumer auto-commit race (Repudiation)** — `enable.auto.commit=true` (sometimes accidentally enabled by copying configuration from non-financial services) commits offsets before side-effects complete. Mitigation: ArchUnit rule bans `enable.auto.commit=true` in any configuration class annotated with `@KafkaConsumerConfig`; automated configuration scan in CI pipeline reports any broker-level auto-commit setting.
+- **Outbox relay stall (Denial of Service)** — The CDC relay (Debezium) stalls due to a Kafka Connect worker crash. Outbox rows accumulate in PostgreSQL indefinitely; no events are published. Mitigation: `GD_Outbox_Relay_Lag` alert fires within 2 minutes; Debezium workers run in a 3-node Kafka Connect cluster (HA); the alert runbook includes steps to restart the connector and verify the backlog clears.
+- **Replay without idempotency (Tampering)** — Guaranteed Delivery is at-least-once; without [EIP-024 Idempotent Receiver](idempotent-receiver.md) on every consumer, a redelivered payment event becomes a duplicate ledger entry. Mitigation: architecture review gate requires EIP-024 to be paired with EIP-023 on every financial channel consumer; ArchUnit rule asserts that any `@KafkaListener` on a financial-channel topic also references the `IdempotentReceiverService`.
 - **MirrorMaker 2 replication lag during failover** — At the moment of a DR failover, the last 5 seconds of messages on the primary may not yet be replicated. These messages are "in-flight" between primary and DR. Mitigation: the outbox pattern ensures these messages exist in the source database; the upstream service re-publishes from the outbox on reconnection; idempotent consumers in DR absorb the duplicates. Effective message loss = 0.
-- **Storage exhaustion causing message deletion before consumption** — If a consumer group falls behind by more than the retention window, Kafka begins deleting messages before the consumer reads them. Mitigation: `GD_Consumer_Lag_High` alert fires at 10,000 messages of lag (well within the retention window); automatic consumer scaling via KEDA; T0 30-day retention provides a wide window before deletion risk.
+- **Storage exhaustion causing message deletion before consumption (Denial of Service)** — If a consumer group falls behind by more than the retention window, Kafka begins deleting messages before the consumer reads them. Mitigation: `GD_Consumer_Lag_High` alert fires at 10,000 messages of lag (well within the retention window); automatic consumer scaling via KEDA; T0 30-day retention provides a wide window before deletion risk.
 
 ## Operational Runbook
 
@@ -388,6 +402,15 @@ nfr:
 **Chaos tests** — Use Chaos Mesh or a Kubernetes network policy to: (a) drop 50% of packets between the producer and one Kafka broker; verify no message loss (producer retries succeed via the other brokers); (b) simultaneously kill two of three Kafka brokers; verify producers receive `NotEnoughReplicasException` (min ISR not met) and message publishing halts rather than data loss occurring; (c) pause the consumer for 2 minutes, then resume; verify all messages are consumed from the correct offset with no loss or duplication.
 
 **Compliance tests** — Automated test asserts that every Kafka topic configuration in the production cluster matches the NFR YAML for its tier. Run as a daily CI job using `kafka-topics.sh --describe` output parsed against expected configuration. Alert on any drift (e.g., someone manually changed `min.insync.replicas` via console).
+
+## Related Patterns
+
+- [EIP-001 Message Channel](message-channel.md) — the channel that this pattern hardens for durability
+- [EIP-024 Idempotent Receiver](idempotent-receiver.md) — partner pattern that makes at-least-once delivery safe on the consumer side
+- [EIP-025 Dead Letter Channel](dead-letter-channel.md) — mandatory companion; messages that exhaust retries go here rather than being lost
+- [INT-002 Transactional Outbox + CDC](../integration/cdc-outbox-pattern.md) — implements Layer L1 (outbox) of the durability contract for T0 producers
+- [REF-001 Multi-Region Active-Active](../../reference-architectures/multi-region-active-active.md) — MirrorMaker 2 cross-region replication described in this doc feeds into the reference architecture
+- [SEC-001 mTLS](../security/mtls-service-mesh.md) — adds confidentiality to the durable financial channels
 
 ## References
 

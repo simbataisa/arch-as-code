@@ -11,6 +11,10 @@ Tier Applicability: T0, T1
 - Process logic embedded in individual services cannot enforce SLA timers — a KYC step that should complete in 4 hours silently stalls because no component owns the escalation trigger. The SBV Circular 09/2020 §IV.2 operational continuity requirements demand that processes either complete within defined windows or escalate to human operators with full context.
 - The Process Manager pattern is distinct from the Saga Orchestrator ([INT-001](../integration/saga-orchestration.md)): a Saga manages compensating transactions to undo prior steps on failure; a Process Manager manages the routing of messages through a multi-step workflow, advancing state based on incoming messages and making routing decisions. Many banking processes require both: the Process Manager routes the flow; the Saga handles compensation if a step fails.
 
+## Context
+
+Process Manager is applied in banking environments where a business operation spans multiple services and message exchanges over an extended time window. Techcombank's KYC onboarding, SWIFT payment lifecycle, and chargeback resolution each involve conditional branching and SLA-bound steps that are impossible to reason about without a single, durable state owner. The pattern differs from a Saga Orchestrator ([INT-001](../integration/saga-orchestration.md)) in that it governs routing logic rather than compensating-transaction logic; in practice both are combined.
+
 ## Solution
 
 A Process Manager is a stateful, durable component that owns the routing logic for a multi-step workflow. It receives events from participating services via message channels, updates its internal process state, and sends commands to the next service in the flow. Each process instance is identified by a `processInstanceId` (UUID) correlated to the business key (`kycApplicationId`, `swiftEndToEndId`, `chargebackCaseId`). State is persisted to PostgreSQL at every transition, making the process restart-safe and auditable.
@@ -186,17 +190,28 @@ stateDiagram-v2
 
 6. **Handle SWIFT payment lifecycle as a second Process Manager instance.** The SWIFT payment process uses the same `ProcessInstanceRepository` with `process_type = 'SWIFT_PAYMENT'`. States: `INITIATED → COMPLIANCE_SCREEN → SWIFT_SUBMITTED → CORRESPONDENT_ACKNOWLEDGED → BENEFICIARY_CREDITED → RECONCILED`. Each state transition is driven by events from the SWIFT adapter. The `RECONCILED` state posts the confirmed credit to T24 via OFS.
 
-## Banking Use Cases
+## When to Use
 
-1. **KYC digital onboarding** — A new customer applies via Techcombank's mobile app. The Process Manager orchestrates: (a) request document upload (30-min SLA); (b) AML screening against watchlists (15-min SLA); (c) AML hit → route to Compliance Officer queue (4-hour SLA); (d) facial recognition match against ID document (2-min SLA); (e) auto-approve if face-match score ≥ 90, else manual review; (f) open T24 CASA account via OFS bridge. Total SLA: same-day for digital channel. Every step transition is logged with timestamp and actor for MAS FCEP audit trail.
+- A business operation spans multiple services and message exchanges over an extended time window (minutes to days) with conditional branching and SLA-bound steps.
+- You need a single, durable owner of process state for auditability — each step transition must be logged with actor and timestamp for regulatory audit (e.g., MAS FCEP, SBV Circular 09/2020).
+- The process involves parallel execution, timeout-based escalation, or conditional routing that cannot be expressed as a simple request-response chain.
+- **Banking examples**: KYC digital onboarding (document collection → AML screening → biometric → account opening); SWIFT outbound payment lifecycle (compliance → SWIFT submission → acknowledgement → reconciliation); chargeback dispute resolution; loan disbursement; account closure.
 
-2. **SWIFT outbound payment lifecycle** — A corporate customer initiates a USD 100,000 wire transfer. The Process Manager ensures: compliance screening completes before SWIFT submission (cannot be bypassed); SWIFT gpi tracker acknowledgement is confirmed before the customer is notified; correspondent bank credit confirmation triggers reconciliation posting to T24. If any step times out, the Process Manager routes to the Exception Handling Queue with full context rather than leaving the payment in an undefined state.
+## When Not to Use
 
-3. **Chargeback dispute resolution** — A card dispute is received from Visa. The Process Manager orchestrates: (a) evidence collection from merchant (10-day window); (b) Dispute Analyst review (3-day SLA); (c) decision: if merchant provides valid evidence → reject dispute and notify customer; if no evidence received → auto-resolve in customer's favour and credit account; (d) Visa notification. Each decision node is logged for the Chargeback Audit Report.
+- The operation is a simple two-step request-reply — a direct service call or a Routing Slip (EIP-016) is simpler and more appropriate.
+- All steps are transactional and must roll back as a unit on failure — use a Saga Orchestrator ([INT-001](../integration/saga-orchestration.md)) for compensation logic; the Process Manager handles routing, not undo.
+- The process has fewer than three steps with no conditional branching — overhead of a state machine and PostgreSQL persistence is not justified.
+- The process completes entirely within a single synchronous HTTP request — stateless orchestration is sufficient.
 
-4. **Loan disbursement workflow** — After loan approval, the Process Manager ensures: (a) disbursement account verification (T24 account balance check); (b) insurance policy activation (if applicable); (c) funds transfer from loan account to current account via T24 OFS; (d) notification to loan servicing for instalment schedule setup. Parallel steps (b) and part of (c) run concurrently; the Process Manager coordinates the join.
+## Variants & Trade-offs
 
-5. **Account closure process** — Regulatory requirements mandate a 30-day cooling-off period, pending transaction clearance, and a final statement before an account can be closed. The Process Manager manages this multi-week process with calendar-aware SLA timers, coordinating between the Core Banking (T24), the Statement Service, and the Customer Notification Service without requiring any of them to know the closure process logic.
+| Variant | When | Trade-off |
+|---|---|---|
+| Spring State Machine + PostgreSQL (this doc) | Well-defined state transitions; strong audit requirements | State machine code must be kept in sync with the diagram; redeployment required to add states |
+| Temporal / Camunda BPM engine | Complex workflows with graphical modelling, versioning, or cross-team ownership | Powerful; USD 2,000–20,000/month licensing for Camunda Enterprise; Temporal Cloud adds ops complexity |
+| Saga-only (INT-001) | Steps are purely compensating transactions, no complex routing | Simpler for linear, all-or-nothing flows; lacks SLA timer and conditional routing |
+| Process Manager + Saga (combined) | Routing + compensation both required | Most complete; Process Manager routes; Saga compensates; as used in KYC/SWIFT examples above |
 
 ## Compliance Mapping
 
@@ -256,7 +271,7 @@ nfr:
     postgresql_connection_pool: 50        # per pod; use PgBouncer for pooling
 ```
 
-## Cost/FinOps
+## Cost / FinOps Notes
 
 - **PostgreSQL state store** — A managed PostgreSQL instance (2 vCPU, 8GB RAM, 100GB SSD, synchronous standby) costs approximately USD 200/month. This supports up to 10,000 concurrent process instances and 7 years of audit log retention. The audit log table partitioned by year keeps query performance stable as historical rows accumulate.
 - **No workflow engine licensing cost** — The implementation above uses Spring State Machine and Spring Integration with plain PostgreSQL — zero licensing cost. Commercial BPM engines (Camunda Enterprise, Temporal Cloud) add USD 2,000–20,000/month. For Techcombank's defined process set (KYC, SWIFT, chargeback, loan, closure), a purpose-built Process Manager is more cost-effective than a general-purpose engine. Re-evaluate when process count exceeds 20 or processes require BPMN-level graphical modelling.
@@ -264,12 +279,12 @@ nfr:
 - **Audit log storage** — The `process_state_transitions` table grows at approximately 50 rows per completed process (average 10 transitions × 5 process types). At 10,000 processes/day × 50 rows × 200 bytes = 100MB/day. PostgreSQL table partitioned annually; cold partitions archived to object storage after 2 years. Annual archival storage cost: approximately USD 5/year at cloud object storage pricing.
 - **Process Manager as cost reduction for T24 integration** — By orchestrating T24 OFS calls as the final step in a fully validated process (all checks passed before T24 is called), the Process Manager reduces T24 transaction reversals by an estimated 70% for KYC-related account openings. T24 transaction reversals carry both direct cost (OFS processing overhead) and indirect cost (manual reconciliation).
 
-## Threat Model
+## Threat Model Summary
 
-- **State machine bypass** — A malicious or buggy service publishes a `AccountOpened` event for a process instance still in `DOCUMENT_COLLECTION` state, causing the Process Manager to skip AML and face-match steps and open an account without proper vetting. Mitigation: `assertState()` in every event handler rejects events that arrive in the wrong state; the PostgreSQL version column prevents race conditions; `InvalidProcessStateException` is logged at ERROR level and triggers an alert.
-- **Process instance ID enumeration** — An attacker queries `GET /api/v1/processes/kyc/{applicationId}` with sequential application IDs to harvest process status for other customers. Mitigation: application IDs are UUIDs (not sequential integers); the API requires Bearer JWT authentication with the `kyc:read` scope; customers can only query their own process instance (subject claim validated against application ID ownership).
-- **Stuck process as denial of service** — A bug causes all new KYC processes to enter an unhandled state transition exception, stalling hundreds of onboardings. Mitigation: `ProcessManager_StuckProcess` alert fires when any instance is in the same state for > 2× its SLA; the alert links directly to the status API for that instance; on-call engineers can manually advance or reject the process via a break-glass admin endpoint (access audited).
-- **Database state tampering** — An attacker with database access modifies `current_state` directly in `process_instances`, skipping compliance steps. Mitigation: the `process_instances` table is accessible only to the process-manager service account; direct database access requires a privileged session via PAM (Privileged Access Management) which generates an immutable audit trail; `process_state_transitions` is append-only and provides a verifiable history that would show the gap in transitions.
+- **State machine bypass (Tampering)** — A malicious or buggy service publishes a `AccountOpened` event for a process instance still in `DOCUMENT_COLLECTION` state, causing the Process Manager to skip AML and face-match steps and open an account without proper vetting. Mitigation: `assertState()` in every event handler rejects events that arrive in the wrong state; the PostgreSQL version column prevents race conditions; `InvalidProcessStateException` is logged at ERROR level and triggers an alert.
+- **Process instance ID enumeration (Information Disclosure)** — An attacker queries `GET /api/v1/processes/kyc/{applicationId}` with sequential application IDs to harvest process status for other customers. Mitigation: application IDs are UUIDs (not sequential integers); the API requires Bearer JWT authentication with the `kyc:read` scope; customers can only query their own process instance (subject claim validated against application ID ownership).
+- **Stuck process as denial of service (Denial of Service)** — A bug causes all new KYC processes to enter an unhandled state transition exception, stalling hundreds of onboardings. Mitigation: `ProcessManager_StuckProcess` alert fires when any instance is in the same state for > 2× its SLA; the alert links directly to the status API for that instance; on-call engineers can manually advance or reject the process via a break-glass admin endpoint (access audited).
+- **Database state tampering (Tampering)** — An attacker with database access modifies `current_state` directly in `process_instances`, skipping compliance steps. Mitigation: the `process_instances` table is accessible only to the process-manager service account; direct database access requires a privileged session via PAM (Privileged Access Management) which generates an immutable audit trail; `process_state_transitions` is append-only and provides a verifiable history that would show the gap in transitions.
 - **SLA timer drift under load** — The scheduler job that checks SLA breaches is CPU-starved during EOD batch peaks, causing breach detection to lag. Mitigation: the SLA check scheduler runs in a dedicated thread pool isolated from the main message-processing pool; the scheduler period (60 seconds) is configurable; breach detection latency of up to 120 seconds is acceptable (SLA windows are measured in hours, not minutes).
 - **Replay of old events advancing process** — A Kafka consumer rebalance replays old messages; an old `DocumentsSubmitted` event re-fires for a process already in `AML_SCREENING`. Mitigation: [EIP-024 Idempotent Receiver](idempotent-receiver.md) on all event handlers uses the Kafka message `messageId` header as the idempotency key; duplicate events are absorbed without state transition.
 - **Optimistic lock storm** — A burst of duplicate events for the same process instance causes many concurrent optimistic lock conflicts, triggering repeated retries that monopolise database connections. Mitigation: the retry policy for `OptimisticLockException` is one retry with 100ms jitter; on second conflict, the event is routed to the DLT and an alert fires; this bounds the maximum retry overhead to 2 database attempts per event.
@@ -302,12 +317,20 @@ nfr:
 
 **Chaos tests** — Kill the Process Manager pod while a KYC process is in `AML_SCREENING`. Restart the pod. Publish the `AmlScreeningPassed` event. Assert the process transitions to `FACE_MATCH` correctly (state was preserved in PostgreSQL). Kill PostgreSQL primary while a state transition is in-flight. Assert no data loss after failover (exactly-once via optimistic lock + [EIP-024](idempotent-receiver.md)).
 
+## Related Patterns
+
+- [EIP-001 Message Channel](message-channel.md) — the channels through which the Process Manager sends commands and receives events
+- [EIP-016 Routing Slip](routing-slip.md) — alternative when the processing sequence is simple and linear without complex state; Routing Slip is stateless, Process Manager is stateful
+- [EIP-024 Idempotent Receiver](idempotent-receiver.md) — required on all event handlers to absorb Kafka redeliveries without causing duplicate state transitions
+- [EIP-025 Dead Letter Channel](dead-letter-channel.md) — receives events that could not be processed after retry; Process Manager routes problematic instances via alerts, not DLT
+- [INT-001 Saga Orchestration](../integration/saga-orchestration.md) — compensating-transaction partner; Process Manager routes; Saga compensates on failure
+- [NFR-001 Service Tiering RTO/RPO](../../nfr/service-tiering-rto-rpo.md) — defines the availability target that governs the PostgreSQL HA configuration for the state store
+
 ## References
 
 - Hohpe, G. & Woolf, B. — Enterprise Integration Patterns (Addison-Wesley), Chapter 7: Process Manager
 - Spring State Machine reference documentation
 - Spring Integration — Stateful Message Flows
-- Related catalog IDs: [EIP-001 Message Channel](message-channel.md), [EIP-016 Routing Slip](routing-slip.md), [EIP-024 Idempotent Receiver](idempotent-receiver.md), [INT-001 Saga Orchestration](../integration/saga-orchestration.md), [NFR-001 Service Tiering RTO/RPO](../../nfr/service-tiering-rto-rpo.md)
 
 ---
 
