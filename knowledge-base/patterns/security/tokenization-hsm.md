@@ -228,14 +228,14 @@ STRIDE: primarily **Information Disclosure**.
   2. *Insider read* of production data — sees tokens, not PANs.
   3. *PCI scope expansion* — bounded to capture / vault / detokenise services.
 - **Top 3 residual threats**:
-  1. *HSM compromise* — catastrophic; mitigation: FIPS 140-2 L3 hardware; multi-HSM; tamper alarms; HSM logs to immutable store.
-  2. *Detokenisation abuse* by an authorised insider — mitigation: ABAC + audit logging + alerts on unusual detok rate per principal.
+  1. *HSM compromise* (Tampering) — catastrophic; mitigation: FIPS 140-2 L3 hardware; multi-HSM; tamper alarms; HSM logs to immutable store.
+  2. *Detokenisation abuse* by an authorised insider (Elevation of Privilege) — mitigation: ABAC + audit logging + alerts on unusual detok rate per principal.
   3. *Token leakage via logs* — mitigation: structured logging with mandatory `LogMasker` (see [SEC-008 Data Masking](data-masking.md)); CI lint that flags any field named `pan` / `cardNumber` / `cccd` in log statements.
 
 ## Operational Runbook
 
 - **Alerts**:
-  - `HSM_PartitionDown`: any HSM partition unhealthy. Severity: Critical.
+  - Alert: HSMKeyRotationFailed — `HSM_PartitionDown`: any HSM partition unhealthy. Severity: Critical.
   - `Tokenisation_LatencyBudget`: P95 > 10 ms for > 5 min. Severity: High.
   - `Detokenisation_AnomalousRate`: a principal detokenises > 3× their baseline rate. Severity: High (possible insider abuse).
   - `Vault_ReplicationLag`: cross-region vault lag > 1 s. Severity: High.

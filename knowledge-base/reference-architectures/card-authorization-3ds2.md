@@ -268,7 +268,7 @@ nfr_acceptance_criteria:
 | Ring 1 | PCI-DSS 4.0 §3 (PAN protection) | PAN never logged or stored outside vault | SEC-004 tokenisation |
 | Ring 1 | PSD2 SCA / RTS (where applicable cross-border) | Strong Customer Authentication | 3DS2 + biometric satisfies SCA |
 | Ring 1 | Visa / Mastercard scheme rules | Issuer obligations | ACS certified per scheme; annual recertification |
-| Ring 2 | SBV Circular 09/2020 §III ⚠️ (working summary — pending Legal review) | Multi-factor authentication for banking | Biometric + device-binding satisfies multi-factor |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 ⚠️ (working summary — pending Legal review) | Multi-factor authentication for banking; personal-data protection | Biometric + device-binding satisfies multi-factor; card tokens are not personal data per PRIN-007 |
 
 ## Cost / FinOps Notes
 
@@ -293,14 +293,14 @@ STRIDE: primarily **Spoofing** (account takeover) and **Tampering** (transaction
   2. *Sophisticated phishing* — biometric step-up via TCB app prevents SIM-swap-bypassed OTP attacks.
   3. *Replay of 3DS challenge* — `transactionId` and signed CRes prevent replay.
 - **Top 3 residual threats**:
-  1. *Compromised cardholder device with bypassed biometric* — outside our control; mitigated by behavioural-anomaly post-auth.
+  1. *Compromised cardholder device with bypassed biometric* (Elevation of Privilege) — outside our control; mitigated by behavioural-anomaly post-auth.
   2. *Issuer-side compromise of risk engine* — strict change control; ML drift monitoring.
   3. *Card-scheme fraud at the network level* — outside our control; bound by scheme rules.
 
 ## Operational Runbook
 
 - **Alerts**:
-  - `ACS_AReqLatency_P95`: > 800 ms for > 5 min. Severity: Critical.
+  - Alert: CardAuth3DS2SLABreach — `ACS_AReqLatency_P95`: > 800 ms for > 5 min. Severity: Critical.
   - `Frictionless_Rate_Drop`: < 70% over rolling 1 h. Severity: High (model regression or rule change).
   - `StepUp_ChannelFail`: any step-up channel error rate > 5%. Severity: High.
   - `Decline_Rate_Anomaly`: decline rate > 3× baseline. Severity: High (possible scheme-rule change or fraud campaign).

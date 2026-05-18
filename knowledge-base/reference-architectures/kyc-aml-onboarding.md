@@ -302,7 +302,7 @@ STRIDE: primarily **Spoofing** (deepfakes, stolen IDs) and **Information Disclos
 ## Operational Runbook
 
 - **Alerts**:
-  - `KYC_AutoApprove_Drop`: auto-approve rate falls below threshold (e.g., < 70%). Severity: High (model regression or list update).
+  - Alert: KYCOnboardingFailureRateHigh — `KYC_AutoApprove_Drop`: auto-approve rate falls below threshold (e.g., < 70%). Severity: High (model regression or list update).
   - `KYC_ManualBacklog`: review queue depth > N for > 4 h. Severity: Warning escalating.
   - `KYC_SanctionListLag`: list older than 24 h. Severity: High.
   - `KYC_FraudPatternSpike`: rejection rate from a specific channel > 3× baseline. Severity: High (possible fraud campaign).

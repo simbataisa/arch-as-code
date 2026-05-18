@@ -373,19 +373,19 @@ nfr_acceptance_criteria:
 STRIDE: full-spectrum, primary concerns:
 
 - **Top 3 threats addressed**:
-  1. *Double-payment* on retry — eliminated by PRIN-006 + EIP-024 + ledger idempotency at OFS bridge.
-  2. *Fraud / account takeover* — fraud screening saga step + SEC-005 device-binding + biometric.
+  1. *Double-payment* on retry (Tampering) — eliminated by PRIN-006 + EIP-024 + ledger idempotency at OFS bridge.
+  2. *Fraud / account takeover* (Spoofing) — fraud screening saga step + SEC-005 device-binding + biometric.
   3. *Single-region outage during peak* — multi-region active-active + cell-based blast radius.
 - **Top 3 residual threats**:
-  1. *NAPAS-side error or outage* — outside our control; mitigation: graceful degradation, customer-facing "service degraded" UX, queue-and-retry.
+  1. *NAPAS-side error or outage* (Denial of Service) — outside our control; mitigation: graceful degradation, customer-facing "service degraded" UX, queue-and-retry.
   2. *Insider with both BFF and HSM access* — mitigation: separation of duties; tamper-evident audit.
   3. *Sophisticated client compromise* (root, malware) — mitigation: device-attestation; behavioural anomaly detection on unusual transaction patterns.
 
 ## Operational Runbook
 
 - **Alerts**:
+  - Alert: NAPASPaymentProcessingLatencyHigh — `NAPAS_CircuitOpen`: CB to NAPAS gateway open. Severity: Critical (page payments-domain-owner).
   - `Payment_AuthRate_Anomaly`: rate of declined / failed payments > 3× baseline. Severity: High.
-  - `NAPAS_CircuitOpen`: CB to NAPAS gateway open. Severity: Critical (page payments-domain-owner).
   - `Saga_Pending_Backlog`: pending-investigation queue depth > 100. Severity: Critical.
   - `Ledger_Lag`: ledger consumer lag > 5 s on payment-events topic. Severity: Critical.
   - `DLT_PaymentEvents`: payment-events DLT depth > 0 unaddressed for > 1 h. Severity: Critical.

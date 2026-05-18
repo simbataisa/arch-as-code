@@ -299,7 +299,7 @@ export async function bffPost<T>(path: string, body: unknown): Promise<T> {
 | Ring 0 | RFC 9449 (DPoP) | Demonstrating Proof-of-Possession at the Application Layer | Direct implementation |
 | Ring 1 | PCI-DSS 4.0 §8 (Authentication) | "Strong cryptographic-based authentication for non-console access" | DPoP + cookies + TLS satisfy |
 | Ring 1 | FAPI 2.0 (Financial-grade API) | Token-binding requirements for financial APIs | DPoP is the FAPI-2 sender-constrained token mechanism |
-| Ring 2 | SBV Circular 09/2020 §III ⚠️ (working summary — pending Legal review) | Multi-factor authentication for banking | Biometric + device key + cookie/DPoP satisfies multi-factor expectations |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 ⚠️ (working summary — pending Legal review) | Multi-factor authentication for banking; personal-data protection | Biometric + device key + cookie/DPoP satisfies multi-factor expectations; session data stays within Vietnam-resident infrastructure |
 
 ## Cost / FinOps Notes
 
@@ -317,18 +317,18 @@ export async function bffPost<T>(path: string, body: unknown): Promise<T> {
 STRIDE: addresses **Spoofing**, **Tampering**, **Information Disclosure** primarily.
 
 - **Top 3 threats addressed**:
-  1. *Token theft via XSS* (web) — httpOnly cookie unreadable from JavaScript.
-  2. *Stolen refresh token used on another device* (mobile) — DPoP signature requires private key bound to original device.
-  3. *Cross-site request forgery* — CSRF double-submit cookie + SameSite=Lax.
+  1. *Token theft via XSS* (Information Disclosure) — httpOnly cookie unreadable from JavaScript.
+  2. *Stolen refresh token used on another device* (Spoofing) — DPoP signature requires private key bound to original device.
+  3. *Cross-site request forgery* (Tampering) — CSRF double-submit cookie + SameSite=Lax.
 - **Top 3 residual threats**:
-  1. *Compromised device* — attacker has physical access + biometric. Mitigation: device-attestation extensions; backend behavioural anomaly detection.
+  1. *Compromised device* (Elevation of Privilege) — attacker has physical access + biometric. Mitigation: device-attestation extensions; backend behavioural anomaly detection.
   2. *Phishing into the OAuth consent screen* — user grants consent on attacker-controlled domain. Mitigation: domain consistency enforcement; user education; FIDO2 Webauthn for high-value flows.
   3. *DPoP replay within the proof's iat window* — attacker captures and replays. Mitigation: short `iat` window (60 s); `jti` uniqueness check on the BFF.
 
 ## Operational Runbook
 
 - **Alerts**:
-  - `BFF_CookieRejectionSpike`: rate of session-cookie verification failures up > 3× baseline. Severity: High (possible token-theft attempt).
+  - Alert: BFFTokenValidationFailureRateHigh — `BFF_CookieRejectionSpike`: rate of session-cookie verification failures up > 3× baseline. Severity: High (possible token-theft attempt).
   - `BFF_DpopMismatchSpike`: rate of DPoP cnf-mismatch failures up > 3× baseline. Severity: High.
   - `Auth_RevocationListGrowth`: revocation list growing at unusual rate. Severity: Warning (possible mass-revocation event).
 - **Dashboards**: Grafana — `bff-auth-overview`, `dpop-verification`, `revocation-list`, `auth-anomalies-by-region`.

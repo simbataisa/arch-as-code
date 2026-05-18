@@ -333,16 +333,16 @@ STRIDE: active-active addresses **Denial of Service** and **Operational Excellen
   2. *DDoS targeting one region* — Global Accelerator distributes; affected region drains.
   3. *Planned-maintenance unavailability* — drain one region, deploy, restore; no customer impact.
 - **Top 3 residual threats**:
-  1. *Logical / data corruption replicates* — point-in-time backups (BP-002) and idempotency (PRIN-006) are the mitigation.
-  2. *Both regions affected by single cyber incident* — coordinated nation-state attack. Mitigation: cold backup offshore (with Decree 53 carve-out approval); air-gapped DR plan.
+  1. *Logical / data corruption replicates* (Tampering) — point-in-time backups (BP-002) and idempotency (PRIN-006) are the mitigation.
+  2. *Both regions affected by single cyber incident* (Denial of Service) — coordinated nation-state attack. Mitigation: cold backup offshore (with Decree 53 carve-out approval); air-gapped DR plan.
   3. *Replication lag* causing data divergence — sync replication for T0 mitigates; monitor lag with `replication-lag-budget` alert (BP-007).
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
+  - Alert: MultiRegionFailoverInitiated — `ARC-Failover-Triggered`: Application Recovery Controller engaged a failover. Severity: Critical (incident logged).
   - `Regional-Health-Critical`: < 95% of T0 health checks passing in a region for 60 s. Severity: Critical (PagerDuty).
   - `Replication-Lag-T0`: cross-region replication lag > 1 s. Severity: High.
-  - `ARC-Failover-Triggered`: Application Recovery Controller engaged a failover. Severity: Critical (incident logged).
   - `Cross-Region-Egress-Spike`: > 200% of baseline egress over 1 hour (FinOps anomaly). Severity: Warning.
 - **Dashboards**: Grafana — `multi-region-overview`, `aurora-global-replication-lag`, `mirrormaker-throughput`, `arc-traffic-dial`.
 - **On-call escalation**:
