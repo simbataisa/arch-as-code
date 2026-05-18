@@ -11,6 +11,10 @@ Tier Applicability: T0, T1
 - In-memory aggregation state is lost on pod restart, causing incomplete aggregates to be silently abandoned. A settlement batch that is 95% aggregated when the pod crashes will never be released, and the missing 5% of settlement records causes a ledger imbalance that is difficult to diagnose.
 - Aggregation without a defined completion condition (count-based, condition-based, or time-based) can hold messages indefinitely, blocking downstream processing and violating SLA commitments under BCBS 239 §5 Timeliness and SBV Circular 09/2020 §IV.2.
 
+## Context
+
+Techcombank's settlement, reconciliation, and statement generation workflows all involve collecting multiple partial events before a meaningful downstream action can be taken. Spring Integration's `AggregatingMessageHandler` provides the stateful aggregation layer, backed by MongoDB `MongoDbMessageStore` for durability across pod restarts. The completion condition — count-based (NAPAS batch), condition-based (SWIFT gpi confirmation), or time-based (daily statement at 23:55 VNT) — is pluggable via the `ReleaseStrategy` interface, making this pattern reusable across all aggregation use cases in the platform.
+
 ## Solution
 
 The Aggregator collects individual messages correlated by a business key, buffers them in a durable store, and releases a single composite message when a completion condition is met. If the completion condition is not met within a timeout window, the partial aggregate is released as an incomplete event that triggers compensating action rather than being silently dropped.
@@ -180,6 +184,26 @@ sequenceDiagram
 
 7. **Handle T24 integration for aggregated batch posting.** When the settlement batch is complete, the OFS bridge receives the `SettlementBatch` object and maps it to a single multi-entry OFS command (TELLER batch input). This is more efficient than posting N individual OFS calls for N settlement items, and reduces T24 lock contention during EOD.
 
+## When to Use
+
+- A business action must only occur after all parts of a correlated event sequence have arrived (NAPAS settlement batch, SWIFT multi-leg confirmation, customer statement assembly).
+- Partial-message processing would produce incorrect intermediate states (premature T24 posting before a batch is complete, early statement generation).
+- Pod-restart durability is required — in-memory aggregation loses state; MongoDB-backed `MessageGroupStore` survives restarts.
+
+## When Not to Use
+
+- Each incoming message is independently actionable — use a plain consumer without aggregation (no need for state management overhead).
+- Messages are independent; there is no correlation key — aggregation requires a defined correlation key; without one, use a simple Kafka consumer.
+- Very high-cardinality, high-frequency groups where MongoDB store becomes a write bottleneck — consider Flink Keyed Windows for stream-native aggregation at extreme scale.
+
+## Variants
+
+| Variant | When to prefer | Trade-off |
+|---------|----------------|-----------|
+| Spring Integration Aggregator + MongoDB (this pattern) | Spring ecosystem; durable aggregation; complex release strategies | Requires MongoDB; sequential group release within a pod |
+| Flink Keyed Windows | Very high throughput (millions of events/s); stream-native aggregation; RocksDB state | Flink cluster required; more complex programming model |
+| Redis HSCAN accumulator | Ultra-low latency; simple count-based completion only | No built-in timeout strategy; must implement completion logic manually |
+
 ## Banking Use Cases
 
 1. **NAPAS inbound settlement batch aggregation** — NAPAS sends intra-day settlement files containing hundreds of individual credit/debit items. Each item arrives as a separate Kafka message on `com.techcombank.napas.settlement.item.received`. The Aggregator correlates by `settlementDate + clearingSession + bicCode`, waits for `count == header.totalItems`, and releases a `SettlementBatch` to the reconciliation service. This replaces a file-polling architecture with a real-time streaming equivalent that can process items as they arrive rather than waiting for the full file.
@@ -264,8 +288,8 @@ nfr:
 
 ## Threat Model
 
-- **Correlation key collision** — Two unrelated batches that happen to share the same `batchId` are aggregated together, producing a corrupted combined batch that posts incorrect settlement amounts to the ledger. Mitigation: correlation keys must include both `batchId` and `settlementDate` (preventing cross-day collisions); NAPAS batch IDs are validated against the NAPAS batch header before acceptance; schema validation at EIP-001 layer rejects malformed batch IDs.
-- **Aggregate state injection** — An attacker with write access to the MongoDB aggregate store inserts fraudulent settlement items into an open group, inflating the released batch amount. Mitigation: MongoDB access is restricted to the aggregator service account (network policy + RBAC); the service account credential is rotated monthly via Vault; the T24 OFS bridge validates the released batch total against the NAPAS control sum before posting.
+- **Correlation key collision (Tampering)** — Two unrelated batches that happen to share the same `batchId` are aggregated together, producing a corrupted combined batch that posts incorrect settlement amounts to the ledger. Mitigation: correlation keys must include both `batchId` and `settlementDate` (preventing cross-day collisions); NAPAS batch IDs are validated against the NAPAS batch header before acceptance; schema validation at EIP-001 layer rejects malformed batch IDs.
+- **Aggregate state injection (Elevation of Privilege)** — An attacker with write access to the MongoDB aggregate store inserts fraudulent settlement items into an open group, inflating the released batch amount. Mitigation: MongoDB access is restricted to the aggregator service account (network policy + RBAC); the service account credential is rotated monthly via Vault; the T24 OFS bridge validates the released batch total against the NAPAS control sum before posting.
 - **Timeout exploitation** — An attacker deliberately suppresses one item in a batch, causing the timeout to fire and the partial batch to route to the DLT — denying service for the affected settlement session. Mitigation: incomplete batch alerts fire within 5 minutes; the triage team investigates; NAPAS provides a re-transmission mechanism for missing items; partial-batch DLT entries are retained for 30 days for forensic analysis.
 - **Duplicate item injection** — The same settlement item is published to the inbound channel twice (producer retry), causing the aggregator to count N+1 items and either over-release (if count-based) or produce a corrupted batch. Mitigation: the aggregator applies [EIP-024 Idempotent Receiver](idempotent-receiver.md) logic on each incoming item using `sequenceNumber` as the idempotency key within a group; duplicate items within a group are rejected before the correlation store upsert.
 - **MongoDB store unavailability** — If MongoDB is unavailable, the aggregator cannot persist incoming items. Messages accumulate on the Kafka inbound topic (consumer lag grows). Mitigation: the aggregator pod fails fast on MongoDB write failure (throws exception, message remains on Kafka topic); consumer lag alert fires; MongoDB HA (replica set) provides automatic failover in < 30 seconds.
@@ -274,7 +298,7 @@ nfr:
 
 ## Operational Runbook
 
-1. **Alert: Aggregator_TimeoutRate_High** — A surge in timed-out groups (> 1% of total) indicates systematic incomplete batches from an upstream producer. Open Grafana `aggregator-overview`. Check `aggregator_groups_timed_out_total` by `correlationKeyPrefix` to identify the affected use case. Inspect the DLT for the incomplete batch payload; examine the `received` vs `expected` counts. Contact the upstream producer team (NAPAS operations or SWIFT gateway team) to investigate missing items.
+1. **Alert: Aggregator_TimeoutRate_High** — Fires when timed-out groups exceed 1% of total over 10 minutes. A surge in timed-out groups (> 1% of total) indicates systematic incomplete batches from an upstream producer. Open Grafana `aggregator-overview`. Check `aggregator_groups_timed_out_total` by `correlationKeyPrefix` to identify the affected use case. Inspect the DLT for the incomplete batch payload; examine the `received` vs `expected` counts. Contact the upstream producer team (NAPAS operations or SWIFT gateway team) to investigate missing items.
 
 2. **Alert: Aggregator_GroupAge_Exceeded** — A specific group has been open for more than 2× its configured timeout, suggesting the timeout strategy failed to fire (e.g., MongoDB TTL index rebuild paused it). Identify the group using `db.payment_aggregate_groups.find({ lastModified: { $lt: new Date(Date.now() - 2*timeout) } })`. Manually trigger release or delete as appropriate after confirming with the business owner. Investigate why the timeout strategy did not fire.
 

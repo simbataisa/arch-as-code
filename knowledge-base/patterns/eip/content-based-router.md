@@ -11,6 +11,10 @@ Tier Applicability: T0, T1
 - Compliance requirements mandate that high-value transactions (≥ VND 500M) are routed to a compliance-review path before execution. Embedding this threshold check inside individual services makes threshold changes a multi-team coordinated release instead of a single-config update.
 - Silent routing failures — where a message matches no routing rule — cause the message to be dropped without any observable signal, violating BCBS 239 §6 Completeness and creating potential ledger gaps.
 
+## Context
+
+Techcombank's payment hub receives a single inbound event stream (`com.techcombank.payments.transaction.initiated`) from mobile, internet banking, and T24 OFS Bridge. Downstream rails are heterogeneous: NAPAS for VND domestic, SWIFT gpi for FX, card networks for card payments, and T24 direct-posting for internal book transfers. A Content-Based Router (EIP-005) sits between the inbound channel and the rail-specific channels, centralising all routing predicates in one audited, versioned, testable component. This pattern is implemented as a stateless Spring Integration `@Router` bean — no side effects, no database calls (except a cached FX rate lookup), making it independently scalable and testable.
+
 ## Solution
 
 A Content-Based Router (CBR) sits between the inbound Message Channel and the downstream handler channels. It inspects the message payload and/or headers and routes each message to exactly one downstream channel based on a set of versioned, observable routing rules. An explicit default route catches any message that matches no rule and routes it to the Dead Letter Channel (EIP-025) with a `ROUTING_UNMATCHED` exception — no silent drops.
@@ -180,6 +184,26 @@ Rules are evaluated in priority order. The compliance-threshold rule (amount ≥
 
 6. **Version the routing rule set.** Store routing rules in a version-controlled configuration file. When rules change, emit a `RoutingRuleChangedEvent` to the audit log channel with the old and new rule sets and the approver's identity. This satisfies ISO 27001 change management controls.
 
+## When to Use
+
+- A single inbound message type must be dispatched to one of several downstream handlers based on message content (currency, amount, transaction type, message type).
+- Routing logic is a regulatory or compliance requirement (e.g., high-value threshold escalation) that must be centralised, versioned, and auditable rather than duplicated across consumers.
+- New payment rails or handling paths are added frequently — the CBR pattern allows adding a new routing rule without modifying any downstream service.
+
+## When Not to Use
+
+- All messages have the same destination (use a plain [EIP-001 Message Channel](message-channel.md) without a router).
+- Routing must consider cross-message state or history (use [EIP-017 Process Manager](process-manager.md) for stateful routing decisions).
+- Messages fan out to multiple destinations simultaneously (use [EIP-003 Publish-Subscribe Channel](publish-subscribe-channel.md); CBR routes to exactly one destination per message).
+
+## Variants
+
+| Variant | When to prefer | Trade-off |
+|---------|----------------|-----------|
+| Spring Integration @Router (this pattern) | Stateless predicate routing; easily unit-tested; integrates with Kafka channels | Requires Spring Integration dependency; routing logic in Java (not externalised rules engine) |
+| Apache Camel Choice/When | Complex routing expressions; DSL-driven routing rules; polyglot environments | Heavier runtime; less idiomatic for Spring Boot projects |
+| Kafka Streams Branch | Routing within a Kafka Streams topology; materialise results into separate output topics | Kafka Streams learning curve; harder to unit-test predicates in isolation |
+
 ## Banking Use Cases
 
 1. **Multi-currency payment rail selection** — A retail customer initiates a USD 5,000 wire transfer via Techcombank's mobile app. The CBR receives the `transaction.initiated` event, converts USD 5,000 to VND equivalent (≈ VND 125M), finds it below the 500M threshold, identifies currency = USD, and routes to the SWIFT rail channel. A second customer sends VND 10,000 to a friend — same inbound channel, routed to NAPAS. The router handles both with a single stateless predicate chain; neither the NAPAS service nor the SWIFT service sees the other's messages.
@@ -256,8 +280,8 @@ nfr:
 
 ## Threat Model
 
-- **Routing rule tampering** — An insider modifies the routing threshold configuration to route large transactions below the compliance threshold, bypassing AML screening. Mitigation: routing configuration is stored in version-controlled Git (GitOps); changes require a pull request approved by the Security Architecture team; Spring Cloud Config is read-only for the application service account; config changes emit an audit event.
-- **FX rate manipulation for threshold evasion** — An attacker manipulates the FX rate service to inflate the VND equivalent of a foreign-currency transaction below the 500M threshold. Mitigation: the FX rate cache has a 60-second TTL sourced from the treasury system (authenticated mTLS); routing uses a slightly conservative FX rate (mid-rate rounded up) to avoid edge-case evasion; compliance review also applies a server-side threshold check independent of the router.
+- **Routing rule tampering (Tampering)** — An insider modifies the routing threshold configuration to route large transactions below the compliance threshold, bypassing AML screening. Mitigation: routing configuration is stored in version-controlled Git (GitOps); changes require a pull request approved by the Security Architecture team; Spring Cloud Config is read-only for the application service account; config changes emit an audit event.
+- **FX rate manipulation for threshold evasion (Spoofing)** — An attacker manipulates the FX rate service to inflate the VND equivalent of a foreign-currency transaction below the 500M threshold. Mitigation: the FX rate cache has a 60-second TTL sourced from the treasury system (authenticated mTLS); routing uses a slightly conservative FX rate (mid-rate rounded up) to avoid edge-case evasion; compliance review also applies a server-side threshold check independent of the router.
 - **Default-route abuse as data exfiltration** — An attacker crafts messages that match no routing rule, flooding the DLT with payment events containing PII. Mitigation: DLT topic access is restricted to the triage team (Kafka ACLs); PII in DLT entries is subject to the same data classification controls as the source topic; DLT entries are encrypted at rest.
 - **Routing decision log replay** — Routing logs containing `transactionId`, `amountVnd`, and `currency` are forwarded to the SIEM. A compromised SIEM could expose routing patterns. Mitigation: `customerId` and `accountNumber` are masked in logs (last 4 chars only); raw amounts are logged only at DEBUG level in production (INFO logs show amount-tier label, not raw amount).
 - **Unmatched message silent drop** — Before the `defaultOutputChannel` was added, unmatched messages were silently discarded by Spring Integration. Mitigation: the `@Router(defaultOutputChannel = "paymentDltChannel")` annotation ensures every unmatched message is observable; `CBR_Unmatched_Rate_High` alert fires immediately.

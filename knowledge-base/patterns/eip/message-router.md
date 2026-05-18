@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Silent routing failures — where a `pacs.008` arrives with an unrecognised BIC prefix or an unsupported destination country code — must surface as observable DLT entries with a `ROUTING_UNMATCHED` code, not as message drops. BCBS 239 §6 requires completeness; any dropped payment event is a regulatory data-quality defect.
 - Throughput during NAPAS end-of-day settlement windows reaches 8,000 TPS. The router must scale horizontally without shared state so that adding pods increases throughput linearly up to the Kafka partition limit.
 
+## Context
+
+Techcombank's ISO 20022 payment hub receives `pacs.008` CustomerCreditTransfer messages on a single inbound Kafka topic and must route each to the correct settlement rail (NAPAS, SWIFT, T24 direct-post). The Message Router sits between the inbound topic and the rail-specific outbound topics, keeping each rail handler completely decoupled from routing logic. It extends EIP-005 Content-Based Router with the full ISO 20022 field-inspection capability needed for multi-rail financial messaging.
+
 ## Solution
 
 A Message Router sits on the inbound `pacs.008` Kafka topic, inspects each message's destination BIC and routing-number fields, and publishes it to exactly one downstream topic corresponding to the target settlement rail. An explicit default route publishes any unmatched message to the Dead Letter Channel (EIP-025) with reason code `ROUTING_UNMATCHED`.
@@ -207,18 +211,18 @@ graph LR
 
 6. **Validate the message against the ISO 20022 `pacs.008.001.10` schema before routing.** A malformed message should be rejected to the DLT with reason `SCHEMA_INVALID` before routing logic runs. Use the Confluent Schema Registry Avro validator registered at `pacs008SchemaId` — the router never routes a message it cannot deserialise.
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A single inbound channel receives messages destined for multiple distinct downstream processors and the routing decision is based on message content or headers.
 - Adding new destination channels must not require changes to existing downstream handlers.
 - Routing decisions must be centrally audited and observable (compliance, BCBS 239).
 - The router predicate is a pure function of message content — no cross-message state is needed to make the decision.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The routing decision requires querying external systems per message (latency kills throughput at 8,000 TPS); cache reference data locally instead.
-- You need to fan-out a single message to multiple recipients simultaneously — use Publish-Subscribe Channel (EIP-006) or Scatter-Gather (EIP-015) instead.
-- Processing steps must be executed in a defined sequence on the same message — use Routing Slip (EIP-016) or Process Manager (EIP-019) instead.
+- You need to fan-out a single message to multiple recipients simultaneously — use Publish-Subscribe Channel (EIP-003) or Scatter-Gather (EIP-015) instead.
+- Processing steps must be executed in a defined sequence on the same message — use Routing Slip (EIP-016) or Process Manager (EIP-017) instead.
 - The number of destination channels is one — a router with a single route is just unnecessary indirection.
 
 ## Variants & Trade-offs

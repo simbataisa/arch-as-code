@@ -13,6 +13,10 @@ Tier Applicability: T0, T1, T2
 - T24 Core Banking fires OFS `ACCOUNT.UPDATE` events synchronously in its batch cycle; downstream consumers with different SLAs (real-time notification vs. overnight regulatory reporting) must decouple from T24's batch cadence.
 - Without durable fan-out, a downstream system that is temporarily unavailable during a high-value transaction event will miss it permanently — an unacceptable gap under BCBS 239 §6 Completeness and SBV audit requirements.
 
+## Context
+
+Techcombank's platform fires many domain events that multiple independent services must react to: `ACCOUNT.BALANCE.CHANGED`, `TRANSACTION.POSTED`, `KYC.CUSTOMER.VERIFIED`, and `FRAUD.ALERT.RAISED` are all candidates for fan-out. Kafka's consumer group model implements this natively: one topic, N independent consumer groups, each with its own committed offset and independent scaling. This avoids the point-to-point limitation (EIP-002) where each message goes to only one consumer, and avoids tight producer-consumer coupling where the producer must know all consumers. Retention (7–30 days) allows late-joining or recovering subscribers to replay missed events without requiring the producer to re-publish.
+
 ## Solution
 
 A Publish-Subscribe Channel delivers each published message to all registered subscriber groups independently. In Techcombank's stack, a single Kafka topic with multiple independent consumer groups implements the pattern: each consumer group maintains its own offset, processes at its own pace, and fails or scales without affecting other groups.
@@ -310,8 +314,8 @@ nfr:
 
 STRIDE: Spoofing, Information Disclosure, Denial of Service addressed; Repudiation partially addressed.
 
-- **Subscriber impersonation** — A rogue service adopts the `fraud-engine` group ID and diverts fraud evaluation events, causing fraudulent transactions to go unscreened. Mitigation: Kafka ACLs restrict `group:fraud-engine` membership to the fraud-engine service account (mTLS client certificate); group ID squatting is logged and alerts on unexpected group member join events.
-- **Event eavesdropping across subscriber groups** — A subscriber for the Analytics Pipeline (lower trust level) reads raw account balance data intended for the Ledger Poster. Mitigation: field-level encryption of sensitive fields (account number, balance delta) within the Avro payload; Analytics subscriber receives an encrypted payload and holds only the analytics decryption key, not the ledger key.
+- **Subscriber impersonation (Spoofing)** — A rogue service adopts the `fraud-engine` group ID and diverts fraud evaluation events, causing fraudulent transactions to go unscreened. Mitigation: Kafka ACLs restrict `group:fraud-engine` membership to the fraud-engine service account (mTLS client certificate); group ID squatting is logged and alerts on unexpected group member join events.
+- **Event eavesdropping across subscriber groups (Information Disclosure)** — A subscriber for the Analytics Pipeline (lower trust level) reads raw account balance data intended for the Ledger Poster. Mitigation: field-level encryption of sensitive fields (account number, balance delta) within the Avro payload; Analytics subscriber receives an encrypted payload and holds only the analytics decryption key, not the ledger key.
 - **Fan-out amplification (DoS)** — A burst of balance events (e.g., EOD batch posting) overwhelms all 4 subscriber groups simultaneously. Mitigation: per-consumer-group rate limiting via `max.poll.records`; KEDA independent autoscaling per group; subscriber SLA monitoring with per-group lag alerts; EOD batch event bursts are predictable and pre-scaled.
 - **Residual — Subscriber group offset tampering** — An administrator with broker access resets a consumer group's offset, causing replay or skipping of events. Mitigation: GitOps-only offset management; offset reset requires a Change Request with dual approval; alert on unexpected `__consumer_offsets` changes for T0 groups.
 - **Residual — Producer masquerade** — A service with network access but without the `account-service` Kafka service account attempts to inject forged balance change events. Residual risk after mTLS ACL enforcement is low but not zero; mitigate with event signing (HMAC on payload using a per-producer key) on T0 channels.

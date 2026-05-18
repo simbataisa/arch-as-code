@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Standard Publish-Subscribe fan-out (EIP-003) is inappropriate for commands — commands have one intended target and represent an imperative action, whereas events represent a fact that may interest many parties.
 - Horizontal scaling of the Payment Processor must not break exclusivity; adding more processor instances must only increase throughput, not create duplicate delivery.
 
+## Context
+
+In Techcombank's payment hub, fund-transfer commands (debit instructions, NAPAS credit transfers, T24 OFS posting events) must be processed by exactly one Payment Processor instance, never duplicated. Kafka implements the Point-to-Point guarantee via consumer groups: all Payment Processor pods share the same `group.id`, and Kafka's partition assignment ensures each partition is exclusively owned by one group member at a time. This is paired with [EIP-024 Idempotent Receiver](idempotent-receiver.md) as a defence-in-depth layer against any edge-case duplicate delivery (e.g., at-least-once delivery on pod crash before offset commit).
+
 ## Solution
 
 A Point-to-Point Channel guarantees that each message published to the channel is delivered to exactly one consumer instance, even when multiple instances of the same consumer service are running. In Techcombank's stack, this is realised with a Kafka topic where all processor instances share the same `group.id` — Kafka's partition assignment mechanism ensures each partition is owned by exactly one group member at a time.
@@ -332,8 +336,8 @@ nfr:
 
 STRIDE: Spoofing, Tampering, Repudiation, Denial of Service addressed; Elevation of Privilege partially addressed.
 
-- **Fraudulent command injection** — An attacker produces a forged `FundTransferCommand` to the payment channel with a manipulated amount or account. Mitigation: Kafka ACLs restrict produce rights to the `payment-service` service account only; mTLS client certificate validates service identity; Avro schema validation rejects structurally malformed commands.
-- **Replay of expired payment commands** — An attacker with broker read access replays a historical debit instruction. Mitigation: Redis idempotency store with 48-hour TTL rejects replayed `EndToEndId` values; ISO 20022 `CreationDateTime` validated to be within ±5 minutes of server time before idempotency check; Kafka ACLs restrict consumer group read access to the `payment-processor` service account.
+- **Fraudulent command injection (Spoofing)** — An attacker produces a forged `FundTransferCommand` to the payment channel with a manipulated amount or account. Mitigation: Kafka ACLs restrict produce rights to the `payment-service` service account only; mTLS client certificate validates service identity; Avro schema validation rejects structurally malformed commands.
+- **Replay of expired payment commands (Tampering)** — An attacker with broker read access replays a historical debit instruction. Mitigation: Redis idempotency store with 48-hour TTL rejects replayed `EndToEndId` values; ISO 20022 `CreationDateTime` validated to be within ±5 minutes of server time before idempotency check; Kafka ACLs restrict consumer group read access to the `payment-processor` service account.
 - **Partition starvation (DoS)** — A rogue producer floods specific partition keys, overwhelming partitions assigned to legitimate processors. Mitigation: Kafka broker-level quota configuration (`producer_byte_rate` per service account) limits maximum throughput per producer; KEDA scales consumers if lag builds regardless of cause; rate limiting at the API Gateway layer upstream.
 - **Residual — Insider threat on broker** — A privileged Kafka admin with broker access can read payment command payloads. Mitigate with field-level encryption for PII (account numbers) within the Avro payload; this is a defence-in-depth measure beyond ACL enforcement.
 - **Residual — Consumer group hijacking** — A misconfigured service uses the `payment-processor` group ID, stealing partition assignments. Mitigate with Kafka ACLs restricting `group:payment-processor` membership to the payment-processor service account; alert on unexpected group member join events.

@@ -13,6 +13,10 @@ Tier Applicability: T1, T2
 - Enrichment failures must be treated as first-class faults: a missing BIC results in a NAPAS hard-reject, so a partially-enriched message that silently omits a required field is worse than a hard failure that triggers a retry or dead-letter.
 - Regulatory traceability (BCBS 239) requires that the source of every enriched field is recorded — which service provided the BIC, at what timestamp, from which data version — so the enrichment step must write provenance metadata into message headers.
 
+## Context
+
+Techcombank's payment processing pipeline requires enrichment at multiple points: a `PaymentInitiatedEvent` carrying only `customerId` and `amount` must be enriched with the customer's risk tier (from Customer Profile Service), the destination BIC (from Reference Data Master), and an AML fraud score (from the Fraud Engine) before it can be routed and cleared. Spring Integration's `@Enricher` annotation wraps each enrichment call; Resilience4j circuit breakers and Caffeine caches make each upstream dependency failure-tolerant. Enrichment is stateless and side-effect-free from the perspective of the message payload — the upstream services own the authoritative data.
+
 ## Solution
 
 A Content Enricher intercepts a message on the input channel, fetches supplementary data from one or more authoritative sources keyed on information already in the message, merges the additional data into an augmented copy of the message, and emits the enriched message on the output channel — leaving the original message immutable.
@@ -266,15 +270,15 @@ public class EnrichmentProvenanceHeaderEnricher {
 }
 ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - The consuming system requires fields that are authoritative in a different bounded context (e.g., BIC lives in a reference-data service, not in the payments domain).
 - Enrichment data changes infrequently enough to benefit from caching, reducing load on upstream services.
 - Compliance mandates (AML scoring, BCBS 239 lineage) require enrichment to happen at a defined, auditable integration point rather than scattered across consumers.
 - Multiple downstream consumers all need the same enriched fields — enrich once at the integration layer rather than in each consumer.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The enrichment lookup itself is a business decision (e.g., "should we block this payment based on the risk score?"). That is routing logic — separate it from enrichment.
 - Enrichment source availability is so low that it would make the enricher a synchronous bottleneck; consider event-driven enrichment (publish-subscribe) or eventual enrichment instead.
 - The additional data is already present in the message and only needs reshaping — use Message Translator (EIP-006) instead.
@@ -355,8 +359,8 @@ data_lineage:
 
 | Threat | Vector | Mitigation |
 |---|---|---|
-| Enrichment source returning stale or tampered BIC | Compromised Redis cache | Cache values are signed with HMAC on write; validation on read; TTL limits exposure window |
-| AML score bypass | FraudEngine unavailable → enricher uses cached/default score | Zero-default policy: unavailable FraudEngine routes to manual-review queue, never uses 0-risk default |
+| Enrichment source returning stale or tampered BIC (Tampering) | Compromised Redis cache | Cache values are signed with HMAC on write; validation on read; TTL limits exposure window |
+| AML score bypass (Elevation of Privilege) | FraudEngine unavailable → enricher uses cached/default score | Zero-default policy: unavailable FraudEngine routes to manual-review queue, never uses 0-risk default |
 | Information leakage via enriched events | Enriched event contains PII (full name, IBAN) on topics accessible to analytics consumers | Apply Content Filter (EIP-008) on the analytics fan-out branch before crossing data-residency boundary |
 | SSRF via enrichment endpoint injection | Attacker injects a crafted accountId that resolves to an internal service URL | All upstream clients use allow-listed base URLs from Spring config; account IDs are UUID-validated before use in URL path |
 | Enrichment amplification DoS | High-rate event flood causes thundering herd on upstream services | Resilience4j rate limiter on each upstream client; Kafka consumer lag back-pressure |
@@ -365,7 +369,7 @@ data_lineage:
 
 - **Health check:** `GET /actuator/health/enrichment` reports status of each upstream (CustomerProfileService, BICDirectory, FraudEngine) as sub-components.
 - **Cache warm-up:** On service startup, pre-load top-1000 most-frequent BIC codes from reference-data service into Redis to avoid cold-start miss storm.
-- **FraudEngine degraded procedure:** Toggle feature flag `enrichment.fraud-score.enabled=false` to route directly to manual-review queue; restore flag once FraudEngine recovers. Alert SoC team.
+- **Alert: EnrichmentUpstreamDegraded** — Toggle feature flag `enrichment.fraud-score.enabled=false` to route directly to manual-review queue when FraudEngine p99 latency exceeds 500 ms; restore flag once FraudEngine recovers and notify the SoC team.
 - **DLQ triage:** Consume `payment.enrichment.dlq`; inspect `X-Enrichment-Error` header; common causes: CustomerProfileService 404 (account closed), FraudEngine timeout, IBAN validation failure. Replay after upstream recovery.
 - **Cache eviction investigation:** If Redis hit rate drops below 70%, check `INFO keyspace` for unexpected TTL changes or eviction policy (`maxmemory-policy`) misconfiguration.
 

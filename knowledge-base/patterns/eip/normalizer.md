@@ -12,6 +12,10 @@ Tier Applicability: T0, T1
 - Regulatory reporting to SBV requires amounts expressed in VND with a consistent precision of two decimal places. SWIFT MT103 encodes amounts without decimal separators; NAPAS XML uses a comma-decimal; OFS strings embed amounts in positional fields. Direct consumption by the reporting service forces business logic into a compliance-critical component that should remain format-agnostic.
 - Without a single normalisation point, a format-specific bug (e.g., an off-by-one in the MT103 amount parser) proliferates silently across all consumers. A Normalizer centralises the defect surface to one translator per format, making regression testing tractable.
 
+## Context
+
+Techcombank receives payment instructions from three sources with incompatible formats: T24 OFS proprietary format, SWIFT MT103 legacy text, and ISO 20022 pacs.008 XML. Before any downstream service (fraud screening, ledger posting, regulatory reporting) can act on these instructions, they must be converted to a single `PaymentInstruction` canonical domain object. The Normalizer pattern applies a router (EIP-004) to identify the format and dispatches to a dedicated translator (EIP-006) for each format — keeping format-specific parsing isolated and independently versioned.
+
 ## Solution
 
 A Normalizer is composed of a router that identifies the inbound format and dispatches each message to the appropriate format-specific translator; each translator converts its input into a single canonical `PaymentInstruction` domain object. All downstream services consume only the canonical form from a shared Kafka topic.
@@ -246,15 +250,15 @@ graph LR
        description: "Check if upstream {{ $labels.format }} schema changed."
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - Two or more source formats must feed the same downstream consumers.
 - Downstream consumers are format-agnostic and should remain so.
 - Compliance or audit requirements demand a single canonical record regardless of source.
 - Format evolution of one wire protocol must not require a release of all downstream services.
 
-**Do NOT use when:**
+## When Not to Use
+
 - Only one format exists and the probability of adding another is negligible — the additional indirection costs deployment complexity.
 - The canonical form would lose information that some downstream services need — in that case, enrich the canonical form rather than carrying multiple formats forward.
 - Downstream services need to react to format-specific metadata (e.g., NAPAS sequence number for settlement reconciliation) — expose these as typed optional fields on the canonical object rather than skipping normalisation.
@@ -332,9 +336,9 @@ nfr:
 
 ## Threat Model Summary
 
-- **Amount mis-mapping (HIGH risk)**: A translator bug maps the MT103 `:32A:` amount field incorrectly (e.g., treating the cents digits as whole units). Mitigation: amount-specific unit tests with golden-file test vectors for each format; canary comparison of normalised amount vs. source amount for all VND-denominated messages.
+- **Amount mis-mapping — Tampering (HIGH risk)**: A translator bug maps the MT103 `:32A:` amount field incorrectly (e.g., treating the cents digits as whole units). Mitigation: amount-specific unit tests with golden-file test vectors for each format; canary comparison of normalised amount vs. source amount for all VND-denominated messages.
 - **Identifier collision across formats**: Two formats use the same identifier namespace (e.g., NAPAS `MaThuChiId` and OFS `TransactionRef` both happen to produce the same string). The `paymentId` must be namespaced by source format: `NAPAS-<MaThuChiId>`, `OFS-<TransactionRef>`. This is enforced in the translator and validated on the canonical topic by a consumer-side check.
-- **Format injection attack**: A malicious actor crafts a message with `payment-format: T24_OFS` header but delivers a NAPAS XML payload, causing the OFS translator to parse XML as positional OFS fields and produce a corrupt `PaymentInstruction`. Mitigation: each translator validates the payload structure before field extraction; a format mismatch exception routes the message to the DLT with `TRANSLATOR_FORMAT_MISMATCH` exception class.
+- **Format injection attack (Spoofing)**: A malicious actor crafts a message with `payment-format: T24_OFS` header but delivers a NAPAS XML payload, causing the OFS translator to parse XML as positional OFS fields and produce a corrupt `PaymentInstruction`. Mitigation: each translator validates the payload structure before field extraction; a format mismatch exception routes the message to the DLT with `TRANSLATOR_FORMAT_MISMATCH` exception class.
 - **Schema drift without translator update**: NAPAS releases a new version of the IBFT XML schema, adding a mandatory field. The existing translator silently ignores the field, producing an incomplete canonical record. Mitigation: strict XML schema validation against the registered XSD before translation; a failed validation routes to DLT; alerts fire on DLT depth growth.
 - **PII in source headers map**: The `sourceHeaders` field on `PaymentInstruction` carries Kafka metadata but must not carry raw payload fragments that include account numbers or names. Translators are reviewed to ensure `sourceHeaders` contains only offsets, partition numbers, and timestamps.
 

@@ -12,6 +12,10 @@ Tier Applicability: T0, T1
 - Kafka's offset model provides message-level commit tracking. Committing a batch file as a single Kafka message forfeits this: if the consumer crashes mid-batch, the entire file must be re-processed. Splitting to individual events enables fine-grained at-least-once delivery with deduplication via the Idempotent Receiver (EIP-024).
 - Regulatory reporting under BCBS 239 Principle 6 requires that each individual transaction be traceable as a discrete data point with its own provenance, timestamp, and identifier. A batch-level record does not satisfy this traceability requirement at the transaction level.
 
+## Context
+
+Techcombank's T24 end-of-day batch process produces composite messages containing hundreds to thousands of individual transaction records in a single batch envelope. Downstream services — the Ledger Poster, the Fraud Engine, and the Regulatory Reporting pipeline — cannot process batch envelopes; they each need individual records at their own pace. The Splitter sits between the T24 batch channel and the per-record consumer channels, exploding composite messages into N independent events and publishing each to Kafka partitioned by `customerId` for downstream ordered processing.
+
 ## Solution
 
 A Splitter receives the composite T24 EOD batch message, iterates over its records, and publishes each record as an independent Kafka event on a downstream topic. Downstream consumers subscribe to the per-record topic and process each event individually, at their own pace and with independent scaling.
@@ -238,15 +242,15 @@ graph LR
          enable-idempotence: true
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A composite message (batch file, bulk payload, aggregate envelope) contains multiple logically independent records that must be processed separately.
 - Downstream consumers need to scale independently and cannot process aggregate messages.
 - Partial failure tolerance is required — one bad record must not block all others.
 - Kafka offset commits should be at the individual record level, not at the batch level.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The composite message is inherently atomic — e.g., a multi-leg financial transaction where all legs must succeed or fail together. Use the Saga pattern (INT-001) instead.
 - The total number of records per composite is very small (e.g., ≤ 5) and downstream consumers can trivially iterate themselves — the Splitter overhead is not justified.
 - Record ordering within the batch must be preserved globally across all consumers — Kafka's partition-level ordering guarantees are sufficient only within a partition. Partition by a stable key (account number) to preserve per-account ordering.

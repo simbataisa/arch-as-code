@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Retaining large payloads on the Kafka topic beyond the minimum processing window wastes expensive SSD-backed broker storage; the payloads themselves belong in object storage with independent lifecycle policies (S3 Glacier tiering after 30 days, deletion after regulatory retention period expires).
 - Without a claim-check indirection, any single large payload entering the bus degrades throughput for all consumers on the same partition, creating a head-of-line blocking problem that violates the SLA for real-time NAPAS payment events sharing the cluster.
 
+## Context
+
+Techcombank's KYC pipeline must transmit large documents (passport scans, utility bills — up to 15 MB each) through the same event bus used for sub-KB payment events. Kafka's practical message size limit for a shared cluster is 1 MB. The Claim Check pattern decouples document storage (S3 with KMS encryption) from event routing (Kafka with a lightweight token). Similarly, the Fraud Engine computes 512-dimension ML feature vectors per transaction that would inflate every Kafka message by 4 KB — stored in Redis with a 300-second TTL and retrieved only by the scoring consumer that needs them.
+
 ## Solution
 
 A Claim Check separates a large message payload from its routing envelope: the sender stores the payload in a durable data store (S3 for documents, Redis for ephemeral ML vectors), replaces it with a lightweight reference token (the "claim check") in the message, publishes the token-carrying message to the bus, and authorised receivers exchange the token for the original payload when they are ready to process it.
@@ -260,15 +264,15 @@ public class KycDocumentOutboxRelay {
 }
 ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - The payload exceeds the message broker's practical size threshold (typically 1 MB for Kafka in a shared cluster).
 - The payload must be retained under a different lifecycle policy than the event stream (e.g., KYC documents retained 10 years; payment events retained 7 days on Kafka).
 - Access to the payload must be controlled independently from access to the routing event (IAM prefix policies on S3 per document type; consumer groups on Kafka per business function).
 - The payload is needed by some consumers but not all — consumers that only need routing metadata skip the retrieval step entirely, saving bandwidth.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The payload is small and self-contained (under 50 KB for infrequent messages, under 10 KB for high-throughput topics) — the indirection overhead exceeds the benefit.
 - The payload store introduces a single point of failure that the original message bus did not have; if the payload store is less reliable than Kafka, claim-check makes the system less reliable, not more.
 - Message ordering is critical and the payload retrieval step introduces non-deterministic latency that breaks ordering guarantees.
@@ -350,8 +354,8 @@ observability:
 
 | Threat | Vector | Mitigation |
 |---|---|---|
-| Token enumeration / payload access | Attacker guesses s3Key (if not random) | s3Key includes a UUID component; bucket has no public access; GetObject requires IAM role or pre-signed URL |
-| Pre-signed URL theft | URL intercepted in transit or logged | Pre-signed URLs expire in 300 s; HTTPS only; URLs must not appear in application logs (log sanitiser strips `X-Amz-Signature` parameter) |
+| Token enumeration / payload access (Information Disclosure) | Attacker guesses s3Key (if not random) | s3Key includes a UUID component; bucket has no public access; GetObject requires IAM role or pre-signed URL |
+| Pre-signed URL theft (Spoofing) | URL intercepted in transit or logged | Pre-signed URLs expire in 300 s; HTTPS only; URLs must not appear in application logs (log sanitiser strips `X-Amz-Signature` parameter) |
 | S3 write-after-publish race | Consumer receives event before payload is committed to S3 | Transactional outbox: Kafka event published only after outbox relay confirms S3 ETag is stored |
 | Redis token replay | Attacker obtains Redis key and retrieves feature vector | `getAndDelete` pattern: token consumed on first retrieval; duplicate retrieval raises `ClaimCheckExpiredException` |
 | Cross-customer prefix access | Consumer IAM role has overly broad GetObject permission | IAM condition: `s3:prefix` restricted to consumer's own service prefix; verified in IaC policy unit tests |
@@ -361,7 +365,7 @@ observability:
 
 - **Health check:** `GET /actuator/health/claim-check` verifies S3 HeadBucket reachability and Redis ping.
 - **Token-expired response:** If consumers report `ClaimCheckExpiredException` on Redis tokens, verify scoring pipeline is processing within the 300 s TTL; scale fraud scoring consumer group if lagging.
-- **S3 403 alert:** Verify IAM role policy was not modified by a recent Terraform apply; check CloudTrail for policy change events.
+- **Alert: ClaimCheckS3AccessDenied** — S3 403 error on payload retrieval. Verify IAM role policy was not modified by a recent Terraform apply; check CloudTrail for policy change events.
 - **Orphan cleanup:** Monitor `eip.claim_check.orphaned_objects` daily; rising count means outbox relay is degraded — check `kyc_document_outbox.published = false` count in RDS.
 - **KMS rotation:** Annual rotation is automatic; verify via CloudTrail `RotateKey` event.
 - **RTBF deletion:** Delete S3 object versions for the customer prefix, publish a Kafka tombstone event, delete outbox entries. Coordinate with Legal for retention override.

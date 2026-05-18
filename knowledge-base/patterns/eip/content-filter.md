@@ -13,6 +13,10 @@ Tier Applicability: T1, T2
 - Rapid schema evolution means new upstream fields may inadvertently introduce PII into existing subscriptions; an allowlist-first filter excludes unknown fields by default.
 - Filtered events must be auditable: compliance teams must confirm that a field was present and removed, without being able to reconstruct its value from the filtered output.
 
+## Context
+
+Techcombank's analytics pipeline and external partner APIs must receive payment event data that has had PII (NRIC, account numbers, phone) removed before delivery. The Content Filter sits between the internal Kafka topic (containing full PII) and the downstream analytics S3 sink or partner API. It uses an allowlist-first approach — only explicitly permitted fields pass through — ensuring that newly added PII fields are blocked by default until explicitly allowed. The filter rule set is stored in Spring Cloud Config and refreshable via `@RefreshScope` without pod restart.
+
 ## Solution
 
 A Content Filter receives a message, applies a deterministic allowlist or blocklist transformation that removes specified fields or redacts their values, and emits a sanitised copy of the message on the output channel — without altering the original message or any fields not in scope.
@@ -284,15 +288,15 @@ content-filter:
     - reviewOutcome
 ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - A message crosses a trust boundary (internal → external partner, internal → analytics lake, VN → cloud) and the full payload contains fields that must not appear on the other side.
 - Upstream schema evolution risk is high; allowlist-first ensures new fields are excluded by default.
 - Regulatory mandates (Decree 13/2023, GDPR-equivalent) require auditable proof that sensitive fields were removed before transit.
 - Multiple consumers need the same sanitised view; centralise filtering once rather than duplicating in each consumer.
 
-**Do NOT use when:**
+## When Not to Use
+
 - All fields are appropriate for the destination — adding a filter stage for zero compliance benefit is unwarranted latency.
 - The filtering decision is conditional on field values (e.g., "remove if riskScore > 80") — that is routing, not filtering.
 - Reshaping or renaming is needed — use Message Translator (EIP-006) instead.
@@ -367,8 +371,8 @@ observability:
 
 | Threat | Vector | Mitigation |
 |---|---|---|
-| PII field survives filter | New field added to source schema; not in blocklist | Allowlist-first: unknown fields excluded by default; CI asserts no unregistered fields pass through |
-| Filter bypass via nested JSON | Sensitive value nested inside an allowed object | Recursive filter with depth limit of 10 levels |
+| PII field survives filter (Information Disclosure) | New field added to source schema; not in blocklist | Allowlist-first: unknown fields excluded by default; CI asserts no unregistered fields pass through |
+| Filter bypass via nested JSON (Tampering) | Sensitive value nested inside an allowed object | Recursive filter with depth limit of 10 levels |
 | Audit log value leakage | Developer logs removed field values in error handler | ArchUnit lint rule asserts filter classes never log removed field values |
 | Pseudonymisation key exposure | HMAC secret committed to Git | Secret fetched from Vault at startup; never in source control |
 | Filter misconfiguration | Allowlist omitted, all fields stripped | CI golden-event test asserts expected fields present and prohibited fields absent |
@@ -380,7 +384,7 @@ observability:
 - **Adding a blocked field:** Update `content-filter.pii.blocked-fields` in Config Server; `@RefreshScope` propagates within 30 s; verify via `GET /actuator/env/content-filter.pii.blocked-fields`.
 - **PII-in-output P1:** Immediately suspend the analytics outbound channel; invoke the data-residency incident response procedure; do not restart until root cause is identified.
 - **DLQ triage:** Consume `content-filter.dlq`; most common cause is unparseable JSON from an upstream schema break. Fix upstream, then replay.
-- **Schema evolution alert:** If `eip.filter.unknown_fields_blocked > 0`, identify the new field via `X-Fields-Removed` on recent messages; decide within 24 hours whether to allowlist or keep blocked; document in ADR.
+- **Alert: ContentFilter_UnknownFieldsBlocked** — Fires when `eip.filter.unknown_fields_blocked > 0`. Identify the new field via `X-Fields-Removed` header on recent messages; decide within 24 hours whether to allowlist or keep blocked; document in ADR.
 
 ## Test Strategy (stub)
 

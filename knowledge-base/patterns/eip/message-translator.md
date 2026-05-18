@@ -13,6 +13,10 @@ Tier Applicability: T0, T1
 - Translation errors at the field level (wrong currency code, truncated beneficiary name, missing BIC) cause NAPAS rejects or SWIFT repair queues that incur direct financial penalties and breach settlement SLAs.
 - Regulatory reporting (BCBS 239 data lineage) requires that every field mapping is traceable: which source field produced which target field, at what timestamp, and in which version of the mapping definition.
 
+## Context
+
+Techcombank's integration layer must translate T24 OFS proprietary format to ISO 20022 pacs.008 XML for NAPAS and SWIFT, and simultaneously translate inbound SWIFT MT103 legacy messages to pacs.008 for the payment hub. MapStruct generates the type-safe field-mapping code at compile time; JAXB marshals/unmarshals the XML. Every mapping is version-controlled and covered by XSD validation tests. Translation is stateless and side-effect-free, making it independently testable and horizontally scalable.
+
 ## Solution
 
 A Message Translator intercepts a message on an input channel, applies a deterministic field-mapping function that knows only about source structure and target structure, and emits the translated message on an output channel — with no business logic embedded in the translation itself.
@@ -229,15 +233,15 @@ public class TranslationErrorHandler implements MessageHandler {
 }
 ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - Two systems must exchange messages but their schemas are incompatible and cannot be changed at source or destination.
 - A regulatory mandate (ISO 20022 migration, NAPAS onboarding) forces an explicit format boundary.
 - The mapping logic is stable enough to be versioned and audited independently of business logic.
 - Multiple downstream consumers require different formats from the same source event.
 
-**Do NOT use when:**
+## When Not to Use
+
 - The source and target schemas are semantically identical — prefer a simple serialisation change (e.g., JSON to Avro with the same field names) without a full translator pattern.
 - Business decisions must be made during translation (routing based on amount, fraud flags). Separate translation from routing — use Message Translator then a separate Router pattern.
 - The mapping is trivial (one field rename) and the overhead of a MapStruct mapper and JAXB marshaller exceeds the value — use a lightweight `@Transformer` lambda instead.
@@ -325,7 +329,7 @@ data_lineage:
 - **Health check:** `GET /actuator/health/translation` returns `{ "status": "UP", "mappingVersion": "..." }`.
 - **Schema update procedure:** Deploy new MapStruct mapper artifact → bump `translation.mapping-version` property → rolling restart → verify `X-Mapping-Version` header on sample messages in staging before promoting.
 - **DLQ triage:** Consume from `payment.translation.dlq`, inspect `errorType` field; common causes: missing BIC, XSD constraint violation on `IntrBkSttlmAmt`. Replay after manual correction using `payment-replay-tool`.
-- **Lag alert response:** If Kafka consumer lag on `t24.ofs.raw` exceeds 10 000 messages, scale translation pods via `kubectl scale deployment payment-translation --replicas=N`.
+- **Alert: TranslationConsumerLag_High** — If Kafka consumer lag on `t24.ofs.raw` exceeds 10,000 messages, scale translation pods via `kubectl scale deployment payment-translation --replicas=N`.
 
 ## Test Strategy (stub)
 

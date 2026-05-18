@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2
 - Consumers that must poll or maintain persistent socket connections to producers cannot scale independently; demand spikes create thundering-herd effects that destabilise the entire call graph.
 - Loss of the in-flight payload during a consumer restart means data loss with no replay path — unacceptable under BCBS 239 §6 Completeness and SBV Circular 09/2020 §IV.2 operational continuity requirements.
 
+## Context
+
+Apache Kafka is the primary Message Channel substrate for Techcombank's inter-service communication. A Kafka topic acts as a named, durable, partitioned log — producers append events and consumers read at their own pace using independent consumer groups. Spring Integration channels are used for in-process routing within a single service (e.g., pipeline stages between deserialization and business logic). The channel taxonomy in this document covers the full range from Point-to-Point (EIP-002) through Publish-Subscribe (EIP-003) and Dead Letter (EIP-025), all sharing the same Kafka infrastructure.
+
 ## Solution
 
 A Message Channel is a logical, named conduit through which one application sends messages and another receives them, with no direct knowledge of each other. In Techcombank's stack, Apache Kafka topics are the primary Message Channel implementation for event streams; Spring Integration channels handle in-process routing between pipeline stages.
@@ -142,6 +146,27 @@ graph LR
 
 8. **Govern channel lifecycle.** Every new channel requires a Channel Design Record (CDR) filed in the `governance/channels/` directory, signed off by the Architecture Guild. CDR fields: channel name, schema ID, tier, partition key, retention, producer team, consumer teams, compliance owner.
 
+## When to Use
+
+- Asynchronous inter-service communication where producers and consumers must scale and deploy independently.
+- Events or commands that multiple downstream services need to consume at their own pace (fan-out to independent consumer groups).
+- Audit and compliance scenarios requiring durable, replayable event streams (30-day retention for T0 channels).
+- Environments requiring ordered processing per entity (partition by `customerId` for ledger consistency).
+
+## When Not to Use
+
+- Synchronous request-response where the caller must receive an immediate result (use REST or gRPC instead; latency of Kafka-based channels is typically 5–15 ms P99).
+- In-process routing between pipeline stages within the same JVM — use Spring Integration `DirectChannel` for zero-latency in-process dispatch.
+- Very low-cardinality, low-frequency events with a single consumer and no replay requirement — a simple database polling or HTTP webhook is simpler to operate.
+
+## Variants
+
+| Variant | When to prefer | Trade-off |
+|---------|----------------|-----------|
+| Kafka topic (this pattern) | Multiple independent consumers; high throughput; replay and durability required | Operational Kafka cluster required; eventual consistency between producer and consumers |
+| Spring Integration DirectChannel | In-process routing within one JVM; sub-millisecond latency | No durability; single JVM only; cannot scale across instances |
+| RabbitMQ AMQP Queue | Low-latency messaging; complex routing topologies (exchanges, bindings) | No native log replay; shorter retention; less suitable for financial audit trails |
+
 ## Banking Use Cases
 
 1. **Real-time payment event fan-out** — When a payment is authorised in T24, the OFS bridge publishes to `com.techcombank.payments.transaction.created`. Three independent consumer groups process simultaneously: the Ledger Poster records the accounting entry, the Fraud Engine evaluates behavioural patterns, and the Notification Service sends the customer push notification. Each group processes at its own pace without blocking the others.
@@ -225,8 +250,8 @@ nfr:
 
 ## Threat Model
 
-- **Unauthorised channel access** — A misconfigured producer publishes to a financial channel it does not own, injecting fraudulent events. Mitigation: Kafka ACLs enforce per-service-account topic-level produce/consume permissions; service accounts provisioned via GitOps IaC (no manual console access). OWASP ASVS V8 data protection controls apply.
-- **Schema poisoning** — A producer publishes a message with an incompatible schema version, corrupting the consumer's deserialisation. Mitigation: `FULL_TRANSITIVE` compatibility mode in the schema registry rejects incompatible schema evolution; consumers use the schema registry to deserialise (never assume a schema version from the payload alone).
+- **Unauthorised channel access (Elevation of Privilege)** — A misconfigured producer publishes to a financial channel it does not own, injecting fraudulent events. Mitigation: Kafka ACLs enforce per-service-account topic-level produce/consume permissions; service accounts provisioned via GitOps IaC (no manual console access). OWASP ASVS V8 data protection controls apply.
+- **Schema poisoning (Tampering)** — A producer publishes a message with an incompatible schema version, corrupting the consumer's deserialisation. Mitigation: `FULL_TRANSITIVE` compatibility mode in the schema registry rejects incompatible schema evolution; consumers use the schema registry to deserialise (never assume a schema version from the payload alone).
 - **Man-in-the-middle on the broker network** — An attacker on the broker network intercepts payment event payloads containing PII. Mitigation: mTLS enforced on all Kafka listeners (NIST SP 800-53 SC-8); certificate rotation managed by the internal PKI (SEC-001); TLS 1.3 minimum.
 - **Consumer lag exhaustion (DoS)** — A slow or stuck consumer group causes its committed offset to fall so far behind that Kafka's log compaction or retention deletes unconsumed messages. Mitigation: consumer lag alerts at 10K messages; automatic scale-out of consumer pods via KEDA on lag metric; DLT as safety valve for un-processable messages.
 - **Retention expiry before consumption** — A consumer offline for longer than the channel retention window returns to find messages already deleted — silent loss. Mitigation: T0 consumer groups are monitored with a maximum offline tolerance of 24 hours; alert fires at 50% of retention window; cross-region replica extends effective retention during outages.
@@ -235,7 +260,7 @@ nfr:
 
 ## Operational Runbook
 
-1. **Detect consumer lag buildup** — Alert `ConsumerLag_T0_High` fires when any T0 consumer group lag exceeds 10,000 messages for 5 minutes. Open Grafana `message-channel-overview` dashboard. Identify the lagging consumer group and partition. Check pod health and JVM GC pressure for that consumer deployment.
+1. **Alert: ConsumerLag_T0_High** — Fires when any T0 consumer group lag exceeds 10,000 messages for 5 minutes. Open Grafana `message-channel-overview` dashboard. Identify the lagging consumer group and partition. Check pod health and JVM GC pressure for that consumer deployment.
 
 2. **Scale consumer pods** — If lag is caused by throughput, scale the consumer deployment: `kubectl scale deployment <consumer> --replicas=<n>` (max = partition count). KEDA is configured to trigger this automatically but can be overridden manually. Confirm lag trend reverses within 2 minutes.
 
