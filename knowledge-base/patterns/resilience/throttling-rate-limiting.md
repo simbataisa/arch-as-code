@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2
 - OTP endpoints are credential-stuffing targets; without velocity controls an attacker can exhaust the OTP namespace for a victim account in minutes.
 - AML transaction-velocity rules require that suspicious bursts (e.g., 30 transfers in 60 seconds from one account) are flagged before they reach the core — a service-level rate limiter is the enforcement point.
 
+## Context
+
+High-volume channels (mobile, open-banking APIs) can submit burst loads that saturate downstream services; rate limiting decouples consumer pace from infrastructure capacity. Token-bucket and leaky-bucket algorithms are standard; Redis-backed counters provide distributed rate state across horizontally-scaled gateway pods. At Techcombank, NAPAS mandates a hard maximum of 50 tps per member bank, and OTP endpoints are credential-stuffing targets requiring per-account velocity controls enforced before any OTP is generated.
+
 ## Solution
 
 Multi-tier throttling: each layer enforces different dimensions (IP, API key, tenant, account) so no single bypass defeats the whole chain.
@@ -310,6 +314,26 @@ management:
       enabled: true
 ```
 
+## When to Use
+
+- Public-facing APIs with burst-prone channels (mobile, open-banking, partner integrations) where a single misbehaving client can saturate shared infrastructure.
+- Regulated channels with externally mandated rate caps (NAPAS: ≤ 50 tps per member bank; OTP: ≤ 5 per minute per account).
+- Services where AML velocity rules require that suspicious bursts (≥ 30 transfers in 60 seconds) are flagged before reaching core banking.
+- Any path where a runaway batch or credential-stuffing attack must be caught at the edge before exhausting downstream quota.
+
+## When Not to Use
+
+- Intra-cluster service-to-service calls on the same trust boundary where rate limiting adds latency without reducing risk — use bulkhead isolation (RES-001) instead.
+- Flows where all callers are equally critical and quota allocation is not meaningful — apply load shedding (RES-009) by priority class instead.
+- Services with a single instance or trivially low traffic where Redis round-trips would dominate request latency.
+
+## Variants & Trade-offs
+
+- **Token bucket (default)** — allows short bursts up to `burstCapacity`; replenishes at `replenishRate`; best for APIs with bursty-but-bounded access patterns.
+- **Leaky bucket** — smooths output at a fixed rate regardless of burst; prevents any burst from reaching the downstream; higher latency at burst onset.
+- **Sliding log (AML velocity)** — exact per-account event count over a rolling window; accurate but higher Redis memory usage; used for AML and OTP velocity controls.
+- **In-process Resilience4j** — per-tenant limiter in JVM memory; zero network overhead; resets on pod restart so state is not shared across replicas — suitable for intra-cluster throttling only.
+
 ## Compliance Mapping
 
 | Ring | Regulation | Provision | How this pattern satisfies |
@@ -319,7 +343,7 @@ management:
 | Ring 0 | AWS WAF | Rate-based rule (managed) | Edge token-bucket mirrors WAF rate-based rule semantics; WAF can be wired in front of the API Gateway for L3/L4 protection. |
 | Ring 1 | PCI-DSS v4.0 | Req 6.4 (Protect public-facing web apps from attacks) | Rate limiting reduces attack surface for credential stuffing and L7 DoS on payment APIs. |
 | Ring 1 | BCBS 230 | Principle 7 (ICT Security) | Velocity controls on NAPAS submission channels and OTP endpoints reduce exposure to enumeration and resource-exhaustion attacks. |
-| Ring 2 | SBV Circular 09/2020 | §IV.2 Operational continuity ⚠️ (working summary — pending Legal review) | Per-tenant throttle prevents a single member-bank misbehaviour from disrupting system-wide operations. |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Operational continuity | Per-tenant throttle prevents a single member-bank misbehaviour from disrupting system-wide operations. ⚠️ (working summary — pending Legal review) |
 
 ## NFR Acceptance Criteria
 
@@ -431,6 +455,14 @@ STRIDE analysis — rate limiting primarily defends against Denial of Service an
 ### Chaos Tests
 - Kill Redis primary during sustained 800 rps load; verify gateway fails open (requests pass through), `throttle_bypass=true` log events appear, and SRE alert fires within 60 s.
 - Restart rate-limiter service mid-load; verify in-memory Resilience4j counters reset gracefully and do not cause a burst after restart.
+
+## Related Patterns
+
+- [RES-001 Bulkhead Isolation](bulkhead-isolation.md) — bulkhead limits concurrency per dependency; rate limiting limits request frequency; both are needed for full protection
+- [RES-002 Circuit Breaker](circuit-breaker.md) — after sustained rate-limit breaches the circuit breaker provides fast-fail for the affected path
+- [RES-009 Load Shedding](load-shedding.md) — load shedding sheds by priority class under CPU/queue pressure; throttling sheds by rate per key (IP, tenant, account)
+- [RES-005 Cell-Based Architecture](cell-based-architecture.md) — per-cell rate limits bound the impact of a misbehaving cell to 1/N of users
+- [SEC-008 Service Mesh mTLS](../security/mtls-service-mesh.md) — mTLS ensures the identity behind each rate-limit key is authenticated
 
 ## References
 

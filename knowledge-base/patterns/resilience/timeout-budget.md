@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2
 - Banking payment call chains are long: client → API gateway → payment service → NAPAS → bank network → beneficiary bank. Each hop consumes time from a fixed user-facing SLA budget; without explicit accounting, any one hop can inadvertently consume the entire budget.
 - Hung threads without timeouts waste compute on work that will be discarded: a payment response that arrives after the caller has already timed out and returned an error to the customer is not just useless, it actively harms the system by holding threads, connections, and memory for the duration of the wait.
 
+## Context
+
+Distributed banking services call downstream systems (payment rails, AML engines, core banking APIs) with variable latency; without a hard deadline, slow responses cascade into thread-pool exhaustion. Resilience4j TimeLimiter wraps each outbound call in a scheduled Future and cancels it if the configured duration elapses, returning a fallback immediately. The payment initiation chain at Techcombank spans five hops with a 3,000 ms user-facing SLA; each hop must declare a timeout strictly smaller than its caller's remaining budget.
+
 ## Solution
 
 Assign every network call an explicit timeout that is strictly less than the caller's remaining deadline. Model the full call chain as a waterfall of decreasing timeout budgets, summing to less than the user-facing SLA.
@@ -307,6 +311,25 @@ public class TimeoutMetricsCollector {
 }
 ```
 
+## When to Use
+
+- Any synchronous outbound call to an external system with variable latency (NAPAS, T24 OFS, SWIFT, AML engine).
+- Payment gateway calls where stalled responses would degrade user experience and consume thread-pool capacity.
+- AML/sanctions checks with SLA-bound response requirements where a late answer is equivalent to no answer.
+- Multi-hop call chains where the user-facing SLA is fixed and each hop must fit within the remaining budget.
+
+## When Not to Use
+
+- Long-running async workflows where a hard deadline would cause data loss without a compensation step — use a saga with timeout compensation instead.
+- Batch jobs where partial completion is worse than waiting; prefer structured cancellation with checkpointing.
+- Operations where the caller cannot safely retry or compensate for a timed-out mutation and idempotency keys are not in place.
+
+## Variants & Trade-offs
+
+- **Adaptive timeout** — dynamically adjust the deadline based on the recent p99 from a sliding window; adds complexity but handles load spikes better than static budgets.
+- **Hedged requests** — issue a second request after a soft deadline and use whichever responds first; doubles downstream load but reduces tail latency on critical paths.
+- **Circuit breaker integration** — pair with [RES-002 Circuit Breaker](circuit-breaker.md) so repeated timeouts trip the breaker and fast-fail subsequent calls; [RES-003 Retry with Backoff](retry-with-backoff.md) controls the per-attempt cap.
+
 ## Compliance Mapping
 
 | Ring   | Regulation                 | Provision                                     | How this pattern satisfies                                                                                                                                             |
@@ -317,8 +340,8 @@ public class TimeoutMetricsCollector {
 | Ring 0 | ISO 27001                  | A.17.2 Redundancies                           | Timeout-driven fast failure is a key enabler of service redundancy — a timed-out call can be rerouted to a secondary                                                   |
 | Ring 1 | BCBS 230                   | Principle 6 (Incident Management)             | Bounded timeouts limit the duration of a downstream degradation event, capping the impact window of an incident                                                        |
 | Ring 1 | BCBS 230                   | Principle 7 — Information and Technology Risk | Cascading failures caused by missing timeouts represent an operational risk; this pattern directly mitigates that risk                                                 |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity requirements           | Timeout budgets prevent thread-pool exhaustion cascades that would violate the operational continuity obligations of §IV.2 ⚠️ (working summary — pending Legal review) |
-| Ring 2 | SBV Circular 09/2020 §IV.3 | Incident response timeliness                  | Fast failure via timeouts reduces MTTR by surfacing degradation early; timeout events are logged as incident precursors ⚠️ (working summary — pending Legal review)    |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Operational continuity requirements | Timeout budgets prevent thread-pool exhaustion cascades that would violate the operational continuity obligations of §IV.2 ⚠️ (working summary — pending Legal review) |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.3 Incident response timeliness | Fast failure via timeouts reduces MTTR by surfacing degradation early; timeout events are logged as incident precursors ⚠️ (working summary — pending Legal review) |
 
 ## NFR Acceptance Criteria
 
@@ -377,6 +400,9 @@ catalog_references:
 
 ## Operational Runbook
 
+- Alert: TimeoutBudgetExceeded_P99 — fires when timeout rate on any TimeLimiter instance exceeds 1% of calls over a 5-minute window (`tcb.timelimiter.timeout_rate > 0.01`). Severity: Warning for T1/T2; High/PagerDuty for T0 downstreams.
+- Alert: TimeoutCancelRunningFutureMisconfigured — fires when `timelimiter_calls{kind="timeout"}` is rising but thread-pool is not recovering, indicating `cancel-running-future=false`. Severity: Critical.
+
 1. **Timeout rate spike alert** (`tcb.timelimiter.timeout_rate > 0.01`): Identify the affected `TimeLimiter` instance name from the metric label. Check the downstream service's latency histogram in Grafana. If downstream P99 latency has increased beyond the configured timeout, the timeout is firing correctly — investigate the downstream. If downstream latency is normal, the timeout may be misconfigured — review the `timeout-duration` setting against current P99.
 
 2. **Adjust timeout budget**: Open the `timeout-budgets.yml` and the `application.yml` for the affected service. Recalculate the waterfall to ensure all hops still sum to less than the user SLA. Submit a change record. Update both the Resilience4j config and the budget registry YAML atomically (same PR). Deploy to staging and verify with a load test that the new timeout does not trigger spuriously under normal load.
@@ -432,6 +458,14 @@ Using [BP-005 Chaos Engineering](../../best-practices/chaos-engineering.md), inj
 - At 2500ms: timeout rate exceeds CB threshold; CB opens; fallback serves all requests.
 - After latency removed: CB enters HALF_OPEN; probes succeed; CB closes; normal operation resumes.
 - At no point does upstream service P95 latency exceed the user SLA.
+
+## Related Patterns
+
+- [RES-002 Circuit Breaker](circuit-breaker.md) — timeout and circuit breaker compose: repeated timeouts trip the breaker into OPEN state for fast-fail
+- [RES-003 Retry with Backoff](retry-with-backoff.md) — timeout sets the per-attempt cap; retry controls how many attempts are made within the overall budget
+- [RES-007 Fallback Strategies](fallback-strategies.md) — the TimeLimiter fallback method is the entry point for timeout-driven degraded responses
+- [NFR-002 Latency Budget Model](../../nfr/latency-budget-model.md) — timeout budgets derive from the tier P95/P99 targets defined in NFR-002
+- [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md) — makes timed-out mutations safe to retry
 
 ## References
 

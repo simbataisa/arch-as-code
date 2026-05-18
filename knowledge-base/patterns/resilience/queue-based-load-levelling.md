@@ -11,6 +11,10 @@ Tier Applicability: T0, T1, T2
 - NAPAS settlement reconciliation requires all daily transactions to be reconciled by a hard cut-off; a synchronous design fails the cut-off if processing falls behind during the peak window.
 - Downstream T24 core-banking OFS commands are rate-sensitive; flooding OFS without a queue causes "OVERLOAD" error codes that require manual intervention and audit trail entries.
 
+## Context
+
+Banking batch windows and end-of-day settlement create predictable spikes; placing a durable queue between producers and consumers lets the system absorb bursts and process them at a sustainable rate. The queue depth becomes a leading indicator of back-pressure. At Techcombank, Tet-eve peer-to-peer transfers and salary-crediting runs can be 10–20× steady-state volume; synchronous processing at peak forces over-provisioning the compute and database tiers for 99% of the calendar year. Apache Kafka with KEDA autoscaling provides the durable buffer and the dynamic consumer fleet to match processing capacity to demand without incurring peak-sized infrastructure cost year-round.
+
 ## Solution
 
 A durable Kafka topic decouples producers (fast accept) from consumers (steady-state processing). Producers write at burst rate; consumers pull at a sustainable pace with auto-scaling based on consumer-group lag.
@@ -411,6 +415,26 @@ public class BackpressureController {
 }
 ```
 
+## When to Use
+
+- Flows with known bursty ingestion patterns (Tet-eve P2P transfers, salary crediting batches, EOD settlement) where synchronous processing at peak is cost-prohibitive.
+- Downstream systems with a hard rate limit (T24 OFS: 200 cmd/s; NAPAS settlement cut-off) that cannot absorb burst load directly.
+- Scenarios where the producer SLA (accept within 500 ms P99) must be decoupled from the consumer SLA (process within the settlement cut-off window).
+- Any flow requiring exactly-once delivery with durable replay capability for disaster recovery.
+
+## When Not to Use
+
+- Synchronous flows where the caller requires an immediate authoritative response (e.g., real-time credit decision requiring a synchronous T24 balance check) — use timeout budget (RES-006) and circuit breaker (RES-002) instead.
+- Low-volume flows where Kafka's operational overhead (broker cluster, ZooKeeper/KRaft, schema registry) exceeds the benefit.
+- Flows where message ordering across all partitions is required and a single-partition topic would become a throughput bottleneck.
+
+## Variants & Trade-offs
+
+- **Single topic + KEDA (default)** — one high-throughput topic per flow; KEDA scales consumers on lag; simple to operate; partition count sets maximum parallelism ceiling.
+- **Priority topics** — separate Kafka topics per tier (T0/T1/T2); consumers poll T0 topic with higher concurrency; adds operational complexity but ensures T0 lag is bounded independently.
+- **Outbox + CDC** — producer writes to a DB outbox table instead of Kafka directly; CDC streams to Kafka; strongest exactly-once semantics at the cost of DB write amplification.
+- **Redis Streams** — lower operational overhead than Kafka; suitable for low-volume intra-cluster load levelling; lacks Kafka's durable log and replay semantics for compliance use cases.
+
 ## Compliance Mapping
 
 | Ring | Regulation | Provision | How this pattern satisfies |
@@ -419,7 +443,7 @@ public class BackpressureController {
 | Ring 0 | ISO 27001 | A.12.1.3 Capacity Management | Queue depth metrics and KEDA autoscaling demonstrate proactive capacity management with documented thresholds. |
 | Ring 1 | BCBS 239 | Principle 5 — Timeliness | Kafka's durable log ensures settlement-reconciliation records are available within the NAPAS cut-off window even if consumers restart; retention log proves the data was received on time. |
 | Ring 1 | ISO 20022 | Async payment notification semantics | ISO 20022 `pacs.002` status reports map naturally to the async-ack model: accept → status-pending → status-final pushed via notification service. |
-| Ring 2 | SBV Circular 09/2020 | §IV Operational continuity ⚠️ (working summary — pending Legal review) | Kafka's replicated log and consumer-group replay capability satisfies the circular's requirement for operational continuity of payment processing during partial system failures. |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV Operational continuity | Kafka's replicated log and consumer-group replay capability satisfies the circular's requirement for operational continuity of payment processing during partial system failures. ⚠️ (working summary — pending Legal review) |
 
 ## NFR Acceptance Criteria
 
@@ -530,6 +554,14 @@ STRIDE analysis — queue-based systems face unique poisoning and replay threats
 - Consumer kill: kill all consumer pods during a 2 000-message burst; restart after 60 s; verify all messages are processed exactly once.
 - Broker kill: terminate one Kafka broker; verify consumer group rebalances within 30 s and lag does not permanently grow.
 - T24 sustained slowdown: configure T24 stub to respond in 3 s (vs 200 ms normal); verify backpressure controller pauses the consumer and lag grows at a controlled rate without overwhelming OFS.
+
+## Related Patterns
+
+- [RES-002 Circuit Breaker](circuit-breaker.md) — pair with the consumer to fast-fail on sustained T24/NAPAS errors before flooding the DLT
+- [RES-006 Timeout Budget](timeout-budget.md) — each consumer call to T24 OFS and NAPAS must carry an explicit timeout to prevent the consumer from blocking indefinitely on a slow downstream
+- [RES-007 Fallback Strategies](fallback-strategies.md) — queue-based fallback is a named variant of RES-007; the pattern here is the full implementation of the deferred-queue fallback strategy
+- [RES-010 Leader Election](leader-election.md) — the EOD batch producer should be gated by leader election to ensure exactly one instance submits the batch to the queue
+- [INT-002 Outbox + CDC](../integration/cdc-outbox-pattern.md) — transactional outbox is an alternative producer pattern providing stronger exactly-once semantics than direct Kafka writes
 
 ## References
 

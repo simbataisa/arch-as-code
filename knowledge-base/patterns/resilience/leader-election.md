@@ -15,6 +15,10 @@ Multi-instance deployments introduce split-brain and duplicate-execution hazards
 - Kubernetes pod autoscaling and rolling deploys mean the number of active instances varies continuously; a hard-coded "instance 0 is leader" approach breaks during deploys and scale-out events.
 - Without leader election observability, SREs cannot determine which instance is performing singleton operations at any given moment, making incident triage and audit log correlation slow and error-prone.
 
+## Context
+
+Multi-instance Kubernetes deployments introduce split-brain hazards for singleton operations: NAPAS requires a single active TCP session per bank connection, and the T24 end-of-day batch must be triggered by exactly one instance. Spring Integration's `LeaderInitiator` backed by a Redis `LockRegistry` provides a renewable lease model — the elected leader holds a TTL-bounded key and renews it on a heartbeat interval; followers campaign to replace a leader that stops renewing. Kubernetes rolling deploys and pod autoscaling make static "instance 0 is leader" designations unreliable; distributed lease-based election is the only safe approach.
+
 ## Solution
 
 Implement distributed leader election so exactly one instance at a time holds a renewable lease for each singleton operation; followers monitor the leader and automatically campaign to take over if the lease expires.
@@ -262,15 +266,15 @@ sequenceDiagram
          - t24-eod-batch-leader
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - An operation must execute on exactly one instance at a time: maintaining a stateful external connection (NAPAS TCP), triggering a batch job, or holding a coordination lock.
 - The cluster size is dynamic (Kubernetes autoscaling, rolling deploys) and a static "primary pod" designation is not reliable.
 - Split-brain execution would cause data integrity problems (double EOD batch trigger, duplicate NAPAS session, duplicate payment).
 - The operation's singleton constraint must survive pod failure with automatic failover within a bounded time window.
 
-**Do NOT use when:**
+## When Not to Use
+
 - All instances can safely execute the operation concurrently (stateless REST handlers, idempotent Kafka consumers with partition assignment).
 - The coordination overhead (Redis round-trip, lease renewal) exceeds the execution time of the protected operation.
 - Extremely short-lived operations (sub-millisecond) — use a local synchronization primitive instead.
@@ -318,7 +322,7 @@ acceptance_criteria:
 | Ring 0 | Microsoft Cloud Patterns — Leader Election | "Coordinate distributed services by electing a leader" | Pattern definition; implementation follows Candidate/Context lifecycle |
 | Ring 0 | Kubernetes documentation — Leader Election | ConfigMap lease-based election | K8s variant uses the same mechanism as control plane components |
 | Ring 1 | BCBS 239 §6 Accuracy — Single authoritative processor | Data aggregation accuracy; no duplicate reporting | Leader election prevents double EOD batch triggers that would create duplicate accrual entries, violating the single-authoritative-processor principle |
-| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Payment system continuity and integrity | NAPAS session leader election ensures uninterrupted payment session continuity during pod failures; automatic failover meets continuity obligations |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Payment system continuity and integrity | NAPAS session leader election ensures uninterrupted payment session continuity during pod failures; automatic failover meets continuity obligations ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -336,20 +340,20 @@ acceptance_criteria:
 STRIDE focus: **Spoofing** and **Tampering** via lock store manipulation.
 
 - **Top 3 threats addressed:**
-  1. *Duplicate singleton execution (split-brain)* — distributed lock with TTL ensures at most one leader holds the lock at any moment.
-  2. *NAPAS session conflict* — only the elected leader establishes and renews the TCP session; followers listen but do not transmit.
+  1. *Duplicate singleton execution — split-brain (Tampering)* — distributed lock with TTL ensures at most one leader holds the lock at any moment; concurrent writes to NAPAS or T24 are prevented.
+  2. *NAPAS session conflict (Spoofing)* — only the elected leader establishes and renews the TCP session; followers listen but do not transmit; forged session attempts from non-leader pods are blocked at the NAPAS authentication layer.
   3. *EOD double-trigger* — leader check at `triggerEodWindow()` entry point prevents follower execution even if the scheduled method fires on all pods.
 - **Top 3 residual threats:**
-  1. *Redis lock store compromise* — an attacker who can write to Redis could forge a lock grant for any identity. Mitigation: Redis ACL restricts write access to payment-service service accounts only; mTLS between service and Redis; Vault-managed credentials.
-  2. *GC pause causing false lease expiry* — a long JVM GC pause on the leader pod may prevent lease renewal, causing a new leader to be elected while the old leader is still running but paused. Mitigation: Java 21 ZGC (sub-millisecond pause); lease TTL set at 5× renewal interval to tolerate transient pauses.
-  3. *Leader starvation* — if a pod repeatedly wins election but crashes before completing the singleton operation, followers cycle without progress. Mitigation: crash-loop detection via Kubernetes restartPolicy and pod disruption budget; alert on > 3 leadership changes in 5 min.
+  1. *Redis lock store compromise (Tampering)* — an attacker who can write to Redis could forge a lock grant for any identity. Mitigation: Redis ACL restricts write access to payment-service service accounts only; mTLS between service and Redis; Vault-managed credentials.
+  2. *GC pause causing false lease expiry (Denial of Service)* — a long JVM GC pause on the leader pod may prevent lease renewal, causing a new leader to be elected while the old leader is still running but paused. Mitigation: Java 21 ZGC (sub-millisecond pause); lease TTL set at 5× renewal interval to tolerate transient pauses.
+  3. *Leader starvation (Denial of Service)* — if a pod repeatedly wins election but crashes before completing the singleton operation, followers cycle without progress. Mitigation: crash-loop detection via Kubernetes restartPolicy and pod disruption budget; alert on > 3 leadership changes in 5 min.
 
 ## Operational Runbook (stub)
 
 - **Alerts:**
-  - `LeaderElectionFlapping`: more than 3 leader role changes in 5 minutes for any role. Severity: Warning — investigate pod stability.
-  - `LeaderAbsent`: no pod reports `isLeader()=true` for a role for > 30 s. Severity: Critical — PagerDuty; NAPAS session may be inactive.
-  - `EodDuplicateTrigger`: T24 audit log shows > 1 EOD trigger in a calendar day. Severity: Critical — immediate data integrity review.
+  - Alert: LeaderElectionFlapping — more than 3 leader role changes in 5 minutes for any role. Severity: Warning — investigate pod stability.
+  - Alert: LeaderAbsent — no pod reports `isLeader()=true` for a role for > 30 s. Severity: Critical — PagerDuty; NAPAS session may be inactive.
+  - Alert: EodDuplicateTrigger — T24 audit log shows > 1 EOD trigger in a calendar day. Severity: Critical — immediate data integrity review.
 - **Dashboards:** Grafana — `leader-election-overview`: current leader pod per role, role grant/revoke events over time, lease renewal latency, Redis lock operation latency.
 - **On-call playbook:**
   1. Check `leader_election.role_granted_total` and `leader_election.role_revoked_total` counters for flap frequency.

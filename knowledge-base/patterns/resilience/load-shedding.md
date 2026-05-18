@@ -15,6 +15,10 @@ Under load spikes, a service that treats all incoming requests equally will degr
 - Without per-priority shedding visibility, SREs cannot tell whether customer-impacting requests or internal batch jobs are being rejected — making triage and escalation decisions slow.
 - SBV and bank management commitments require NAPAS real-time credit transfers to achieve > 99.95% success rate; non-discriminatory rejection under load directly violates this commitment.
 
+## Context
+
+Under load spikes, treating all requests equally causes high-value transactions to compete with low-priority batch jobs for the same thread-pool capacity. Resilience4j Bulkhead per priority class partitions concurrency budgets so that T0 NAPAS credit transfers always have reserved capacity even when the service is saturated. Priority is stamped by Spring Cloud Gateway using route metadata — never trusted from the client — so the classification is authoritative and tamper-resistant. SBV payment continuity obligations require NAPAS real-time transfers to achieve > 99.95% success rate; non-discriminatory rejection under load directly violates this commitment.
+
 ## Solution
 
 Assign every inbound request a priority class (T0–T3) at the gateway edge; under load, shed the lowest-priority classes first using per-class token buckets and Resilience4j Bulkhead, preserving capacity for T0 real-time payment processing.
@@ -275,15 +279,15 @@ graph LR
    }
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - The service handles requests of materially different business value and SLA commitments (T0 payments vs. T3 reports).
 - Overload conditions are measurable and predictable (known NAPAS peak windows, end-of-month batch runs).
 - Clients of lower-priority tiers can tolerate rejection and retry (batch jobs, report generators).
 - You need a deterministic capacity ceiling for T0 flows that infrastructure scaling cannot guarantee in sub-second response time.
 
-**Do NOT use when:**
+## When Not to Use
+
 - All request classes share the same SLA and business criticality — load shedding without priority differentiation is just rate limiting.
 - The service has no observable load signal (CPU, queue depth, latency) to drive shedding decisions — adaptive shedding requires reliable instrumentation.
 - Shed requests cannot be retried by the client (e.g., a fire-and-forget webhook with no retry infrastructure) — the 503 will result in permanent data loss.
@@ -331,7 +335,7 @@ acceptance_criteria:
 | Ring 0 | AWS Well-Architected Operational Excellence — Bulkhead | Bulkhead pattern | Resilience4j Bulkhead per priority class implements the bulkhead isolation recommended by AWS |
 | Ring 0 | Microsoft Cloud Patterns — Throttling | "Throttle resource consumption" | Per-class token bucket + bulkhead implements priority-aware throttling |
 | Ring 1 | BCBS 230 Principle 6 ⚠️ (working summary — pending PDF fetch) | Operational resilience — protect critical functions | Priority-based shedding ensures T0 payment processing capacity is protected during stress; load shedding is an operational resilience control |
-| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Payment system availability and continuity | NAPAS credit transfers must never be shed; the T0 bulkhead with no adaptive reduction implements this commitment in code |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Payment system availability and continuity | NAPAS credit transfers must never be shed; the T0 bulkhead with no adaptive reduction implements this commitment in code ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -360,10 +364,10 @@ STRIDE focus: **Denial of Service** and **Elevation of Privilege** via priority 
 ## Operational Runbook (stub)
 
 - **Alerts:**
-  - `LoadSheddingT3Active`: T3 shed rate > 0 for > 5 min. Severity: Info — expected during peak.
-  - `LoadSheddingT2Active`: T2 shed rate > 0 for > 5 min. Severity: Warning — investigate cause.
-  - `LoadSheddingT1Active`: T1 shed rate > 0 for > 2 min. Severity: Critical — PagerDuty; T0 at risk.
-  - `LoadSheddingT0Breach`: Any T0 503 response. Severity: Critical — immediate escalation.
+  - Alert: LoadSheddingT3Active — T3 shed rate > 0 for > 5 min. Severity: Info — expected during peak.
+  - Alert: LoadSheddingT2Active — T2 shed rate > 0 for > 5 min. Severity: Warning — investigate cause.
+  - Alert: LoadSheddingT1Active — T1 shed rate > 0 for > 2 min. Severity: Critical — PagerDuty; T0 at risk.
+  - Alert: LoadSheddingT0Breach — Any T0 503 response. Severity: Critical — immediate escalation.
 - **Dashboards:** Grafana — `load-shedding-overview`: shed rate per tier, CPU load trend, bulkhead utilisation, active concurrent calls per class.
 - **On-call playbook:**
   1. Check `load_shedding.cpu_load` gauge to confirm overload signal.

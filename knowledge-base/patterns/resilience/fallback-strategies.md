@@ -15,6 +15,10 @@ When a primary dependency is unavailable, the absence of an explicit fallback le
 - Notification services (FCM/APNs) experience regional outages; mobile push failures must not surface as visible errors to customers when in-app delivery on next open is acceptable.
 - Without explicit fallback contracts, individual teams make inconsistent decisions about degraded-mode behaviour, creating audit gaps and unpredictable customer outcomes.
 
+## Context
+
+When a primary dependency is unavailable, the service must choose between hard failure and a degraded-but-functional response. For Techcombank T0 payment flows, hard failure is often worse than serving a stale risk score or queuing the request for retry. Resilience4j `@CircuitBreaker(fallbackMethod=...)` binds a fallback method to every protected call, ensuring that the degraded response is pre-defined, tested, and observable. The fallback strategy must be chosen per dependency: cached data works for balance enquiry; a Kafka deferred queue works for NAPAS retries; silent-fail works for push notifications.
+
 ## Solution
 
 Define an explicit, tested fallback response for every external call: choose from cached-stale data, rule-based default, deferred-queue, or silent-fail strategies based on the consequence of each dependency being absent.
@@ -213,15 +217,15 @@ sequenceDiagram
          timeout: 500ms
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - The service has a well-defined degraded-mode response that is safer than hard failure (stale data, rule-based default, deferred queue).
 - The dependency is external or shared-infrastructure (T24, NAPAS, fraud ML, CMS, push gateways).
 - Compliance or UX requires the user journey to continue at reduced fidelity rather than terminate.
 - The fallback can be instrumented distinctly (separate metric labels) so SREs see degraded-mode usage.
 
-**Do NOT use when:**
+## When Not to Use
+
 - Consistency is non-negotiable: a debit instruction must never proceed on stale balance if the stale value would lead to an overdraft beyond policy limits.
 - The fallback itself requires the unavailable dependency (circular fallback).
 - The operation is idempotency-critical and the fallback cannot guarantee deduplication — queue-based fallbacks must carry idempotency keys (see [PRIN-006 Idempotency-by-default](../../principles/idempotency-by-default.md)).
@@ -269,7 +273,7 @@ acceptance_criteria:
 | Ring 0 | Resilience4j Documentation — Fallback | `@CircuitBreaker(fallbackMethod=...)` spec | Canonical library used; implementation follows documented fallback method contract |
 | Ring 0 | Microsoft Cloud Design Patterns — Fallback | Fallback pattern specification | Pattern definition aligns; Kafka deferred-queue variant maps to Queue-Based Load Levelling |
 | Ring 1 | BCBS 230 Principle 6 ⚠️ (working summary — pending PDF fetch) | Operational resilience — continuity of critical functions | Explicit fallbacks bound failure impact: critical payment flows continue in degraded mode rather than halting entirely |
-| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Payment system continuity | Queue-based NAPAS fallback satisfies continuity obligation; cached-balance fallback with staleness disclosure satisfies transparency obligation |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Payment system continuity | Queue-based NAPAS fallback satisfies continuity obligation; cached-balance fallback with staleness disclosure satisfies transparency obligation ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -287,20 +291,20 @@ acceptance_criteria:
 STRIDE focus: **Tampering** and **Elevation of Privilege** via fallback path abuse.
 
 - **Top 3 threats addressed:**
-  1. *Dependency failure causing T0 service cascade* — fallback bounds the blast radius; the calling service remains available at reduced fidelity.
+  1. *Dependency failure causing T0 service cascade (Denial of Service)* — fallback bounds the blast radius; the calling service remains available at reduced fidelity.
   2. *Inconsistent degraded-mode behaviour across teams* — a catalogued fallback contract standardises the response, reducing audit surface.
-  3. *Silent data staleness* — degraded-response disclosure flag prevents consumers from treating stale data as fresh.
+  3. *Silent data staleness (Information Disclosure)* — degraded-response disclosure flag prevents consumers from treating stale data as fresh.
 - **Top 3 residual threats:**
-  1. *Fallback abused as an attack vector* — an attacker that can force a dependency to fail may intentionally trigger rule-based fraud scoring (which may be less accurate). Mitigation: fallback fraud scores above a conservative threshold still block; threshold reviewed quarterly.
-  2. *Cache poisoning* — stale balance served from a compromised Redis entry. Mitigation: Redis secured with mTLS + ACL; balance cache entries include a HMAC; Vault-managed secrets.
-  3. *Kafka retry queue message injection* — malformed retry events could replay arbitrary payments. Mitigation: retry topic ACL restricts producers to payment-service identity; idempotency key checked before processing.
+  1. *Fallback abused as an attack vector (Elevation of Privilege)* — an attacker that can force a dependency to fail may intentionally trigger rule-based fraud scoring (which may be less accurate). Mitigation: fallback fraud scores above a conservative threshold still block; threshold reviewed quarterly.
+  2. *Cache poisoning (Tampering)* — stale balance served from a compromised Redis entry. Mitigation: Redis secured with mTLS + ACL; balance cache entries include a HMAC; Vault-managed secrets.
+  3. *Kafka retry queue message injection (Tampering)* — malformed retry events could replay arbitrary payments. Mitigation: retry topic ACL restricts producers to payment-service identity; idempotency key checked before processing.
 
 ## Operational Runbook (stub)
 
 - **Alerts:**
-  - `FallbackRateHigh`: fallback rate for any dependency > 5% over 5 min. Severity: Warning.
-  - `FallbackRateCritical`: fallback rate > 20% over 2 min (fraud-score or T24). Severity: High — PagerDuty.
-  - `NapasRetryQueueDepth`: `payment.napas.retry` consumer lag > 500. Severity: Critical — payment backlog accumulating.
+  - Alert: FallbackRateHigh — fallback rate for any dependency > 5% over 5 min. Severity: Warning.
+  - Alert: FallbackRateCritical — fallback rate > 20% over 2 min (fraud-score or T24). Severity: High — PagerDuty.
+  - Alert: NapasRetryQueueDepth — `payment.napas.retry` consumer lag > 500. Severity: Critical — payment backlog accumulating.
 - **Dashboards:** Grafana — `fallback-strategies-overview`: fallback rate per dependency, cache hit ratio, retry queue lag, degraded-response rate.
 - **On-call playbook:**
   1. Identify which dependency triggered the fallback from the `dependency` label on the `fallback_invocation_total` metric.

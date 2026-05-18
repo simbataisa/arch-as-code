@@ -15,6 +15,10 @@ Without composite health signals, load balancers and Kubernetes probes cannot di
 - Multiple teams implement ad-hoc health endpoints with inconsistent schemas, making it impossible to build a unified SRE dashboard or feed a single readiness probe without custom per-service logic.
 - Cascading health: when T24 is degraded, all services that depend on T24 should signal `OUT_OF_SERVICE` on their readiness probe so the load balancer routes around them — without aggregation, this cascade is invisible.
 
+## Context
+
+A payment-service pod whose T24 OFS connection pool is exhausted will accept new HTTP connections (JVM alive) but fail every payment — Kubernetes liveness probe passes, so the pod is never restarted and the load balancer continues routing traffic to it. Spring Boot Actuator's `HealthIndicator` extension points allow per-dependency health checks to be aggregated into a single composite readiness signal that the orchestration layer can act on. Liveness and readiness are deliberately separated: dependency failures trigger LB removal (readiness), not pod restarts (liveness), preventing restart storms on shared-dependency flaps.
+
 ## Solution
 
 Implement a composite health aggregator using Spring Boot Actuator's `HealthIndicator` extension points, producing a single `/actuator/health` response that liveness and readiness probes, load balancers, and service meshes can consume, with per-component detail for SRE dashboards.
@@ -306,15 +310,15 @@ graph LR
    }
    ```
 
-## When to Use / When NOT to Use
+## When to Use
 
-**Use when:**
 - The service depends on external systems whose availability directly affects the service's ability to serve requests (T24, NAPAS, Kafka, Vault).
 - Kubernetes readiness/liveness probes must reflect real dependency health, not just JVM liveness.
 - SREs need per-component health visibility in a unified dashboard without custom per-service scraping logic.
 - The service participates in a cascading health model: T24 degradation should propagate through all services that depend on T24, removing them from LB rotation automatically.
 
-**Do NOT use when:**
+## When Not to Use
+
 - Health check logic is expensive or slow enough to affect probe timeouts — each indicator must complete within the probe's `timeoutSeconds` minus network overhead (< 2 s per indicator); use circuit-broken fast-fail checks, not live queries.
 - A dependency is non-critical and its failure should not affect readiness — exclude it from the readiness group and include it in a separate `management` group for SRE dashboards only.
 - The service is a pure batch processor with no Kubernetes readiness semantics (cron jobs, one-shot containers) — standard actuator health is sufficient.
@@ -361,7 +365,7 @@ acceptance_criteria:
 | Ring 0 | Microsoft Cloud Patterns — Health Endpoint Monitoring | "Implement functional checks in an application" | Actuator `HealthIndicator` per dependency implements the functional check pattern; composite endpoint implements the aggregation |
 | Ring 0 | Kubernetes documentation — Configure Liveness/Readiness Probes | Probe configuration reference | Liveness/readiness split, failure thresholds, and period settings follow Kubernetes best practices |
 | Ring 1 | BCBS 230 Principle 6 ⚠️ (working summary — pending PDF fetch) | Operational resilience — detection and recovery | Automated health aggregation enables fast, automated detection of degraded components, reducing MTTD and supporting bounded incident impact |
-| Ring 2 | SBV Circular 09/2020 §IV.2 ⚠️ (working summary — pending Legal review) | Operational continuity — monitoring and fault detection | Health check aggregation is a monitoring control that surfaces dependency failures to the orchestration layer, enabling automatic traffic rerouting that supports payment system continuity |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Operational continuity — monitoring and fault detection | Health check aggregation is a monitoring control that surfaces dependency failures to the orchestration layer, enabling automatic traffic rerouting that supports payment system continuity ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -391,10 +395,10 @@ STRIDE focus: **Information Disclosure** via overly detailed health responses an
 ## Operational Runbook (stub)
 
 - **Alerts:**
-  - `HealthComponentDown`: any indicator status transitions to DOWN for > 30 s. Severity: Warning → maps to the dependent component's own alert (T24, NAPAS, Kafka).
-  - `ReadinessProbeFailure`: Kubernetes `kube_pod_container_status_ready` drops to 0 for any payment-service pod. Severity: High — PagerDuty.
-  - `AllPodsUnready`: all payment-service pods removed from LB rotation. Severity: Critical — immediate escalation; service fully unavailable.
-  - `HealthEndpointSlow`: `/actuator/health/readiness` P99 > 2 s. Severity: Warning — probe may time out, causing false readiness failure.
+  - Alert: HealthComponentDown — any indicator status transitions to DOWN for > 30 s. Severity: Warning → maps to the dependent component's own alert (T24, NAPAS, Kafka).
+  - Alert: ReadinessProbeFailure — Kubernetes `kube_pod_container_status_ready` drops to 0 for any payment-service pod. Severity: High — PagerDuty.
+  - Alert: AllPodsUnready — all payment-service pods removed from LB rotation. Severity: Critical — immediate escalation; service fully unavailable.
+  - Alert: HealthEndpointSlow — `/actuator/health/readiness` P99 > 2 s. Severity: Warning — probe may time out, causing false readiness failure.
 - **Dashboards:** Grafana — `health-check-aggregation-overview`: component status heatmap per pod, readiness probe pass/fail rate, time-since-last-UP per component, indicator latency distribution.
 - **On-call playbook:**
   1. Check the Grafana heatmap to identify which component is DOWN and on which pods.

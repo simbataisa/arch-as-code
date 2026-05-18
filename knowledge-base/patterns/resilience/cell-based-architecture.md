@@ -239,7 +239,7 @@ Clients don't choose cells; the edge / gateway routes them based on customer-id.
 | Ring 0 | Microsoft Cloud Patterns — Deployment Stamps | "Independent copies of components" | Equivalent concept; cells = stamps |
 | Ring 1 | Basel BCBS 230 — Impact tolerance (Principles 1–3) ⚠️ (working summary — pending PDF fetch + Legal review) | "Banks must define and bound the impact of disruptions" | Cells make impact bounded to 1/N |
 | Ring 1 | Basel BCBS 239 §6 (Accuracy) | Risk-data aggregation must avoid double-counting | Strict cell isolation prevents cross-cell duplicate processing |
-| Ring 2 | SBV Circular 09/2020 §IV.2 | Operational continuity ⚠️ (working summary — pending Legal review) | Cells preserve service for the unaffected fraction during a single-cell incident |
+| Ring 2 | SBV Circular 09/2020; Decree 13/2023 | §IV.2 Operational continuity | Cells preserve service for the unaffected fraction during a single-cell incident ⚠️ (working summary — pending Legal review) |
 
 ## Cost / FinOps Notes
 
@@ -262,20 +262,20 @@ Clients don't choose cells; the edge / gateway routes them based on customer-id.
 STRIDE: addresses **Denial of Service** primarily; secondary on **Tampering** (cross-cell data leakage).
 
 - **Top 3 threats addressed**:
-  1. *Cell-wide bug* — affects 1/N users; surviving cells continue.
-  2. *Targeted DDoS on one cell* — other cells absorb routed traffic; affected cell can be drained.
+  1. *Targeted DDoS on one cell (Denial of Service)* — other cells absorb routed traffic; affected cell can be drained.
+  2. *Cross-cell data leakage (Tampering)* — strict cell isolation (separate DB, cache, compute) prevents one cell's data reaching another; cross-cell call detection alerts on architecture violations.
   3. *Bad deployment* — caught by canary cell metrics before reaching others.
 - **Top 3 residual threats**:
   1. *Routing-table bug* — routes everyone to one cell. Mitigation: routing-table validation in CI; smoke test on every deploy.
   2. *Shared bottleneck* (T24, NAPAS, single cache) — outage of the shared dependency affects all cells. Mitigation: per-cell circuit breakers (RES-002); explicit dependency mapping.
-  3. *Cell-pinning attack* — attacker forces traffic to one cell to overload it. Mitigation: customer-id is hash-distributed and stable; no client-controlled cell choice.
+  3. *Cell-pinning attack (Denial of Service)* — attacker forces traffic to one cell to overload it. Mitigation: customer-id is hash-distributed and stable; no client-controlled cell choice.
 
 ## Operational Runbook (stub)
 
 - **Alerts**:
-  - `Cell_Health_<cell>`: per-cell error rate / latency outside budget. Severity: tier-dependent.
-  - `Cell_Skew_Detected`: customer distribution skew > 10% from expected (1/N). Severity: Warning.
-  - `Cross_Cell_Call_Detected`: log message indicating an unexpected cross-cell synchronous call. Severity: Critical (architecture violation).
+  - Alert: CellHealthDegraded — per-cell error rate / latency outside budget (p99 > tier SLA). Severity: tier-dependent.
+  - Alert: CellSkewDetected — customer distribution skew > 10% from expected (1/N). Severity: Warning.
+  - Alert: CrossCellCallDetected — log message indicating an unexpected cross-cell synchronous call. Severity: Critical (architecture violation).
 - **Dashboards**: Grafana — `cell-overview` (per-cell health), `cell-routing-distribution`, `cell-deployment-progress`.
 - **Recovery**:
   - Cell down: drain traffic at routing layer; verify other cells absorb; deploy fix to the cell; restore.
