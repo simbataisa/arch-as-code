@@ -299,6 +299,8 @@ nfr_acceptance_criteria:
 
 ## Operational Runbook Stub
 
+**Alert: SwiftCredentialRotationOverdue** — fires when SWIFT Alliance credential Vault secret updated_time exceeds 85 days.
+
 - **Alert `swift_credential_rotation_overdue`** (Vault secret updated_time > 85 days): Steps: (1) Run `governance/scripts/rotate-swift-credentials.sh` immediately. (2) Verify SWIFT Alliance accepts new credentials: test connection via Alliance operator console. (3) Update rotation log in `governance/audit/swift-credential-rotations.md`. (4) If rotation script fails: manually generate new credentials in Vault and update SWIFT Alliance; notify @ciso-delegate.
 - **Alert `swift_four_eyes_approval_expired`** (Pending authorization expired without second approver): Steps: (1) Identify expired authorization from alert payload (authId). (2) Notify original submitter to resubmit the payment instruction. (3) If expired authorizations are accumulating (more than 3 in 24h): investigate whether second approver availability is a process problem; escalate to @payments-domain-owner.
 - **Dashboards**: Grafana — `swift-csp-compliance`.

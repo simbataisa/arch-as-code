@@ -276,6 +276,8 @@ nfr_acceptance_criteria:
 
 ## Operational Runbook Stub
 
+**Alert: Iso20022ValidationDlqSpike** — fires when ISO 20022 validation DLQ message count exceeds 10 in 5 minutes.
+
 - **Alert `iso20022_validation_dlq_spike`** (DLQ message count > 10 in 5 min): Steps: (1) Check DLQ contents: `kubectl exec camel-pod -- curl http://localhost:8161/api/message/payment.dlq`. (2) Identify failing message type (malformed MT103 source vs. translation bug vs. XSD schema change). (3) If NAPAS changed XSD: deploy updated XSD file and restart Camel pod. (4) If source system sending malformed MT103: notify upstream team; reject at source. (5) Replay DLQ messages after fix: `kubectl exec camel-pod -- scripts/replay-dlq.sh`.
 - **Alert `swift_pacs008_submission_timeout`** (SWIFT submission response > 30s): Steps: (1) Check SWIFT Alliance connectivity: `curl -k https://swift-gateway:9443/health`. (2) If SWIFT Alliance unreachable: route to SWIFT contingency channel (secondary SWIFT partner). (3) If SWIFT is reachable but slow: check message queue depth; alert SWIFT ops. (4) Escalate to @payments-domain-owner if disruption exceeds 15 min.
 - **Dashboards**: Grafana — `iso20022-translation-pipeline`.

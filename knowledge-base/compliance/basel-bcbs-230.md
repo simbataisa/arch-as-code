@@ -372,6 +372,8 @@ STRIDE applied to BCBS 230 operational resilience controls:
 
 ## Runbook Stub
 
+**Alert: BcpTestOverdue** — fires when BCP test scheduled date is exceeded for a T0/T1 service.
+
 - **Alert `BcpTestOverdue`**: BCP test overdue for T0 service. Steps: (1) Check `governance/bia/*.yaml` for `next_bcp_test_due`. (2) Schedule emergency chaos drill via `governance/scripts/chaos-drill-payment-gateway.sh`. (3) Commit updated `last_tested` and `next_test_due` dates after drill completes.
 - **Alert `ImpactToleranceBreach`**: Service RTO exceeds defined tolerance. Steps: (1) Check pod health `kubectl get pods -n banking-prod -l app=<service>`. (2) Review HPA scaling events. (3) Escalate to SRE if recovery exceeds 5 minutes — SBV notification may be required per Circular 09/2020 Art. 24.
 - **Dashboards**: Grafana — `bcbs230-operational-resilience`.
