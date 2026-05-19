@@ -238,6 +238,8 @@ nfr_acceptance_criteria:
 
 ## Operational Runbook Stub
 
+**Alert: OpaDecisionLatencyHigh** — fires when OPA authorization decision p99 exceeds 50 ms for 2 minutes.
+
 - **Alert `opa_decision_p99 > 50ms`**: Steps: (1) Check OPA pod CPU: `kubectl top pod -l app=opa-sidecar`. (2) If throttled, increase CPU limit. (3) Profile policy: `opa bench data.banking.allow -d policy.rego -i input.json` — if more than 10 ms, policy has O(n) iteration; refactor to indexed rule sets.
 - **Alert `opa_bundle_age > 300s`**: Steps: (1) Check bundle server health: `kubectl get pods -l app=opa-bundle-server`. (2) If down, restore from backup bundle or redeploy. (3) If healthy but OPA not fetching, check OPA log for fetch errors. (4) If bundle age exceeds 600 s, OPA enters deny-all mode — escalate immediately.
 - **Dashboards**: Grafana — `opa-abac-decisions`.

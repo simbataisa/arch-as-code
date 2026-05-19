@@ -236,6 +236,8 @@ nfr_acceptance_criteria:
 
 ## Operational Runbook Stub
 
+**Alert: AuditChainVerificationFailure** — CRITICAL: fires when a tamper-evidence chain break is detected; preserve forensic state and notify CISO immediately.
+
 - **Alert `audit_chain_verification_failure`** (fires when a chain break is detected): CRITICAL — Steps: (1) Immediately `pg_dump audit_log > /tmp/audit_snapshot_$(date +%s).sql` to preserve evidence. (2) Identify break point from verification log (CHAIN_BREAK at id=...). (3) Compare PostgreSQL entry against S3 WORM export for the same time range. (4) Notify CISO; open forensics investigation. (5) Do NOT repair the chain — preserve broken state as forensic evidence. (6) Notify SBV within regulatory incident reporting window.
 - **Alert `audit_export_lag > 1h`** (nightly export job overdue): Steps: (1) Check export job logs: `kubectl logs -l app=audit-export-job`. (2) If S3 unreachable, write to secondary S3 region. (3) If PostgreSQL read replica slow, export from primary with read-only connection. (4) Increase export job resource limits if OOMKilled.
 - **Dashboards**: Grafana — `audit-log-tamper-evident`.

@@ -231,6 +231,8 @@ nfr_acceptance_criteria:
 
 ## Operational Runbook Stub
 
+**Alert: FraudSignalIngestionLagHigh** — fires when Kafka consumer group lag exceeds 5 s sustained for 2 minutes.
+
 - **Alert `fraud_signal_ingestion_lag > 5s`** (Kafka consumer group lag): Steps: (1) `kubectl get pods -l app=screener-svc` — check pod count and restarts. (2) If lag growing, scale: `kubectl scale deploy screener-svc --replicas=6`. (3) If OOM: increase memory limit in Helm values. (4) If Kafka broker is bottleneck, rebalance partitions via Kafka admin.
 - **Alert `feature_store_staleness > 60s`**: Steps: (1) Check Redis cluster connectivity: `redis-cli -h redis-cluster ping`. (2) If Redis unreachable, screener is failing silently — check pod logs. (3) If healthy, screener may be stuck on consumer rebalance — restart screener pods. (4) Escalate to on-call DBA if Redis Cluster shows a node failure.
 - **Dashboards**: Grafana — `fraud-signal-collection`.

@@ -221,6 +221,8 @@ nfr_acceptance_criteria:
 
 ## Operational Runbook Stub
 
+**Alert: SessionIntrospectionLatencyHigh** — fires when session introspection p99 exceeds 50 ms sustained for 2 minutes.
+
 - **Alert `session_introspection_p99 > 50ms`**: Steps: (1) Check Redis latency: `redis-cli --latency-history -h redis-cluster`. (2) If `used_memory` near `maxmemory`, eviction is occurring — increase `maxmemory` or reduce session TTL. (3) Scale introspection endpoint pods via HPA. (4) If Redis failover in progress, latency spike is transient — monitor for recovery within 30 s.
 - **Alert `mass_session_revocation > 1000/min`**: Steps: (1) Confirm if scheduled forced re-auth or anomalous. (2) If anomalous, check login service for credential stuffing. (3) Trigger ABAC step-up authentication for all active accounts via OPA bundle update. (4) Notify security team.
 - **Dashboards**: Grafana — `session-revocation`.
