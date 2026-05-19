@@ -198,7 +198,7 @@ public class ProvisionalCreditService {
 
 ## Threat Model
 
-- **Fraudulent self-dispute (Fraud)**: A customer files a dispute for a legitimate transaction they actually authorised (first-party fraud / friendly fraud), obtaining provisional credit for a purchase they received. Mitigation: Triage checks original authorisation record for device fingerprint match (SEC-009 fraud signals); cases with fraud signals are routed to enhanced analyst review with dual approval (SEC-010 ABAC); pattern of repeat disputes triggers case escalation to financial crime.
+- **Fraudulent self-dispute (Repudiation)**: A customer files a dispute for a legitimate transaction they actually authorised (first-party fraud / friendly fraud), obtaining provisional credit for a purchase they received. Mitigation: Triage checks original authorisation record for device fingerprint match (SEC-009 fraud signals); cases with fraud signals are routed to enhanced analyst review with dual approval (SEC-010 ABAC); pattern of repeat disputes triggers case escalation to financial crime.
 - **Provisional credit never reversed (Tampering)**: A RESOLVED_MERCHANT outcome fails to trigger the credit reversal due to a state machine bug or Kafka consumer failure, leaving the customer with a permanent credit they should not have. Mitigation: Daily reconciliation job queries `dispute_cases WHERE state = RESOLVED_MERCHANT AND provisional_reversal_posted = false`; alerts on any match; idempotent reversal saga allows safe re-run.
 
 ## Operational Runbook Stub
