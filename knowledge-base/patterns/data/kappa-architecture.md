@@ -156,7 +156,7 @@ KafkaSource<TransactionEvent> replaySource = KafkaSource.<TransactionEvent>build
 
 ## Threat Model
 
-- **State corruption on checkpoint failure (Integrity loss)**: Flink RocksDB checkpoint to S3 fails silently; Flink restores from a stale checkpoint, producing incorrect aggregates for the gap period. Mitigation: `CheckpointConfig.setTolerableCheckpointFailureNumber(0)` causes job failure on any checkpoint failure; job restarts from the last successful checkpoint, replaying Kafka from that offset.
+- **State corruption on checkpoint failure (Tampering)**: Flink RocksDB checkpoint to S3 fails silently; Flink restores from a stale checkpoint, producing incorrect aggregates for the gap period. Mitigation: `CheckpointConfig.setTolerableCheckpointFailureNumber(0)` causes job failure on any checkpoint failure; job restarts from the last successful checkpoint, replaying Kafka from that offset.
 - **Kafka topic truncation before replay completes (Denial of Service)**: A retention policy change truncates events needed for a historical replay; the replay job processes a shorter range, producing incomplete results. Mitigation: Kafka topic deletion requires `delete.topic.enable=true` (disabled in production); retention changes require CAB approval; replay jobs validate that the earliest available offset covers the requested replay range before starting.
 
 ## Runbook Stub
