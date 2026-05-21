@@ -2017,7 +2017,7 @@ rows:
 - id: BSP-014
   title: FX Rate Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: payments-domain-owner
   path: knowledge-base/patterns/banking-solutions/fx-rate-engine.md
   tiers: [T0, T1]
@@ -2032,7 +2032,7 @@ rows:
 - id: BSP-015
   title: Position Keeping Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: wealth-domain-owner
   path: knowledge-base/patterns/banking-solutions/position-keeping-engine.md
   tiers: [T0, T1]
@@ -2047,7 +2047,7 @@ rows:
 - id: BSP-016
   title: Settlement Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: payments-domain-owner
   path: knowledge-base/patterns/banking-solutions/settlement-engine.md
   tiers: [T0]
