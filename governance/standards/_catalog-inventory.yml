@@ -1894,6 +1894,231 @@ rows:
   last_reviewed: 2026-05-09
   notes: Stub — Wave 2
   target_wave: 2
+- id: BSP-006
+  title: Pricing Engine
+  category: banking-solutions
+  status: Proposed
+  owner: payments-domain-owner
+  path: knowledge-base/patterns/banking-solutions/pricing-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [IFRS 15, PCI-DSS §4]
+    ring1: [BCBS 239 §4, ISO 4217]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9A
+  target_wave: 9
+- id: BSP-007
+  title: Interest Calculation Engine
+  category: banking-solutions
+  status: Proposed
+  owner: core-banking-domain-owner
+  path: knowledge-base/patterns/banking-solutions/interest-calculation-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [IFRS 9 §B5.4, Act/365 ISDA]
+    ring1: [BCBS 239 §4]
+    ring2: [SBV Circular 39/2016, SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9A
+  target_wave: 9
+- id: BSP-008
+  title: Fee Engine
+  category: banking-solutions
+  status: Proposed
+  owner: core-banking-domain-owner
+  path: knowledge-base/patterns/banking-solutions/fee-engine.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [IFRS 15, OWASP Top-10]
+    ring1: [BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.2, Decree 13/2023 Art. 9]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9A
+  target_wave: 9
+- id: BSP-009
+  title: Tax Calculation Engine
+  category: banking-solutions
+  status: Proposed
+  owner: head-of-compliance
+  path: knowledge-base/patterns/banking-solutions/tax-calculation-engine.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [OECD BEPS, FATF Rec. 6]
+    ring1: [BCBS 239 §6]
+    ring2: [Vietnam Tax Law 2023, Decree 13/2023, SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9A
+  target_wave: 9
+- id: BSP-010
+  title: Rule / Decisioning Engine
+  category: banking-solutions
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/banking-solutions/rule-decisioning-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-53 SA-11, OWASP ASVS §12]
+    ring1: [FATF Rec. 6, BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.2, Decree 13/2023]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9B
+  target_wave: 9
+- id: BSP-011
+  title: Credit Limit Engine
+  category: banking-solutions
+  status: Proposed
+  owner: risk-management-domain-owner
+  path: knowledge-base/patterns/banking-solutions/credit-limit-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Basel III §§ 4.1–4.3, NIST SP 800-53]
+    ring1: [BCBS 239 §§ 4–6, BCBS 230 §27]
+    ring2: [SBV Circular 41/2016 (credit classification), SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9B
+  target_wave: 9
+- id: BSP-012
+  title: Transaction Limit Engine
+  category: banking-solutions
+  status: Proposed
+  owner: risk-management-domain-owner
+  path: knowledge-base/patterns/banking-solutions/transaction-limit-engine.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [PCI-DSS §10, NIST SP 800-53 AC-4]
+    ring1: [FATF Rec. 16, BCBS 239 §6]
+    ring2: [SBV Circular 09/2020 §IV.2, Decree 13/2023 Art. 9]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9B
+  target_wave: 9
+- id: BSP-013
+  title: Collateral Management Engine
+  category: banking-solutions
+  status: Proposed
+  owner: risk-management-domain-owner
+  path: knowledge-base/patterns/banking-solutions/collateral-management-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Basel III §§ 5.1–5.4 (CRM), NIST SP 800-53]
+    ring1: [BCBS 239 §§ 4–6, BCBS 230 §27]
+    ring2: [SBV Circular 39/2016 (secured lending), SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9B
+  target_wave: 9
+- id: BSP-014
+  title: FX Rate Engine
+  category: banking-solutions
+  status: Proposed
+  owner: payments-domain-owner
+  path: knowledge-base/patterns/banking-solutions/fx-rate-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [ISO 4217, ISDA FX Definitions]
+    ring1: [BCBS 239 §§ 4–6, SWIFT CSP 2024 §5]
+    ring2: [SBV Exchange Rate Regulations 2023, SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9C
+  target_wave: 9
+- id: BSP-015
+  title: Position Keeping Engine
+  category: banking-solutions
+  status: Proposed
+  owner: wealth-domain-owner
+  path: knowledge-base/patterns/banking-solutions/position-keeping-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-53, Basel III market risk]
+    ring1: [BCBS 239 §§ 3–6, BCBS 230 §§ 6–8]
+    ring2: [SBV Circular 09/2020 §IV.2, SBV securities regulations]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9C
+  target_wave: 9
+- id: BSP-016
+  title: Settlement Engine
+  category: banking-solutions
+  status: Proposed
+  owner: payments-domain-owner
+  path: knowledge-base/patterns/banking-solutions/settlement-engine.md
+  tiers: [T0]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [ISO 20022 pacs.008/.002, PCI-DSS §4]
+    ring1: [SWIFT CSP 2024, BCBS 239 §6]
+    ring2: [SBV Payment System Regulations, SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9C
+  target_wave: 9
+- id: BSP-017
+  title: Product Factory
+  category: banking-solutions
+  status: Proposed
+  owner: ea-board
+  path: knowledge-base/patterns/banking-solutions/product-factory.md
+  tiers: [T0, T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-53 SA-4, OWASP ASVS §1]
+    ring1: [BCBS 239 §4, BCBS 230 §27]
+    ring2: [SBV product approval requirements, SBV Circular 09/2020 §III]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9D
+  target_wave: 9
+- id: BSP-018
+  title: Accrual Engine
+  category: banking-solutions
+  status: Proposed
+  owner: core-banking-domain-owner
+  path: knowledge-base/patterns/banking-solutions/accrual-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [IFRS 9 §B5.4, IAS 18]
+    ring1: [BCBS 239 §§ 4–6]
+    ring2: [Vietnam Accounting Standards VAS 01, SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9D
+  target_wave: 9
+- id: BSP-019
+  title: Collections Engine
+  category: banking-solutions
+  status: Proposed
+  owner: lending-domain-owner
+  path: knowledge-base/patterns/banking-solutions/collections-engine.md
+  tiers: [T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [FDCPA (reference), NIST SP 800-53]
+    ring1: [IFRS 9 §5.5 (credit-impaired staging), BCBS 239 §6]
+    ring2: [Decree 13/2023 Art. 9, SBV Circular 11/2021 (loan classification)]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9D
+  target_wave: 9
+- id: BSP-020
+  title: Relationship Pricing Engine
+  category: banking-solutions
+  status: Proposed
+  owner: core-banking-domain-owner
+  path: knowledge-base/patterns/banking-solutions/relationship-pricing-engine.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [ECOA (reference), NIST SP 800-53]
+    ring1: [BCBS 239 §4, IFRS 15]
+    ring2: [SBV Circular 09/2020 §IV.2, Decree 13/2023 Art. 9]
+  last_reviewed: '2026-05-21'
+  notes: Wave 9D
+  target_wave: 9
 - id: REF-001
   title: Multi-Region Active-Active
   category: reference-architectures
