@@ -1957,7 +1957,7 @@ rows:
 - id: BSP-010
   title: Rule / Decisioning Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: tech-lead-backend
   path: knowledge-base/patterns/banking-solutions/rule-decisioning-engine.md
   tiers: [T0, T1]
@@ -1972,7 +1972,7 @@ rows:
 - id: BSP-011
   title: Credit Limit Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: risk-management-domain-owner
   path: knowledge-base/patterns/banking-solutions/credit-limit-engine.md
   tiers: [T0, T1]
@@ -1987,7 +1987,7 @@ rows:
 - id: BSP-012
   title: Transaction Limit Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: risk-management-domain-owner
   path: knowledge-base/patterns/banking-solutions/transaction-limit-engine.md
   tiers: [T0, T1, T2]
@@ -2002,7 +2002,7 @@ rows:
 - id: BSP-013
   title: Collateral Management Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: risk-management-domain-owner
   path: knowledge-base/patterns/banking-solutions/collateral-management-engine.md
   tiers: [T0, T1]
