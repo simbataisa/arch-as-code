@@ -1,0 +1,69 @@
+name: Catalog Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  compliance-check:
+    name: Compliance Row Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run compliance row check
+        run: python3 scripts/check-compliance-rows.py
+
+      - name: Run internal link validator
+        run: python3 scripts/validate-internal-links.py
+
+  mermaid-lint:
+    name: Mermaid Diagram Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Lint changed markdown files
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE=${{ github.event.pull_request.base.sha }}
+          else
+            BASE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+          fi
+
+          if [ -z "$BASE" ]; then
+            echo "No base commit — skipping mermaid lint (initial commit)."
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE"...HEAD -- '*.md' 2>/dev/null || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No markdown files changed."
+            exit 0
+          fi
+
+          FAILED=0
+          for f in $CHANGED; do
+            if [ -f "$f" ]; then
+              echo "Linting: $f"
+              bash scripts/mermaid-lint-doc.sh "$f" || FAILED=1
+            fi
+          done
+          exit $FAILED
