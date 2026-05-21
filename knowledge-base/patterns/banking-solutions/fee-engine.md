@@ -239,8 +239,8 @@ nfr_acceptance_criteria:
 
 - [BSP-001 Double-Entry Ledger](double-entry-ledger.md) — receives ledger posting requests from FeePoster
 - [BSP-006 Pricing Engine](pricing-engine.md) — provides the fee amount via PricingClient
-- [BSP-010 Rule / Decisioning Engine](rule-decisioning-engine.md) — WaiverChecker calls BSP-010 to evaluate waiver eligibility rules
-- [EIP-024 Idempotent Receiver](../integration/idempotent-receiver.md) — the Redis idempotency store pattern used by FeeEventConsumer
+- BSP-010 Rule / Decisioning Engine — WaiverChecker calls BSP-010 to evaluate waiver eligibility rules (authored in Wave 9B)
+- [EIP-024 Idempotent Receiver](../eip/idempotent-receiver.md) — the Redis idempotency store pattern used by FeeEventConsumer
 
 ## References
 

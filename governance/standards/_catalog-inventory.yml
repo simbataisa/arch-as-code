@@ -1897,7 +1897,7 @@ rows:
 - id: BSP-006
   title: Pricing Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: payments-domain-owner
   path: knowledge-base/patterns/banking-solutions/pricing-engine.md
   tiers: [T0, T1]
@@ -1912,7 +1912,7 @@ rows:
 - id: BSP-007
   title: Interest Calculation Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: core-banking-domain-owner
   path: knowledge-base/patterns/banking-solutions/interest-calculation-engine.md
   tiers: [T0, T1]
@@ -1927,7 +1927,7 @@ rows:
 - id: BSP-008
   title: Fee Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: core-banking-domain-owner
   path: knowledge-base/patterns/banking-solutions/fee-engine.md
   tiers: [T0, T1, T2]
@@ -1942,7 +1942,7 @@ rows:
 - id: BSP-009
   title: Tax Calculation Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: head-of-compliance
   path: knowledge-base/patterns/banking-solutions/tax-calculation-engine.md
   tiers: [T0, T1, T2]

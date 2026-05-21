@@ -241,10 +241,10 @@ The Interest Calculation Engine is consumed by every product line that accrues i
 
 ## Related Patterns
 
-- [BSP-018 Accrual Engine](accrual-engine.md) — orchestrates bulk EOD accrual by calling this service in partitioned Spring Batch jobs
 - [BSP-006 Pricing Engine](pricing-engine.md) — provides the nominal interest rate that feeds into AccrualRequest.annualRate
-- [REF-013 Retail Deposits Platform](../../reference-architectures/retail-deposits-platform.md) — primary consumer of the accrual and EIR APIs
-- [REF-014 Consumer Lending Platform](../../reference-architectures/consumer-lending-platform.md) — uses generateSchedule for origination and calculateEIR for IFRS 9 staging
+- [BSP-001 Double-Entry Ledger](double-entry-ledger.md) — receives daily accrual postings produced by the AccrualCalculator
+- BSP-018 Accrual Engine — orchestrates bulk EOD accrual by calling this service in partitioned Spring Batch jobs (authored in Wave 9D)
+- REF-013 Retail Deposits Platform — primary consumer of the accrual and EIR APIs (authored in Wave 10)
 
 ## References
 

@@ -245,9 +245,9 @@ The Pricing Engine is the single source of truth for all fee, rate, and spread c
 ## Related Patterns
 
 - [BSP-008 Fee Engine](fee-engine.md) — BSP-006 provides the calculated fee amount; BSP-008 applies waiver rules and posts to the ledger
-- [BSP-020 Relationship Pricing Engine](relationship-pricing-engine.md) — queries BSP-006 and applies customer-segment discounts on top of base rates
-- [BSP-014 FX Rate Engine](fx-rate-engine.md) — provides real-time FX mid-rates consumed by BSP-006 for FX spread calculations
-- [DATA-013 Reference Data Master](../../data/reference-data-master.md) — currency codes and product codes are mastered here; BSP-006 validates inputs against this registry
+- [DATA-013 Reference Data Master](../data/reference-data-master.md) — currency codes and product codes are mastered here; BSP-006 validates inputs against this registry
+- BSP-020 Relationship Pricing Engine — queries BSP-006 and applies customer-segment discounts on top of base rates (authored in Wave 9D)
+- BSP-014 FX Rate Engine — provides real-time FX mid-rates consumed by BSP-006 for FX spread calculations (authored in Wave 9C)
 
 ## References
 
