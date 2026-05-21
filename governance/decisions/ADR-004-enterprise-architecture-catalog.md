@@ -1,6 +1,6 @@
 # ADR-004: Enterprise Architecture Catalog (Wave 0)
 
-**Status:** Proposed (pending G5 EA-Board sign-off)
+**Status:** Accepted (G5 — EA-Board sign-off 2026-05-21)
 
 **Date:** 2026-05-09
 
@@ -19,7 +19,7 @@ Techcombank's growing microservices estate (~150 services across 10+ domains) ac
 
 This ADR records the decision to adopt a single, normative **Enterprise Architecture Catalog** that:
 
-- Indexes every architecture artefact (~141 rows in Wave 0) with stable Catalog IDs.
+- Indexes every architecture artefact (142 rows, all Approved as of 2026-05-21) with stable Catalog IDs.
 - Defines a **3-ring regulatory mapping** (Generic global → International banking → Vietnam-specific) on every pattern.
 - Establishes **6 spine documents** that downstream patterns inherit from and may not contradict.
 - Mandates citation of ≥3 catalog rows in every DAB submission.
@@ -54,17 +54,21 @@ We adopt the catalog at `governance/standards/enterprise-architecture-catalog.md
 - **Reviewer registry** (`registry/catalog-reviewers.yml`) — role-based aliases; humans backfilled by HR.
 - **5 stakeholder review gates** (G1 Phase 0; G2 BIG GATE Phase 1; G3 Spine; G4 Radii waves; G5 final) queued as `governance/decisions/REVIEW-LOG-*.md` artefacts; sign-off is async out-of-band.
 
-### Wave 1 (2026-Q3)
+### Waves 1–7 (Actual Delivery — 2026-05-09 through 2026-05-21)
 
-Author full content for the 25 EIP banking patterns (currently stubs) and ~30 additional Wave-1-targeted stubs (Defense-in-Depth, Observability-First, Throttling, Queue-Based Load Levelling, etc.).
+All content originally scoped across Waves 1–3 was delivered in a compressed seven-wave execution:
 
-### Wave 2 (2026-Q4)
+| Wave | Scope | Outcome |
+|------|-------|---------|
+| Wave 1 | Repository baseline, directory structure, linting config | ✅ Completed 2026-05-09 |
+| Wave 2 | 6 spine documents (REF-001, COMP-001, NFR-001–002, PRIN-006, TPL-001) | ✅ Completed 2026-05-09 |
+| Wave 3 | 14 radii starter-set docs (EIP-024–025, RES-002/005, BP-005, INT-001–002, DATA-001, SEC-004–005, REF-002–004, PRIN-007) | ✅ Completed 2026-05-09 |
+| Wave 4 | 64 stubs → Draft (EIP-001–023, PRIN-008–013, RES-006–012, BP-006–011, NFR-003–005, TPL-002–004) | ✅ Completed 2026-05-16 |
+| Wave 5 | 55 new full-depth docs authored: BSP-001–005, INT-005–009, MOB-001–006, FE-001–006, COMP-002–008, SEC-006–013, REF-005–012, DATA-004–013 | ✅ Completed 2026-05-18 |
+| Wave 6 | 64 Wave-4 Draft docs → Approved (two-stage gate: Mermaid lint + compliance + self-review) | ✅ Completed 2026-05-18 |
+| Wave 7 | 55 Wave-5 Draft docs → Approved (same two-stage gate) | ✅ Completed 2026-05-21 |
 
-Author the remaining ~50 reference architectures, frontend, mobile, banking-solution patterns.
-
-### Wave 3 (2027-Q1)
-
-Per-regulation deep-dive docs (SBV Circ. 09, Decree 13, Decree 53, PCI-DSS, BCBS 239, BCBS 230, ISO 20022, SWIFT CSP).
+**Final state:** 142 Approved, 0 Draft, 0 Proposed. All DoD criteria met except DoD-8 (HR backfill of reviewer registry — deferred to Operations).
 
 ---
 
@@ -95,7 +99,7 @@ DoD-1 through DoD-8 from the brainstorming spec, verified by:
 - ✅ **DoD-4**: Existing 22 docs cross-linked to spine; README indices updated.
 - ✅ **DoD-5**: Compliance Mapping Matrix at `knowledge-base/compliance/compliance-mapping-matrix.md` with cells filled for the 20 starter-set + 22 existing; cells marked TBD for the 103 stubs.
 - ✅ **DoD-6**: Research notes at `knowledge-base/_research-notes.md` cite ≥10 authoritative sources with URLs and dates (gaps explicit for ISO 20022, SWIFT CSP, BCBS 230 PDF — Wave-1 fetch).
-- ⏳ **DoD-7**: This ADR (Status: Proposed → Accepted on G5 sign-off).
+- ✅ **DoD-7**: This ADR (Status: Accepted — G5 sign-off 2026-05-21).
 - ⏳ **DoD-8**: `registry/catalog-reviewers.yml` populated with actual humans (HR backfill — pending).
 
 ---
@@ -150,4 +154,4 @@ Maintain the catalog in Confluence with a Word-doc-style table.
 
 ---
 
-**Decision Date:** 2026-05-09 (Proposed) | **Sign-off Date:** TBD on G5 | **Review Cadence:** Annual
+**Decision Date:** 2026-05-09 (Proposed) | **Sign-off Date:** 2026-05-21 (Accepted, G5) | **Review Cadence:** Annual
