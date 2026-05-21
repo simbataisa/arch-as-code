@@ -214,7 +214,7 @@ groups:
 - [BSP-003 Sanction Screening Pipeline](../banking-solutions/sanction-screening-pipeline.md) — screening runs before routing; only CLEARED payments reach the router
 - [BSP-001 Double-Entry Ledger](../banking-solutions/double-entry-ledger.md) — the INTERNAL route posts directly to the ledger
 - [INT-001 Saga Orchestration](saga-orchestration.md) — the payment saga orchestrator dispatches the `PaymentDispatchCommand` that the router receives
-- [EIP-005 Content-Based Router (EIP catalog)](../../eip/) — the foundational EIP pattern this implementation realizes
+- [EIP-005 Content-Based Router (EIP catalog)](../eip/) — the foundational EIP pattern this implementation realizes
 
 ## References
 

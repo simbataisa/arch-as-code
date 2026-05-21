@@ -220,10 +220,10 @@ public class ProvisionalCreditService {
 
 ## Related Patterns
 
-- [BSP-005 Reversal and Chargeback](../../patterns/banking-solutions/reversal-and-chargeback.md)
-- [BSP-002 Idempotent Payment Key](../../patterns/banking-solutions/idempotent-payment-key.md)
-- [BSP-001 Double-Entry Ledger](../../patterns/banking-solutions/double-entry-ledger.md)
-- [SEC-012 Tamper-Evident Audit Logging](../../patterns/security/audit-logging-tamper-evident.md)
+- [BSP-005 Reversal and Chargeback](../patterns/banking-solutions/reversal-and-chargeback.md)
+- [BSP-002 Idempotent Payment Key](../patterns/banking-solutions/idempotent-payment-key.md)
+- [BSP-001 Double-Entry Ledger](../patterns/banking-solutions/double-entry-ledger.md)
+- [SEC-012 Tamper-Evident Audit Logging](../patterns/security/audit-logging-tamper-evident.md)
 - [REF-010 Ledger Posting Engine](ledger-posting-engine.md)
 
 ## References

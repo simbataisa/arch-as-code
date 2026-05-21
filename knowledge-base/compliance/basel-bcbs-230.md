@@ -388,11 +388,11 @@ STRIDE applied to BCBS 230 operational resilience controls:
 
 ## Related Patterns
 
-- [NFR-001 Service Tiering + RTO/RPO Matrix](../../nfr/service-tiering-rto-rpo.md) — impact tolerances in BIA YAML must align with tier-specific RTO/RPO targets
-- [BP-002 Disaster Recovery Playbook](../../best-practices/disaster-recovery-playbook.md) — BCP drills validate the DR playbook's recovery procedures
-- [BP-005 Chaos Engineering](../../best-practices/chaos-engineering.md) — chaos drills use Chaos Mesh tooling defined in this pattern
-- [RES-005 Cell-Based Architecture](../resilience/cell-based-architecture.md) — blast-radius bounding satisfies BCBS d516 P4/P5 dependency isolation
-- [SEC-001 mTLS Service Mesh](../security/mtls-service-mesh.md) — mTLS satisfies BCBS d516 P6/P7 ICT resilience and cyber controls
+- [NFR-001 Service Tiering + RTO/RPO Matrix](../nfr/service-tiering-rto-rpo.md) — impact tolerances in BIA YAML must align with tier-specific RTO/RPO targets
+- [BP-002 Disaster Recovery Playbook](../best-practices/disaster-recovery-playbook.md) — BCP drills validate the DR playbook's recovery procedures
+- [BP-005 Chaos Engineering](../best-practices/chaos-engineering.md) — chaos drills use Chaos Mesh tooling defined in this pattern
+- [RES-005 Cell-Based Architecture](../patterns/resilience/cell-based-architecture.md) — blast-radius bounding satisfies BCBS d516 P4/P5 dependency isolation
+- [SEC-001 mTLS Service Mesh](../patterns/security/mtls-service-mesh.md) — mTLS satisfies BCBS d516 P6/P7 ICT resilience and cyber controls
 - [COMP-004 PCI-DSS 4.0](../compliance/pci-dss-4-0.md) — overlapping third-party risk controls for shared SWIFT/NAPAS dependencies
 
 ## References

@@ -295,7 +295,7 @@ nfr_acceptance_criteria:
 - [COMP-008 SWIFT CSP v2024](swift-csp-2024.md) — SWIFT security requirements governing the SWIFT connectivity used by this pipeline
 - [BSP-002 Idempotent Payment Key](../patterns/banking-solutions/idempotent-payment-key.md) — MT103 transaction reference (F20) serves as the idempotency key in pacs.008 MsgId
 - [EIP-025 Dead Letter Channel](../patterns/eip/dead-letter-channel.md) — XSD validation failures are routed to the Dead Letter Queue via this pattern
-- [REF-005 SWIFT MT/MX Wire Transfer](../../reference-architectures/swift-mt-mx-wire-transfer.md) — end-to-end SWIFT wire transfer reference architecture composing this pattern
+- [REF-005 SWIFT MT/MX Wire Transfer](../reference-architectures/swift-mt-mx-wire-transfer.md) — end-to-end SWIFT wire transfer reference architecture composing this pattern
 
 ## References
 

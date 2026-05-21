@@ -216,11 +216,11 @@ public class DataQualityGate {
 
 ## Related Patterns
 
-- [COMP-005 BCBS 239](../../compliance/basel-bcbs-239.md)
-- [DATA-009 Data Lineage](../../patterns/data/data-lineage.md)
-- [DATA-011 Data Quality Rules](../../patterns/data/data-quality-rules.md)
-- [BSP-004 End-of-Day Batch Window](../../patterns/banking-solutions/end-of-day-batch-window.md)
-- [SEC-012 Tamper-Evident Audit Logging](../../patterns/security/audit-logging-tamper-evident.md)
+- [COMP-005 BCBS 239](../compliance/basel-bcbs-239.md)
+- [DATA-009 Data Lineage](../patterns/data/data-lineage.md)
+- [DATA-011 Data Quality Rules](../patterns/data/data-quality-rules.md)
+- [BSP-004 End-of-Day Batch Window](../patterns/banking-solutions/end-of-day-batch-window.md)
+- [SEC-012 Tamper-Evident Audit Logging](../patterns/security/audit-logging-tamper-evident.md)
 
 ## References
 

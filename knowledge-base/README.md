@@ -29,7 +29,7 @@ In your DAB submissions, reference knowledge-base content using relative links:
 ```markdown
 # Service Architecture
 
-This service implements the [API-First Design](../../knowledge-base/principles/api-first-design.md) principle and follows the [SAGA Orchestration Pattern](../../knowledge-base/patterns/integration/saga-orchestration.md) for distributed transactions.
+This service implements the [API-First Design](./principles/api-first-design.md) principle and follows the [SAGA Orchestration Pattern](./patterns/integration/saga-orchestration.md) for distributed transactions.
 ```
 
 ## Contributing New Patterns/Principles

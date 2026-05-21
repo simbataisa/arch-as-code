@@ -461,6 +461,6 @@ Pipeline runs on MR creation:
 ---
 
 ## Related Documents
-- [DAB Full Process](./dab-full-process.md)
-- [DAB Light Process](./dab-light-process.md)
+- [DAB Full Process](../dab-process/dab-full-process.md)
+- [DAB Light Process](../dab-process/dab-light-process.md)
 - [Diagram Standards](./diagram-standards.md)

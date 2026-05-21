@@ -207,10 +207,10 @@ public class CreditEnrichmentService {
 ## Related Patterns
 
 - [REF-003 KYC/AML Onboarding](kyc-aml-onboarding.md)
-- [BSP-001 Double-Entry Ledger](../../patterns/banking-solutions/double-entry-ledger.md)
-- [INT-001 Saga Orchestration](../../patterns/integration/saga-orchestration.md)
-- [INT-005 Anti-Corruption Layer](../../patterns/integration/anti-corruption-layer.md)
-- [COMP-005 BCBS 239](../../compliance/basel-bcbs-239.md)
+- [BSP-001 Double-Entry Ledger](../patterns/banking-solutions/double-entry-ledger.md)
+- [INT-001 Saga Orchestration](../patterns/integration/saga-orchestration.md)
+- [INT-005 Anti-Corruption Layer](../patterns/integration/anti-corruption-layer.md)
+- [COMP-005 BCBS 239](../compliance/basel-bcbs-239.md)
 
 ## References
 

@@ -204,9 +204,9 @@ public class FeatureStoreService {
 
 ## Related Patterns
 
-- [SEC-009 Fraud Signal Collection](../../patterns/security/fraud-signal-collection.md)
-- [BSP-003 Sanction Screening Pipeline](../../patterns/banking-solutions/sanction-screening-pipeline.md)
-- [SEC-010 Attribute-Based Access Control](../../patterns/security/attribute-based-access-control.md)
+- [SEC-009 Fraud Signal Collection](../patterns/security/fraud-signal-collection.md)
+- [BSP-003 Sanction Screening Pipeline](../patterns/banking-solutions/sanction-screening-pipeline.md)
+- [SEC-010 Attribute-Based Access Control](../patterns/security/attribute-based-access-control.md)
 - [REF-002 Real-Time Payments NAPAS](real-time-payments-napas.md)
 
 ## References

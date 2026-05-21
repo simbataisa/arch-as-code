@@ -213,9 +213,9 @@ public class DedupService {
 ## Related Patterns
 
 - [REF-003 KYC/AML Onboarding](kyc-aml-onboarding.md)
-- [MOB-003 Mobile Biometric Authentication](../../patterns/mobile/mobile-biometric-auth.md)
-- [INT-005 Anti-Corruption Layer](../../patterns/integration/anti-corruption-layer.md)
-- [BSP-002 Idempotent Payment Key](../../patterns/banking-solutions/idempotent-payment-key.md)
+- [MOB-003 Mobile Biometric Authentication](../patterns/mobile/mobile-biometric-auth.md)
+- [INT-005 Anti-Corruption Layer](../patterns/integration/anti-corruption-layer.md)
+- [BSP-002 Idempotent Payment Key](../patterns/banking-solutions/idempotent-payment-key.md)
 
 ## References
 

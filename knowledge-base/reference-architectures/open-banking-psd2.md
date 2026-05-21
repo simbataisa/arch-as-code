@@ -196,10 +196,10 @@ public class ConsentService {
 
 ## Related Patterns
 
-- [SEC-002 OAuth2 Authorization](../../patterns/security/oauth2-authorization.md)
-- [SEC-005 BFF Token Binding](../../patterns/security/bff-token-binding.md)
-- [INT-008 Backend-for-Frontend Routing](../../patterns/integration/backend-for-frontend-routing.md)
-- [SEC-011 Session Revocation](../../patterns/security/session-revocation.md)
+- [SEC-002 OAuth2 Authorization](../patterns/security/oauth2-authorization.md)
+- [SEC-005 BFF Token Binding](../patterns/security/bff-token-binding.md)
+- [INT-008 Backend-for-Frontend Routing](../patterns/integration/backend-for-frontend-routing.md)
+- [SEC-011 Session Revocation](../patterns/security/session-revocation.md)
 
 ## References
 

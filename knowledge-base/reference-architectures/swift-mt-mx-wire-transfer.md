@@ -237,11 +237,11 @@ public void onGpiConfirmation(GpiConfirmationEvent event) {
 
 ## Related Patterns
 
-- [COMP-007 ISO 20022 Messaging](../../compliance/iso-20022-messaging.md)
-- [COMP-008 SWIFT CSP v2024](../../compliance/swift-csp-2024.md)
-- [BSP-003 Sanction Screening Pipeline](../../patterns/banking-solutions/sanction-screening-pipeline.md)
-- [BSP-001 Double-Entry Ledger](../../patterns/banking-solutions/double-entry-ledger.md)
-- [SEC-010 Attribute-Based Access Control](../../patterns/security/attribute-based-access-control.md)
+- [COMP-007 ISO 20022 Messaging](../compliance/iso-20022-messaging.md)
+- [COMP-008 SWIFT CSP v2024](../compliance/swift-csp-2024.md)
+- [BSP-003 Sanction Screening Pipeline](../patterns/banking-solutions/sanction-screening-pipeline.md)
+- [BSP-001 Double-Entry Ledger](../patterns/banking-solutions/double-entry-ledger.md)
+- [SEC-010 Attribute-Based Access Control](../patterns/security/attribute-based-access-control.md)
 
 ## References
 

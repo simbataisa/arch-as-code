@@ -218,11 +218,11 @@ public class EodReconciliationJob {
 
 ## Related Patterns
 
-- [BSP-001 Double-Entry Ledger](../../patterns/banking-solutions/double-entry-ledger.md)
-- [BSP-002 Idempotent Payment Key](../../patterns/banking-solutions/idempotent-payment-key.md)
-- [BSP-004 End-of-Day Batch Window](../../patterns/banking-solutions/end-of-day-batch-window.md)
-- [INT-002 CDC Outbox Pattern](../../patterns/integration/cdc-outbox-pattern.md)
-- [SEC-012 Tamper-Evident Audit Logging](../../patterns/security/audit-logging-tamper-evident.md)
+- [BSP-001 Double-Entry Ledger](../patterns/banking-solutions/double-entry-ledger.md)
+- [BSP-002 Idempotent Payment Key](../patterns/banking-solutions/idempotent-payment-key.md)
+- [BSP-004 End-of-Day Batch Window](../patterns/banking-solutions/end-of-day-batch-window.md)
+- [INT-002 CDC Outbox Pattern](../patterns/integration/cdc-outbox-pattern.md)
+- [SEC-012 Tamper-Evident Audit Logging](../patterns/security/audit-logging-tamper-evident.md)
 
 ## References
 
