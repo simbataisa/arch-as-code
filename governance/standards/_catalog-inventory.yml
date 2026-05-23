@@ -2062,7 +2062,7 @@ rows:
 - id: BSP-017
   title: Product Factory
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: ea-board
   path: knowledge-base/patterns/banking-solutions/product-factory.md
   tiers: [T0, T1, T2, T3]
@@ -2077,7 +2077,7 @@ rows:
 - id: BSP-018
   title: Accrual Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: core-banking-domain-owner
   path: knowledge-base/patterns/banking-solutions/accrual-engine.md
   tiers: [T0, T1]
@@ -2092,7 +2092,7 @@ rows:
 - id: BSP-019
   title: Collections Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: lending-domain-owner
   path: knowledge-base/patterns/banking-solutions/collections-engine.md
   tiers: [T1, T2]
@@ -2107,7 +2107,7 @@ rows:
 - id: BSP-020
   title: Relationship Pricing Engine
   category: banking-solutions
-  status: Proposed
+  status: Draft
   owner: core-banking-domain-owner
   path: knowledge-base/patterns/banking-solutions/relationship-pricing-engine.md
   tiers: [T0, T1]
