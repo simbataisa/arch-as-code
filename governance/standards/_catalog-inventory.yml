@@ -2972,7 +2972,7 @@ rows:
 - id: REF-013
   title: Retail Deposits Platform
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: core-banking-domain-owner
   path: knowledge-base/reference-architectures/retail-deposits-platform.md
   tiers: [T0, T1]
@@ -2987,7 +2987,7 @@ rows:
 - id: REF-014
   title: Consumer Lending Platform
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: lending-domain-owner
   path: knowledge-base/reference-architectures/consumer-lending-platform.md
   tiers: [T0, T1]
@@ -3002,7 +3002,7 @@ rows:
 - id: REF-015
   title: Credit Card Issuing Platform
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: payments-domain-owner
   path: knowledge-base/reference-architectures/credit-card-issuing-platform.md
   tiers: [T0]
@@ -3017,7 +3017,7 @@ rows:
 - id: REF-016
   title: Corporate Lending and Syndications
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: lending-domain-owner
   path: knowledge-base/reference-architectures/corporate-lending-syndications.md
   tiers: [T0, T1]
@@ -3032,7 +3032,7 @@ rows:
 - id: REF-017
   title: Trade Finance Platform
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: core-banking-domain-owner
   path: knowledge-base/reference-architectures/trade-finance-platform.md
   tiers: [T0, T1]
@@ -3047,7 +3047,7 @@ rows:
 - id: REF-018
   title: Treasury and FX Platform
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: wealth-domain-owner
   path: knowledge-base/reference-architectures/treasury-fx-platform.md
   tiers: [T0]
@@ -3062,7 +3062,7 @@ rows:
 - id: REF-019
   title: Wealth Management Platform
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: wealth-domain-owner
   path: knowledge-base/reference-architectures/wealth-management-platform.md
   tiers: [T0, T1]
@@ -3077,7 +3077,7 @@ rows:
 - id: REF-020
   title: Cash Management and Liquidity
   category: reference-architectures
-  status: Draft
+  status: Approved
   owner: core-banking-domain-owner
   path: knowledge-base/reference-architectures/cash-management-liquidity.md
   tiers: [T0, T1]
