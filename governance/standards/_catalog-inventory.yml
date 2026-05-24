@@ -2924,6 +2924,182 @@ rows:
   last_reviewed: '2026-05-10'
   notes: Wave 2a
   target_wave: 2
+- id: OBS-006
+  title: Error Budget Burn Rate Alerting
+  category: observability
+  status: Proposed
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/error-budget-burn-rate.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Google SRE Workbook — Multi-Window Alerting]
+    ring1: [BCBS 239 §5 Timeliness, BCBS 230 Principle 9]
+    ring2: [SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12A
+  target_wave: 12
+
+- id: OBS-007
+  title: Distributed Tracing Sampling Strategy
+  category: observability
+  status: Proposed
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/tracing-sampling-strategy.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [OpenTelemetry Specification — Sampling]
+    ring1: [BCBS 239 §4 Granularity]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12A
+  target_wave: 12
+
+- id: OBS-008
+  title: Log Aggregation Pipeline
+  category: observability
+  status: Proposed
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/log-aggregation-pipeline.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [OpenTelemetry Logs Specification]
+    ring1: [BCBS 239 §6 Adaptability, ISO/IEC 27001 A.12.4]
+    ring2: [SBV Circular 09/2020 §IV.2, Decree 13/2023 Art. 9]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12A
+  target_wave: 12
+
+- id: OBS-009
+  title: Synthetic Monitoring and Canary Probes
+  category: observability
+  status: Proposed
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/synthetic-monitoring-canary.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Prometheus Blackbox Exporter, OTEL Synthetic Monitoring]
+    ring1: [BCBS 230 Principle 9 — operational resilience testing]
+    ring2: [SBV Circular 09/2020 §IV.3]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12A
+  target_wave: 12
+
+- id: OBS-010
+  title: Metrics Cardinality Management
+  category: observability
+  status: Proposed
+  owner: sre-lead
+  path: knowledge-base/patterns/observability/metrics-cardinality-management.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Prometheus Best Practices — Label Cardinality]
+    ring1: [BCBS 239 §4 Data Granularity]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12A
+  target_wave: 12
+
+- id: PLT-003
+  title: GitOps Deployment Pipeline
+  category: platform
+  status: Proposed
+  owner: ea-board
+  path: knowledge-base/patterns/platform/gitops-deployment-pipeline.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [OpenGitOps Principles v1.0]
+    ring1: [BCBS 230 Principle 7 — change management]
+    ring2: [SBV Circular 09/2020 §III.2]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12B
+  target_wave: 12
+
+- id: PLT-004
+  title: Internal Developer Platform
+  category: platform
+  status: Proposed
+  owner: platform-lead
+  path: knowledge-base/patterns/platform/internal-developer-platform.md
+  tiers: [T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [CNCF Platforms White Paper 2023]
+    ring1: [BCBS 239 §6 Adaptability]
+    ring2: [SBV Circular 09/2020 §III]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12B
+  target_wave: 12
+
+- id: PLT-005
+  title: Kubernetes Operator Pattern
+  category: platform
+  status: Proposed
+  owner: ea-board
+  path: knowledge-base/patterns/platform/kubernetes-operator-pattern.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Kubernetes Operator Pattern — CNCF]
+    ring1: [BCBS 239 §4 Data Accuracy]
+    ring2: [SBV Circular 09/2020 §IV.2]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12B
+  target_wave: 12
+
+- id: PLT-006
+  title: FinOps Cost Allocation
+  category: platform
+  status: Proposed
+  owner: ea-board
+  path: knowledge-base/patterns/platform/finops-cost-allocation.md
+  tiers: [T0, T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [FinOps Foundation — Cost Allocation Framework]
+    ring1: [BCBS 239 §4 Data Management]
+    ring2: [SBV Circular 09/2020 §III]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12B
+  target_wave: 12
+
+- id: PLT-007
+  title: Platform Service Catalog
+  category: platform
+  status: Proposed
+  owner: platform-lead
+  path: knowledge-base/patterns/platform/platform-service-catalog.md
+  tiers: [T0, T1, T2, T3]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [Backstage.io — Service Catalog Spec]
+    ring1: [BCBS 239 §6 Adaptability]
+    ring2: [SBV Circular 09/2020 §III.2]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12B
+  target_wave: 12
+
+- id: PLT-008
+  title: Multi-Tenancy Isolation
+  category: platform
+  status: Proposed
+  owner: ea-board
+  path: knowledge-base/patterns/platform/multi-tenancy-isolation.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: [NIST SP 800-204 — Microservices Security]
+    ring1: [BCBS 239 §4, ISO/IEC 27001 A.9]
+    ring2: [SBV Circular 09/2020 §IV.2, Decree 13/2023 Art. 9]
+  last_reviewed: '2026-05-24'
+  notes: Wave 12B
+  target_wave: 12
+
 - id: INT-010
   title: AsyncAPI Specification
   category: integration
