@@ -312,6 +312,18 @@ STRIDE focus: **Information Disclosure** (PII in logs) and **Tampering** (log in
 - **CI gate**: `grep -E '"(pan|cvv|accountNumber|cccdNumber|password|pin|otp)"\s*:\s*"[^*]'` on integration test log files — fail build if match found.
 - **ILM**: OpenSearch integration test — create test index with T0 ILM policy; assert rollover after 7 days (simulate with `max_age: 1ms` in test policy).
 
+## Threat Model
+
+**Log Injection — structured field override (Tampering)**: an attacker sends an HTTP request whose body contains JSON escape sequences targeting the structured log schema, causing the `severity` field to be overridden from `ERROR` to `INFO` in the emitted log, suppressing PagerDuty alerts. Mitigation: the `PiiMaskingConverter` sanitises the message field before JSON serialisation; the `severity` field is always set from the SLF4J log level (not from message content); OpenSearch index template enforces a strict mapping that rejects documents with unexpected field types.
+
+**Log Exfiltration — OpenSearch access (Information Disclosure)**: an insider with read access to OpenSearch queries all logs containing `accountId` for a specific customer, extracting transaction history patterns without going through the authorised audit trail. Mitigation: OpenSearch field-level security (FLS) restricts access to the `accountId` field to the compliance role only; all OpenSearch query access is logged to a separate audit index; PiiMaskingConverter ensures account numbers > 10 digits are masked before indexing.
+
+## Operational Runbook (stub)
+
+1. Alert: LogIngestionStopped — fires when the Fluent Bit or Vector agent on any node stops forwarding logs to OpenSearch for more than 5 minutes (metric: `fluentbit_output_proc_records_total` rate = 0). p50 resolution: 5 min; p99: 20 min. Check agent status on the affected node: `kubectl exec -n logging daemonset/fluent-bit -- fluent-bit -i`. If the agent is healthy but OpenSearch is backpressuring, check cluster disk usage.
+
+2. Alert: StructuredLogParseFailure — fires when the log parsing error rate (malformed JSON) exceeds 5% for any service. p50 resolution: 10 min; p99: 30 min. Identify the offending service from the `service_name` field in the parse-failure index. Check the service's `logback-spring.xml` for a missing JSON encoder or a multiline exception format incompatible with the schema.
+
 ## Related Patterns
 
 - [OBS-001 OpenTelemetry Instrumentation](otel-instrumentation.md) — OTEL MDC bridge injects `traceId` / `spanId` automatically

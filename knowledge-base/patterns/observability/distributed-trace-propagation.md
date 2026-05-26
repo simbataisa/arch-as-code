@@ -318,6 +318,18 @@ STRIDE focus: **Spoofing** and **Information Disclosure** via trace headers.
 - **Contract**: CI check — no `X-B3-TraceId` in captured HTTP exchanges (using MockMvc or WireMock request inspection).
 - **Chaos**: Kill the OTEL Collector during a T0 payment flow; assert the payment completes successfully; assert a new trace appears after Collector recovery.
 
+## Threat Model
+
+**Trace Forgery — injected traceparent header (Tampering)**: an external client sends a request with a crafted `traceparent` header containing a pre-chosen `traceId`, causing the bank's internal traces to be linked to attacker-controlled trace context — enabling correlation attacks where the attacker probes which trace IDs appear in the backend. Mitigation: the API gateway regenerates a fresh `traceId` for all inbound requests from untrusted external sources (sampled=`01` dropped; a new root span started); internal service-to-service `traceparent` is trusted only over mTLS-authenticated channels (PLT-001).
+
+**Trace Context Stripping — middleware misconfiguration (Denial of Service)**: an intermediate proxy or load balancer is upgraded and drops all custom headers including `traceparent`, breaking trace continuity across a critical service boundary and making it impossible to correlate payment flow spans for incident investigation. Mitigation: trace propagation integration tests run in CI as contract tests (assert single `traceId` across the full HTTP/Kafka/gRPC flow); any build that drops trace continuity fails CI; Collector alerts on orphaned root spans from known internal services.
+
+## Operational Runbook (stub)
+
+1. Alert: TraceGapDetected — fires when span ingestion shows a service boundary with no parent-child link for more than 5% of T0 traces in a 10-minute window. p50 resolution: 15 min; p99: 1 hour. Identify the broken boundary: query Grafana Tempo for traces with orphaned child spans. Check if the intermediate service was recently updated (ArgoCD audit log). Re-run the trace propagation integration test against the deployed version to confirm the regression.
+
+2. Alert: BaggagePropagationFailure — fires when `sre-team-tier` Baggage entry is absent from > 1% of downstream span attributes. p50 resolution: 10 min; p99: 30 min. Check `otel.propagators` JVM flag on the service pod — must include `baggage`. Restart the pod with the correct propagator configuration.
+
 ## Related Patterns
 
 - [OBS-001 OpenTelemetry Instrumentation](otel-instrumentation.md) — agent setup and OTEL Collector configuration

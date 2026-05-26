@@ -316,6 +316,18 @@ STRIDE focus: **Denial of Service** (alert fatigue leading to ignored pages) and
 - **Integration**: Chaos drill (quarterly, per BP-005) — inject 10% error rate into T0 service via Istio fault injection (PLT-001); assert `T0SloFastBurn` fires within 5 min; assert PagerDuty receives P1 alert.
 - **Dynatrace parity**: Terraform plan output includes DT SLO target; assert matches Prometheus SLO target via CI script.
 
+## Threat Model
+
+**SLO Target Manipulation — recording rule tampering (Tampering)**: an operator edits the SLO error budget threshold in the Prometheus recording rule YAML from 0.0005 (99.95%) to 0.005 (99.5%), effectively relaxing the T0 SLO and suppressing P1 alerts that would otherwise fire. The bank breaches its SBV SLA commitment without any alert. Mitigation: SLO recording rule YAML is managed via GitOps (PLT-003); changes require SRE lead approval; Prometheus does not accept runtime rule file pushes; a weekly audit job compares recorded SLO values against the SLO policy registry and alerts on any divergence.
+
+**Alert Suppression — Alertmanager inhibition abuse (Elevation of Privilege)**: an engineer adds a broad inhibition rule to Alertmanager config that silences all `severity=critical` alerts whenever any `severity=info` alert is active, preventing SLO breach pages from reaching on-call. Mitigation: Alertmanager configuration is version-controlled and requires peer review in Git; inhibition rules are tested in a CI environment that validates P1 alerts still fire under simulated SLO breach conditions.
+
+## Operational Runbook (stub)
+
+1. Alert: SLOBudgetCritical — fires when the error budget for any T0 service drops below 10% of the monthly allocation. p50 resolution: 10 min; p99: 1 hour. Initiate deploy freeze for the affected service (no non-critical changes until budget recovers). Identify the root cause via OBS-001 traces and OBS-003 logs. Escalate to SRE lead and product owner.
+
+2. Alert: SLORecordingRuleStale — fires when a Prometheus recording rule has not been evaluated for more than 60 seconds. p50 resolution: 5 min; p99: 30 min. Check Prometheus health: `GET /api/v1/rules`. Restart Prometheus if rule evaluation is blocked by a slow query.
+
 ## Related Patterns
 
 - [OBS-001 OpenTelemetry Instrumentation](otel-instrumentation.md) — OTEL metrics provide the SLI data source

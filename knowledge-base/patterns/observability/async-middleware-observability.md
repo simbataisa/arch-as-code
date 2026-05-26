@@ -353,6 +353,18 @@ STRIDE focus: **Denial of Service** (queue exhaustion) and **Tampering** (DLQ me
 - **Integration — lag alert**: stop consumer pod; produce 1,100 messages to T0 topic; assert `KafkaConsumerLagHighT0` fires within 10 min.
 - **FOLLOWS_FROM**: Testcontainers Kafka; producer publishes event; consumer consumes; assert Tempo trace has `FOLLOWS_FROM` link from consumer span to producer span via `InMemorySpanExporter`.
 
+## Threat Model
+
+**Lag Metric Spoofing — fake consumer group (Tampering)**: an attacker registers a dummy Kafka consumer group with the same `group.id` as the production fee-engine consumer, causing the consumer group offset to advance without processing any messages. The lag metric reads zero; the real consumer is actually behind by hours. Mitigation: Kafka consumer group ACLs restrict which service principals can register a consumer group with the `fee-engine` group ID (Kafka SASL/ACL controlled by PLT-003 GitOps); consumer group creation is audited in Kafka's audit log.
+
+**DLQ Flood — poison message amplification (Denial of Service)**: a malformed FeeableEvent that cannot be deserialised causes the consumer to fail, retry 3 times, and send the message to the DLQ — repeated at scale with 10,000 such messages per second, exhausting DLQ storage and consumer memory. Mitigation: Kafka consumer uses a rate limiter (Resilience4j `RateLimiter`) capped at 5,000 events/second; DLQ depth alert fires when depth > 1,000 (long before storage exhaustion); the consumer drops messages that fail deserialisation after 3 retries rather than infinite retry.
+
+## Operational Runbook (stub)
+
+1. Alert: KafkaConsumerLagCritical — fires when consumer group lag for any T0 topic exceeds 1,000 events for more than 5 minutes. p50 resolution: 5 min; p99: 20 min. Scale the consumer deployment: `kubectl scale deployment fee-engine --replicas=6`. Check consumer throughput — if lag persists after scale-out, check BSP-001 ledger latency (slow downstream = slow consumer).
+
+2. Alert: DLQDepthHigh — fires when DLQ topic depth exceeds 1,000 messages. p50 resolution: 10 min; p99: 1 hour. Inspect the first 10 DLQ messages to identify the poison message pattern. Fix the root cause in the producer service. Replay valid messages: `kafka-consumer-groups.sh --reset-offsets --topic feeable-events-dlq --to-earliest`. Mark malformed messages as permanently failed.
+
 ## Related Patterns
 
 - [EIP-025 Dead Letter Channel](../eip/dead-letter-channel.md) — DLQ pattern; OBS-005 adds the alerting dimension

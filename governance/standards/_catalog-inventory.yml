@@ -2822,7 +2822,7 @@ rows:
 - id: OBS-001
   title: OpenTelemetry Instrumentation
   category: observability
-  status: Draft
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/otel-instrumentation.md
   tiers: [T0, T1, T2, T3]
@@ -2837,7 +2837,7 @@ rows:
 - id: OBS-002
   title: Distributed Trace Propagation
   category: observability
-  status: Draft
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/distributed-trace-propagation.md
   tiers: [T0, T1, T2]
@@ -2852,7 +2852,7 @@ rows:
 - id: OBS-003
   title: Structured Logging Standard
   category: observability
-  status: Draft
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/structured-logging-standard.md
   tiers: [T0, T1, T2, T3]
@@ -2867,7 +2867,7 @@ rows:
 - id: OBS-004
   title: SLO Alerting
   category: observability
-  status: Draft
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/slo-alerting.md
   tiers: [T0, T1, T2]
@@ -2882,7 +2882,7 @@ rows:
 - id: OBS-005
   title: Async Middleware Observability
   category: observability
-  status: Draft
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/async-middleware-observability.md
   tiers: [T0, T1]
@@ -2897,7 +2897,7 @@ rows:
 - id: PLT-001
   title: Service Mesh Traffic Management
   category: platform
-  status: Draft
+  status: Approved
   owner: platform-lead
   path: knowledge-base/patterns/platform/service-mesh-traffic.md
   tiers: [T0, T1]
@@ -2912,7 +2912,7 @@ rows:
 - id: PLT-002
   title: CNCF Stack Selection
   category: platform
-  status: Draft
+  status: Approved
   owner: ea-board
   path: knowledge-base/patterns/platform/cncf-stack-selection.md
   tiers: [T0, T1, T2, T3]
@@ -2927,7 +2927,7 @@ rows:
 - id: OBS-006
   title: Error Budget Burn Rate Alerting
   category: observability
-  status: Proposed
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/error-budget-burn-rate.md
   tiers: [T0, T1, T2]
@@ -2943,7 +2943,7 @@ rows:
 - id: OBS-007
   title: Distributed Tracing Sampling Strategy
   category: observability
-  status: Proposed
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/tracing-sampling-strategy.md
   tiers: [T0, T1, T2]
@@ -2959,7 +2959,7 @@ rows:
 - id: OBS-008
   title: Log Aggregation Pipeline
   category: observability
-  status: Proposed
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/log-aggregation-pipeline.md
   tiers: [T0, T1, T2]
@@ -2975,7 +2975,7 @@ rows:
 - id: OBS-009
   title: Synthetic Monitoring and Canary Probes
   category: observability
-  status: Proposed
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/synthetic-monitoring-canary.md
   tiers: [T0, T1, T2]
@@ -2991,7 +2991,7 @@ rows:
 - id: OBS-010
   title: Metrics Cardinality Management
   category: observability
-  status: Proposed
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/observability/metrics-cardinality-management.md
   tiers: [T0, T1, T2]

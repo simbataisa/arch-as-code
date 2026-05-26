@@ -308,6 +308,18 @@ STRIDE focus: **Information Disclosure** and **Elevation of Privilege** via tele
 - **Sampling**: Gatling load test at T1 rate; assert actual sampled percentage within ±5% of 50% target.
 - **Overhead**: JMH benchmark of instrumented vs uninstrumented `authorisePayment`; CI fails if instrumented overhead > 3%.
 
+## Threat Model
+
+**Span Attribute Exfiltration — PII in trace data (Information Disclosure)**: a developer adds `customer.nid` or `card.pan` as a span attribute during debugging and merges it to production, causing sensitive PII to be stored in Grafana Tempo for 90 days and accessible to SRE engineers without data protection controls. Mitigation: OTEL Collector `redaction` processor applies a deny-list of attribute key patterns (`*.nid`, `*.pan`, `*.pin`); any matching attribute is replaced with `[REDACTED]` before export; CI includes a span schema lint step that fails if banned attribute keys appear in `@WithSpan` annotations.
+
+**Collector Poisoning — fabricated span injection (Tampering)**: an attacker on the internal network sends crafted OTLP spans to the OTEL Collector's gRPC port (4317) that falsify latency metrics for the payment gateway, suppressing legitimate SLO alerts. Mitigation: OTEL Collector gRPC endpoint is only reachable within the cluster via Kubernetes NetworkPolicy; pods authenticate via mTLS (PLT-001); Collector validates that `service.name` matches a service registry allow-list.
+
+## Operational Runbook (stub)
+
+1. Alert: OtelCollectorExportFailure — fires when the Collector's `otelcol_exporter_send_failed_spans_ratio` exceeds 1% for more than 2 minutes. p50 resolution: 5 min; p99: 30 min. Check Collector logs: `kubectl logs -n monitoring deployment/otel-collector`. Verify Grafana Tempo and OpenSearch are healthy. If Collector is OOM, increase memory limit: `kubectl set resources deployment/otel-collector --limits memory=2Gi`.
+
+2. Alert: TraceLatencyAnomaly — fires when p99 latency for any T0 service exceeds the SLO budget by 200%. p50 resolution: 10 min; p99: 1 hour. Pull recent T0 traces in Grafana Tempo filtered by `duration > 2s`; identify the slowest span — typically the ledger (BSP-001) or pricing engine (BSP-006) call.
+
 ## Related Patterns
 
 - [OBS-002 Distributed Trace Propagation](distributed-trace-propagation.md) — how `traceparent` crosses service/protocol boundaries
