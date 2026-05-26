@@ -3007,7 +3007,7 @@ rows:
 - id: PLT-003
   title: GitOps Deployment Pipeline
   category: platform
-  status: Proposed
+  status: Approved
   owner: ea-board
   path: knowledge-base/patterns/platform/gitops-deployment-pipeline.md
   tiers: [T0, T1, T2]
@@ -3023,7 +3023,7 @@ rows:
 - id: PLT-004
   title: Internal Developer Platform
   category: platform
-  status: Proposed
+  status: Approved
   owner: platform-lead
   path: knowledge-base/patterns/platform/internal-developer-platform.md
   tiers: [T1, T2, T3]
@@ -3039,7 +3039,7 @@ rows:
 - id: PLT-005
   title: Kubernetes Operator Pattern
   category: platform
-  status: Proposed
+  status: Approved
   owner: ea-board
   path: knowledge-base/patterns/platform/kubernetes-operator-pattern.md
   tiers: [T0, T1, T2]
@@ -3055,7 +3055,7 @@ rows:
 - id: PLT-006
   title: FinOps Cost Allocation
   category: platform
-  status: Proposed
+  status: Approved
   owner: ea-board
   path: knowledge-base/patterns/platform/finops-cost-allocation.md
   tiers: [T0, T1, T2, T3]
@@ -3071,7 +3071,7 @@ rows:
 - id: PLT-007
   title: Platform Service Catalog
   category: platform
-  status: Proposed
+  status: Approved
   owner: platform-lead
   path: knowledge-base/patterns/platform/platform-service-catalog.md
   tiers: [T0, T1, T2, T3]
@@ -3087,7 +3087,7 @@ rows:
 - id: PLT-008
   title: Multi-Tenancy Isolation
   category: platform
-  status: Proposed
+  status: Approved
   owner: ea-board
   path: knowledge-base/patterns/platform/multi-tenancy-isolation.md
   tiers: [T0, T1, T2]
@@ -3103,7 +3103,7 @@ rows:
 - id: INT-010
   title: AsyncAPI Specification
   category: integration
-  status: Draft
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/asyncapi-specification.md
   tiers: [T0, T1, T2]
@@ -3118,7 +3118,7 @@ rows:
 - id: INT-011
   title: CloudEvents Envelope Standard
   category: integration
-  status: Draft
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/cloudevents-envelope.md
   tiers: [T0, T1, T2]
