@@ -663,7 +663,7 @@ rows:
 - id: INT-010
   title: AsyncAPI Specification Standard
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/asyncapi-specification.md
   tiers: [T0, T1, T2]
@@ -673,7 +673,7 @@ rows:
 - id: INT-011
   title: CloudEvents Envelope Standard
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/cloudevents-envelope.md
   tiers: [T0, T1, T2]
@@ -683,7 +683,7 @@ rows:
 - id: INT-012
   title: Error Code Mapping Standard
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/error-code-mapping.md
   tiers: [T0, T1, T2]
@@ -804,7 +804,7 @@ rows:
 - id: RES-004
   title: Graceful Degradation
   category: resilience
-  status: Proposed
+  status: Approved
   owner: sre-lead
   path: knowledge-base/patterns/resilience/graceful-degradation.md
   tiers: [T0, T1, T2]
