@@ -226,6 +226,14 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | INT-007 | Sidecar / Ambassador | integration | Approved | radii | @sre-lead | `knowledge-base/patterns/integration/sidecar-ambassador.md` | T0, T1 | MS Cloud Sidecar | 2026-05-18 | 2 | Wave 7B — self-review complete |
 | INT-008 | Backend-for-Frontend Routing | integration | Approved | radii | @tech-lead-backend | `knowledge-base/patterns/integration/backend-for-frontend-routing.md` | T0, T1 | MS Cloud BFF | 2026-05-18 | 2 | Wave 7B — self-review complete |
 | INT-009 | Content-Based Router | integration | Approved | radii | @tech-lead-backend | `knowledge-base/patterns/integration/content-based-router.md` | T0, T1 | EIP §4 | 2026-05-18 | 2 | Wave 7B — self-review complete |
+| INT-010 | AsyncAPI Specification Standard | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/asyncapi-specification.md` | T0, T1, T2 | AsyncAPI 3.0; SBV Circ. 09 §IV.2 | 2026-05-27 | 0 | Wave 13A — orphan file registered |
+| INT-011 | CloudEvents Envelope Standard | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/cloudevents-envelope.md` | T0, T1, T2 | CNCF CloudEvents 1.0; SBV Circ. 09 §IV.2 | 2026-05-27 | 0 | Wave 13A — orphan file registered |
+| INT-012 | Error Code Mapping Standard | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/error-code-mapping.md` | T0, T1, T2 | RFC 7807 Problem Details; SBV Circ. 09 §IV.2 | 2026-05-27 | 0 | Wave 13A — orphan file registered |
+| INT-013 | Schema Registry Governance | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/schema-registry-governance.md` | T0, T1, T2 | Confluent Schema Registry; Avro/Protobuf; BCBS 239 §6 | 2026-05-27 | 0 | Wave 13B — new |
+| INT-014 | Webhook Delivery Reliability | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/webhook-delivery-reliability.md` | T0, T1, T2 | MS Cloud Webhook; PCI-DSS 4.0 §6.4 | 2026-05-27 | 0 | Wave 13B — new |
+| INT-015 | API Contract Testing | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/api-contract-testing.md` | T1, T2 | Pact.io Consumer-Driven Contracts | 2026-05-27 | 0 | Wave 13B — new |
+| INT-016 | Distributed Saga Choreography | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/distributed-saga-choreography.md` | T0, T1 | BCBS 239 §6; SBV Circ. 09 §IV.2 | 2026-05-27 | 0 | Wave 13B — new |
+| INT-017 | Message Sequencer | integration | Proposed | radii | @tech-lead-backend | `knowledge-base/patterns/integration/message-sequencer.md` | T0, T1 | EIP §7; BCBS 239 §6 | 2026-05-27 | 0 | Wave 13B — new |
 | MOB-001 | Mobile Offline Queue | mobile | Approved | radii | @tech-lead-mobile | `knowledge-base/patterns/mobile/mobile-offline-queue.md` | T1, T2 | OWASP M2; PCI-DSS §3.5; Decree 13/2023 §9 | 2026-05-18 | 2 | Wave 7C — self-review complete |
 | MOB-002 | Mobile Secure Storage | mobile | Approved | radii | @tech-lead-mobile | `knowledge-base/patterns/mobile/mobile-secure-storage.md` | T0, T1 | OWASP M2; PCI-DSS §3.5; SBV Circ. 09 §III | 2026-05-18 | 2 | Wave 7C — self-review complete |
 | MOB-003 | Mobile Biometric Auth | mobile | Approved | radii | @tech-lead-mobile | `knowledge-base/patterns/mobile/mobile-biometric-auth.md` | T0, T1 | NIST SP 800-63B; PCI-DSS §8.4; SBV Circ. 09 §III.2 | 2026-05-18 | 2 | Wave 7C — self-review complete |
@@ -291,6 +299,7 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | RES-001 | Bulkhead Isolation | resilience | Approved | radii | @sre-lead | `knowledge-base/patterns/resilience/bulkhead-isolation.md` | T0, T1, T2 | MS Cloud Bulkhead; BCBS 230 §6 (UNOFFICIAL) | 2026-03-08 | 0 | Existing — cross-link only; extended by RES-005 cell-based |
 | RES-002 | Circuit Breaker | resilience | Approved | radii | @sre-lead | `knowledge-base/patterns/resilience/circuit-breaker.md` | T0, T1, T2 | Resilience4j /circuitbreaker; BCBS 230 §6 (UNOFFICIAL); SBV Circ. 09 §IV.2 (UNOFFICIAL) | 2026-05-09 | 0 | Existing — UPGRADED in Wave 3a |
 | RES-003 | Retry with Backoff | resilience | Approved | radii | @sre-lead | `knowledge-base/patterns/resilience/retry-with-backoff.md` | T0, T1, T2 | Resilience4j Retry | 2026-03-08 | 0 | Existing — cross-link only |
+| RES-004 | Graceful Degradation | resilience | Proposed | radii | @sre-lead | `knowledge-base/patterns/resilience/graceful-degradation.md` | T0, T1, T2 | BCBS 230 §6; SBV Circ. 09 §IV.2 | 2026-05-27 | 0 | Wave 13A — new |
 | RES-005 | Cell-Based Architecture | resilience | Approved | radii | @sre-lead | `knowledge-base/patterns/resilience/cell-based-architecture.md` | T0, T1 | AWS Operational Excellence — bulkhead; BCBS 230 §27 impact tolerance (UNOFFICIAL); SBV Circ. 09 §IV.2 (UNOFFICIAL) | 2026-05-18 | 1 | Wave 6D — self-review complete |
 | RES-006 | Timeout Budget | resilience | Approved | radii | @sre-lead | `knowledge-base/patterns/resilience/timeout-budget.md` | T0, T1, T2 | Resilience4j TimeLimiter | 2026-05-18 | 1 | Wave 6D — self-review complete |
 | RES-007 | Fallback Strategies | resilience | Approved | radii | @sre-lead | `knowledge-base/patterns/resilience/fallback-strategies.md` | T0, T1 | — | 2026-05-18 | 1 | Wave 6D — self-review complete |
@@ -444,9 +453,6 @@ This solution implements the following catalog patterns:
 
 | Catalog ID | Title | Why we use it | Variant chosen (if any) |
 |---|---|---|---|
-| PRIN-006 | Idempotency-by-default | All write APIs may be retried | strict idempotency key in HTTP header |
-| EIP-025 | Dead Letter Channel | Poison-message handling on payment-events topic | DLT with 3-day retention |
-| RES-005 | Cell-Based Architecture | Blast-radius isolation | 3 cells per AZ |
 
 Compliance posture (cross-referenced from each pattern's Compliance Mapping):
 - SBV Circ. 09 §IV.2 — satisfied via PRIN-006 + RES-005

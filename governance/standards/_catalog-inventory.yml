@@ -659,6 +659,87 @@ rows:
   last_reviewed: 2026-05-09
   notes: Stub — Wave 2
   target_wave: 2
+
+- id: INT-010
+  title: AsyncAPI Specification Standard
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/asyncapi-specification.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-011
+  title: CloudEvents Envelope Standard
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/cloudevents-envelope.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-012
+  title: Error Code Mapping Standard
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/error-code-mapping.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-013
+  title: Schema Registry Governance
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/schema-registry-governance.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-014
+  title: Webhook Delivery Reliability
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/webhook-delivery-reliability.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-015
+  title: API Contract Testing
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/api-contract-testing.md
+  tiers: [T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-016
+  title: Distributed Saga Choreography
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/distributed-saga-choreography.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  target_wave: 13
+
+- id: INT-017
+  title: Message Sequencer
+  category: integration
+  status: Proposed
+  owner: tech-lead-backend
+  path: knowledge-base/patterns/integration/message-sequencer.md
+  tiers: [T0, T1]
+  spine_or_radii: radii
+  target_wave: 13
+
 - id: RES-001
   title: Bulkhead Isolation
   category: resilience
@@ -719,6 +800,17 @@ rows:
   last_reviewed: 2026-03-08
   notes: Existing — cross-link only
   target_wave: 0
+
+- id: RES-004
+  title: Graceful Degradation
+  category: resilience
+  status: Proposed
+  owner: sre-lead
+  path: knowledge-base/patterns/resilience/graceful-degradation.md
+  tiers: [T0, T1, T2]
+  spine_or_radii: radii
+  target_wave: 13
+
 - id: RES-005
   title: Cell-Based Architecture
   category: resilience
