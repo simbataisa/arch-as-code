@@ -317,31 +317,17 @@ public class TechcombankCloudEventValidator {
 
 **Cost of NOT standardising**: one broken partner webhook integration (wrong field name) requires 2 weeks of integration debugging + partner SLA penalty. Standard envelope eliminates this class of error.
 
-## Threat Model Summary
+## Threat Model
 
-STRIDE focus: **Spoofing** (forged `source`) and **Tampering** (malformed `id` bypassing idempotency).
+**Envelope Spoofing — forged CloudEvents `source` field (Spoofing)**: a rogue service publishes CloudEvents with `source: "//banking.internal/payment-gateway"` (impersonating the payment gateway), causing downstream consumers to process fraudulent events as if they originated from a trusted source. Mitigation: CloudEvents published to Kafka must include an HMAC-SHA256 signature over the `id + source + type + time` fields in the `x-signature` extension attribute; consumers verify the signature against the expected producer service account before processing; unsigned events are forwarded to the dead letter topic; Kafka mTLS (INT-002) ensures only authenticated services can publish to production topics.
 
-- **Top 3 threats addressed**:
-  1. *Forged `source` — attacker spoofs a Techcombank system* — consumer validates `source` against allowlist; mTLS on Kafka ensures only authenticated services can publish.
-  2. *Duplicate events causing double-processing* — `id` (UUID v4) deduplication via Redis cache; consumer rejects events with seen `id`.
-  3. *Missing `time` causing audit gap* — Techcombank standard mandates `time`; `TechcombankCloudEventValidator` enforces at producer; build fails if `withTime()` not called.
-- **Top 3 residual threats**:
-  1. *UUID v4 collision* — astronomically rare (birthday paradox at ~2.7 quintillion IDs); acceptable risk; no mitigation required.
-  2. *Redis cache unavailable — deduplication fails open* — mitigation: database-level idempotency key for T0 transactions (PRIN-006) as secondary guard.
-  3. *`techcombanktraceparent` missing for older services* — mitigation: consumer handles missing extension gracefully; OTEL context not restored (trace broken but event processed); alert on high rate of missing traceparent.
+**Event Data Injection — malicious payload in `data` field (Tampering)**: an attacker publishes a CloudEvent with a valid envelope but injects a SQL fragment into the `data.accountNumber` field. A consumer that trusts the CloudEvent envelope without validating the payload passes the injected value to a downstream JDBC query. Mitigation: consumers must validate the `data` field against the registered JSON Schema for the event `type`; the schema is fetched from the schema registry using the event `dataschema` URI; any event whose `data` fails schema validation is rejected and sent to the DLQ with a `validation_failure` reason; producer SDKs run `withDataSchema()` validation at build time.
 
 ## Operational Runbook (stub)
 
-**Alert: duplicate event detected:**
-1. Check producer service for retry bug (common cause: Kafka producer retry without idempotent producer config).
-2. Enable Kafka idempotent producer: `spring.kafka.producer.properties.enable.idempotence=true`.
-3. Verify consumer deduplication cache is working: `redis-cli GET cloudevents:id:{eventId}`.
+1. Alert: CloudEventsValidationFailure — fires when the CloudEvents consumer reports more than 5 schema validation failures per minute for any event type. p50 resolution: 20 min; p99: 2 hours. Check the DLQ for rejected events: `kubectl exec -n banking-prod -it kafka-client -- kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic payment-events.dlq --max-messages 5`. The rejected event's `x-rejection-reason` extension attribute contains the validation error. Common cause: producer deployed a schema change without updating the registry; the consumer's `dataschema` URI points to an old schema version.
 
-**Alert: malformed CloudEvent in DLQ:**
-1. Inspect DLQ message: `kafka-console-consumer.sh --topic {service}-dlq`.
-2. Check `content-type` header — must be `application/cloudevents+json`.
-3. If missing: update producer to set content-type header.
-4. If wrong SDK version: update producer CloudEvents SDK to latest 2.x.
+2. Alert: CloudEventsDuplicateRate — fires when the CloudEvents consumer deduplication cache reports more than 10 duplicate `id` values per minute for the same consumer group. p50 resolution: 10 min; p99: 30 min. Check the producer for retry misconfiguration: `spring.kafka.producer.properties.enable.idempotence` must be `true`. Verify the Redis deduplication cache is healthy: `redis-cli GET cloudevents:id:{eventId}`. If Redis is unavailable, the database-level idempotency guard (PRIN-006) provides fallback protection.
 
 ## Test Strategy (stub)
 

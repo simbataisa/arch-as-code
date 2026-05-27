@@ -403,6 +403,18 @@ STRIDE focus: **Tampering** (schema injection) and **Information Disclosure** (t
 - **Code generation**: `asyncapi generate` run in CI; `git diff --exit-code src/generated/asyncapi/` fails if stubs are stale.
 - **Contract test**: Microcks container in integration test stage; publishes example messages; validates schema conformance.
 
+## Threat Model
+
+**Schema Injection — malicious producer registers non-compliant schema version (Tampering)**: a compromised producer service account registers a new Avro schema version that adds a `redirect_url` field. Consumers that auto-deserialise the field may follow the injected URL, triggering SSRF. Mitigation: schema registration requires an OAuth2 service account token specific to the producer; consumer service accounts have read-only access to the schema registry; a CI gate runs `asyncapi validate` against the `asyncapi.yaml` on every PR; schema changes that remove required fields or alter types are blocked by the registry's `FULL_TRANSITIVE` compatibility mode.
+
+**Event Replay Attack — replaying a legitimate payment event (Repudiation)**: an attacker intercepts a signed payment-initiated CloudEvent and replays it after processing, causing a duplicate payment. Mitigation: every AsyncAPI event includes a `messageId` field (UUID v4) and a `timestamp` (ISO 8601); consumers check `messageId` against a Redis idempotency store with 24-hour TTL; the `messageId` is used as the Kafka message key so broker-level deduplication eliminates replays within the deduplication window; all replay attempts are logged with source IP to the SIEM.
+
+## Operational Runbook (stub)
+
+1. Alert: AsyncAPISchemaValidationFailure — fires when the AsyncAPI validator CI job reports a schema incompatibility on merge to main. p50 resolution: 30 min; p99: 2 hours. Check the CI job output for the specific incompatible field. Common causes: producer changed a required field type without registering a compatibility-checked new version; consumer-side `asyncapi.yaml` references a message type that no longer exists in the producer's schema. Fix: update the schema version, re-run `asyncapi validate`, and ensure the compatibility mode check passes before re-merging.
+
+2. Alert: AsyncAPIDocumentOutOfSync — fires when the `asyncapi.yaml` document in git differs from the runtime schema in the schema registry (checked nightly). p50 resolution: 1 day; p99: 3 days. The drift job outputs the diff. Common cause: developer updated the Kafka topic schema directly in the registry without updating the `asyncapi.yaml` in git. Resolution: update the `asyncapi.yaml` to match and commit via PR.
+
 ## Related Patterns
 
 - [INT-011 CloudEvents Envelope Standard](cloudevents-envelope.md) — message envelope; composes with AsyncAPI channel contract

@@ -353,32 +353,17 @@ Error codes are stable across API versions — the error catalogue is versioned 
 | Error catalogue hosting | `errors.techcombank.com` static site | ~$5/month (S3 + CloudFront) |
 | Redis deduplication cache | Reuses OBS-001 / INT-011 cache instance | No additional cost |
 
-## Threat Model Summary
+## Threat Model
 
-STRIDE focus: **Information Disclosure** (internal details in error responses) and **Tampering** (error code injection).
+**Error Enumeration — verbose error codes expose internal system topology (Information Disclosure)**: the API returns error codes like `DB_CONNECTION_TIMEOUT_PROD_POSTGRES_PRIMARY` that reveal infrastructure details. An attacker uses this to craft targeted attacks against the specific database version or technology. Mitigation: the error code mapping layer translates all internal technical error codes to canonical domain errors (e.g., `ERR-SYS-001`) before sending to API consumers; internal error details are logged server-side with a correlation ID but never included in the API response body; the global `TechcombankExceptionHandler` catches all `Throwable` and builds `detail` from `DomainError.getMessage()` only (no `getCause()` chain); a CI test asserts that no response body contains Java stack traces or raw OFS codes.
 
-- **Top 3 threats addressed**:
-  1. *Internal OFS codes leaked to mobile clients* — `ErrorTranslator` always maps to domain error; `UpstreamProtocolError` logs raw code internally but never propagates it.
-  2. *Stack trace in JSON error response* — global `TechcombankExceptionHandler` catches all `Throwable`; `detail` field built from `DomainError.getMessage()` only (no `getCause()` chain).
-  3. *Error code inconsistency across services* — `DomainError` hierarchy shared via common library `techcombank-domain-errors`; all services import same codes.
-- **Top 3 residual threats**:
-  1. *New OFS error code not in translator map* — returns `ERR-SYS-001` + WARN log with raw code; on-call adds mapping in next sprint. Risk: client sees generic error instead of specific message.
-  2. *Error catalogue out of date* — mitigation: `errors.techcombank.com/catalogue.json` generated automatically from `DomainError` class hierarchy in CI; deployed on every common-library release.
-  3. *gRPC client receives unhandled `DomainError` subclass* — mitigation: catch-all `@GrpcExceptionHandler(DomainError.class)` in handler ensures every subclass is mapped.
+**Error Code Spoofing — client fabricates error responses (Spoofing)**: a man-in-the-middle attacker intercepts an API error response (HTTP 402 `PAYMENT_REQUIRED`) and replaces it with a fabricated HTTP 200 with a synthetic success payload. The client application proceeds as if the payment succeeded without the server actually processing it. Mitigation: all API responses are protected by Istio mTLS (PLT-001) for internal east-west traffic and TLS 1.3 for external traffic; mobile clients (MOB-002) use certificate pinning to prevent MITM interception; a response signing pattern (HMAC over response body in `X-Response-Signature` header) is applied to all T0 payment API responses, allowing clients to verify authenticity before acting on a success response.
 
 ## Operational Runbook (stub)
 
-**New T24 OFS error code encountered (unknown):**
-1. Alert: `warn` log `Unknown T24 OFS error code: {code}` — sent to `#sre-ofs-errors` Slack channel via Fluent Bit alert rule.
-2. On-call opens Jira ticket: "Add OFS error mapping for {code}".
-3. Engineer adds mapping to `T24OfsErrorTranslator` + updates error catalogue.
-4. PR merged; `techcombank-domain-errors` library patch release; services update dependency.
+1. Alert: UnknownUpstreamErrorCode — fires when the error translation layer logs more than 5 `Unknown upstream error code` warnings per minute (indicating a new upstream error code not in the mapping table). p50 resolution: 30 min; p99: 2 hours. Check the service logs: `kubectl logs -n banking-prod -l app=payment-gateway --tail=100 | grep "Unknown upstream"`. The log line contains the raw upstream code. Add the mapping to `T24OfsErrorTranslator`, increment the common library patch version, and deploy. Open a Jira ticket to track the new mapping.
 
-**Error catalogue update process:**
-1. Add new `DomainError` subclass to common library.
-2. CI auto-generates catalogue JSON from class annotations.
-3. Deploy to `errors.techcombank.com` via GitLab CD pipeline.
-4. Notify mobile SDK teams; they update localisation strings.
+2. Alert: ErrorCatalogueStaleness — fires when the error catalogue at `errors.banking.internal/catalogue.json` has not been updated for more than 7 days while new DomainError subclasses exist in the common library (detected by CI diff). p50 resolution: 1 day; p99: 3 days. Trigger a new common library release to regenerate and redeploy the catalogue: `./gradlew :common-errors:release`; the CD pipeline redeploys the catalogue site automatically.
 
 ## Test Strategy (stub)
 
