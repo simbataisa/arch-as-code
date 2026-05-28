@@ -693,7 +693,7 @@ rows:
 - id: INT-013
   title: Schema Registry Governance
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/schema-registry-governance.md
   tiers: [T0, T1, T2]
@@ -703,7 +703,7 @@ rows:
 - id: INT-014
   title: Webhook Delivery Reliability
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/webhook-delivery-reliability.md
   tiers: [T0, T1, T2]
@@ -713,7 +713,7 @@ rows:
 - id: INT-015
   title: API Contract Testing
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/api-contract-testing.md
   tiers: [T1, T2]
@@ -723,7 +723,7 @@ rows:
 - id: INT-016
   title: Distributed Saga Choreography
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/distributed-saga-choreography.md
   tiers: [T0, T1]
@@ -733,7 +733,7 @@ rows:
 - id: INT-017
   title: Message Sequencer
   category: integration
-  status: Proposed
+  status: Approved
   owner: tech-lead-backend
   path: knowledge-base/patterns/integration/message-sequencer.md
   tiers: [T0, T1]
