@@ -262,7 +262,7 @@ nfr_acceptance_criteria:
 - [INT-001 Saga Orchestration](saga-orchestration.md) — saga events processed by the ledger posting step are sequenced before posting using this pattern to preserve transaction order
 - [INT-013 Schema Registry Governance](schema-registry-governance.md) — `TxnAuthorised` and `GapDetected` event schemas are registered in the Confluent Schema Registry
 - [INT-016 Distributed Saga Choreography](distributed-saga-choreography.md) — choreography events for the same account also benefit from sequencing when the saga emits multiple events per account within a short window
-- [RES-001 Kafka Consumer Group Patterns](../resilience/kafka-consumer-group-patterns.md) — the sequencer consumer group follows standard consumer group resilience patterns for partition rebalance handling
+- [RES-003 Retry with Backoff](../resilience/retry-with-backoff.md) — the gap timeout monitor uses the same exponential backoff principles when retrying gap-fill attempts before emitting a GapDetected sentinel
 - [OBS-008 Log Aggregation Pipeline](../observability/log-aggregation-pipeline.md) — gap timeout events and buffer overflow events are shipped to OpenSearch as structured alerts for reconciliation evidence
 
 ## References

@@ -268,7 +268,7 @@ nfr_acceptance_criteria:
 
 ## Related Patterns
 
-- [INT-009 OpenAPI Specification Standard](openapi-specification.md) — the OpenAPI spec is the human-readable contract; Pact tests are the machine-verifiable enforcement of that contract
+- [INT-009 Content-Based Router](content-based-router.md) — content-based routing uses the same OpenAPI-defined request fields as contract tests; a valid Pact contract implicitly verifies that routing predicates remain stable
 - [INT-013 Schema Registry Governance](schema-registry-governance.md) — Kafka/Avro event contracts use the schema registry; REST API contracts use Pact — the two patterns are complementary, not competing
 - [INT-014 Webhook Delivery Reliability](webhook-delivery-reliability.md) — webhook payload contracts are also tested with Pact consumer-driven contracts before delivery
 - [PLT-003 GitOps Deployment Pipeline](../platform/gitops-deployment-pipeline.md) — the can-i-deploy gate is integrated into the GitOps promotion workflow; no ArgoCD sync proceeds without a passed can-i-deploy check

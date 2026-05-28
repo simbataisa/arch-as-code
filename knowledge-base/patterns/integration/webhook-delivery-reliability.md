@@ -260,7 +260,7 @@ nfr_acceptance_criteria:
 - [INT-001 Saga Orchestration](saga-orchestration.md) — saga events crossing the Kafka boundary to external partners are dispatched via this webhook pattern
 - [INT-011 CloudEvents Envelope](cloudevents-envelope.md) — webhook payloads use CloudEvents structure for interoperability and receiver-side schema validation
 - [INT-013 Schema Registry Governance](schema-registry-governance.md) — webhook payload schemas are registered in the schema registry to ensure producer/consumer compatibility
-- [SEC-007 Secrets Management](../security/secrets-management.md) — HMAC signing keys are stored in Vault and injected at runtime; never in environment variables or application config
+- [SEC-007 Vault Secret Management](../security/vault-secret-management.md) — HMAC signing keys are stored in Vault and injected at runtime; never in environment variables or application config
 - [OBS-008 Log Aggregation Pipeline](../observability/log-aggregation-pipeline.md) — webhook delivery attempts (success, retry, dead-letter) are shipped to OpenSearch as structured audit logs
 
 ## References
