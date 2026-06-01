@@ -308,7 +308,7 @@ nfr_acceptance_criteria:
 - [PLT-008 Multi-Tenancy Isolation](multi-tenancy-isolation.md) — ApplicationSet scopes each team's applications to their own namespace
 - [SEC-007 Secrets Rotation](../security/secrets-rotation.md) — Vault agent injector delivers rotated secrets without pod restart
 - [OBS-010 Metrics Cardinality Management](../observability/metrics-cardinality-management.md) — OPA Gatekeeper constraint deployed via GitOps
-- [COMP-006 BCBS 230 Operational Resilience](../../compliance/bcbs-230.md) — §Principle 7 change management evidence provided by ArgoCD audit log
+- [COMP-006 BCBS 230 Operational Resilience](../../compliance/basel-bcbs-230.md) — §Principle 7 change management evidence provided by ArgoCD audit log
 
 ## References
 

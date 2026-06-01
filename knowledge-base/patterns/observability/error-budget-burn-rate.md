@@ -272,7 +272,7 @@ nfr_acceptance_criteria:
 - [OBS-009 Synthetic Monitoring and Canary Probes](synthetic-monitoring-canary.md) — independent probe feed prevents metric poisoning
 - [RES-002 Circuit Breaker](../resilience/circuit-breaker.md) — budget breach at >50× burn triggers circuit open
 - [PLT-003 GitOps Deployment Pipeline](../platform/gitops-deployment-pipeline.md) — recording rule YAML managed via GitOps; config changes require PR approval
-- [COMP-005 BCBS 239 Deep Dive](../../compliance/bcbs-239.md) — §5 timeliness satisfied by real-time burn-rate ledger
+- [COMP-005 BCBS 239 Deep Dive](../../compliance/basel-bcbs-239.md) — §5 timeliness satisfied by real-time burn-rate ledger
 
 ## References
 

@@ -277,7 +277,7 @@ nfr_acceptance_criteria:
 - [OBS-001 OpenTelemetry Instrumentation](otel-instrumentation.md) — k6 synthetic requests propagate OTEL trace headers for end-to-end trace correlation
 - [RES-002 Circuit Breaker](../resilience/circuit-breaker.md) — probe failures trigger circuit breaker inspection in operational runbook
 - [PLT-001 Service Mesh Traffic Management](../platform/service-mesh-traffic.md) — probes traverse the same mTLS paths as real traffic
-- [COMP-006 BCBS 230 Operational Resilience](../../compliance/bcbs-230.md) — §Principle 9 operational resilience testing satisfied by continuous synthetic probing
+- [COMP-006 BCBS 230 Operational Resilience](../../compliance/basel-bcbs-230.md) — §Principle 9 operational resilience testing satisfied by continuous synthetic probing
 
 ## References
 

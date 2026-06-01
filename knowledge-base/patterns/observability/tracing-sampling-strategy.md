@@ -294,7 +294,7 @@ nfr_acceptance_criteria:
 - [OBS-006 Error Budget Burn Rate Alerting](error-budget-burn-rate.md) — T0 traces are the ground truth for SLI calculation
 - [SEC-012 Tamper-Evident Audit Logging](../security/audit-logging-tamper-evident.md) — T0 payment audit chain complements trace audit chain
 - [PLT-003 GitOps Deployment Pipeline](../platform/gitops-deployment-pipeline.md) — Collector config managed via GitOps; tier label injected by Kubernetes pod spec
-- [COMP-005 BCBS 239 Deep Dive](../../compliance/bcbs-239.md) — §4 data granularity at transaction level
+- [COMP-005 BCBS 239 Deep Dive](../../compliance/basel-bcbs-239.md) — §4 data granularity at transaction level
 
 ## References
 

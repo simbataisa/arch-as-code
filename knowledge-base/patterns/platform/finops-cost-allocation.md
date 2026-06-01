@@ -284,7 +284,7 @@ nfr_acceptance_criteria:
 - [PLT-004 Internal Developer Platform](internal-developer-platform.md) — Backstage component page surfaces the showback cost widget; golden path template includes mandatory tag fields
 - [PLT-008 Multi-Tenancy Isolation](multi-tenancy-isolation.md) — namespace isolation boundaries align with cost allocation boundaries; one namespace = one cost centre
 - [OBS-010 Metrics Cardinality Management](../observability/metrics-cardinality-management.md) — OPA Gatekeeper used for both tag enforcement and cardinality label control
-- [COMP-006 BCBS 230 Operational Resilience](../../compliance/bcbs-230.md) — cost control evidence from FinOps PostgreSQL satisfies BCBS 230 Principle 7 operational risk management requirement
+- [COMP-006 BCBS 230 Operational Resilience](../../compliance/basel-bcbs-230.md) — cost control evidence from FinOps PostgreSQL satisfies BCBS 230 Principle 7 operational risk management requirement
 
 ## References
 
