@@ -329,6 +329,7 @@ git commit -m "test(catalog): add catalog consistency audit"
 - Create: `scripts/reconcile-catalog-inventory.py`
 - Modify: `governance/standards/_catalog-inventory.yml`
 - Modify: `governance/standards/enterprise-architecture-catalog.md`
+- Modify: `knowledge-base/templates/stub-doc-template.md`
 
 - [ ] **Step 1: Create the inventory reconciliation script**
 
@@ -541,7 +542,27 @@ Expected:
 Rendered 191 rows into §4 (Approved=191)
 ```
 
-- [ ] **Step 5: Run the audit without document status enforcement**
+- [ ] **Step 5: Repair the TPL-003 document catalog ID header**
+
+The stronger audit validates document `Catalog ID` headers even when status-header enforcement is disabled. `knowledge-base/templates/stub-doc-template.md` currently uses the generic stub value `Catalog ID: [XXX-NNN]`; change only that header to the concrete catalog row ID:
+
+```bash
+python3 - <<'EOF'
+from pathlib import Path
+
+path = Path("knowledge-base/templates/stub-doc-template.md")
+text = path.read_text()
+old = "Catalog ID: [XXX-NNN]"
+new = "Catalog ID: TPL-003"
+if old not in text:
+    raise SystemExit(f"expected header not found in {path}")
+path.write_text(text.replace(old, new, 1))
+EOF
+```
+
+Expected: `knowledge-base/templates/stub-doc-template.md` now contains `Catalog ID: TPL-003`.
+
+- [ ] **Step 6: Run the audit without document status enforcement**
 
 Run:
 
@@ -556,7 +577,7 @@ PASS catalog consistency
 inventory_rows=191 markdown_rows=191 duplicate_ids=0 missing_paths=0 mismatches=0 doc_status_checked=0
 ```
 
-- [ ] **Step 6: Commit inventory reconciliation**
+- [ ] **Step 7: Commit inventory reconciliation**
 
 Before committing, run GitNexus change detection:
 
@@ -564,12 +585,12 @@ Before committing, run GitNexus change detection:
 gitnexus_detect_changes(scope: "all", repo: "arch-as-code")
 ```
 
-Expected: changed symbols limited to new script functions plus catalog markdown/YAML files. No application execution flows should be affected.
+Expected: changed symbols limited to new script functions plus catalog markdown/YAML files and the TPL-003 template header. No application execution flows should be affected.
 
 Run:
 
 ```bash
-git add scripts/reconcile-catalog-inventory.py governance/standards/_catalog-inventory.yml governance/standards/enterprise-architecture-catalog.md
+git add scripts/reconcile-catalog-inventory.py governance/standards/_catalog-inventory.yml governance/standards/enterprise-architecture-catalog.md knowledge-base/templates/stub-doc-template.md
 git commit -m "chore(catalog): reconcile inventory source of truth"
 ```
 
