@@ -1,7 +1,7 @@
 # [PLACEHOLDER: Document Title]
 
 Status: Draft | Last Reviewed: 2026-05-09 | Owner: [@owner]
-Catalog ID: [XXX-NNN]
+Catalog ID: TPL-003
 Tier Applicability: [T0 | T1 | T2 | T3 | N/A]
 
 > **STUB** — full content to be authored per the wave plan.
