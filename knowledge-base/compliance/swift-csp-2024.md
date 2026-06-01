@@ -1,6 +1,6 @@
 # SWIFT Customer Security Programme (CSP) v2024
 
-Status: Draft | Last Reviewed: 2026-05-16 | Catalog ID: COMP-008 | Owner: @ciso-delegate
+Status: Approved | Last Reviewed: 2026-05-16 | Catalog ID: COMP-008 | Owner: @ciso-delegate
 Tier Applicability: N/A — applies to all systems in the SWIFT security zone
 
 ## Problem Statement

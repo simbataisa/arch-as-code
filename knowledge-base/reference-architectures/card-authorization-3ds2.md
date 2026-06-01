@@ -1,6 +1,6 @@
 # Card Authorization (3DS2)
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @payments-domain-owner, @ciso-delegate
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @payments-domain-owner, @ciso-delegate
 Catalog ID: REF-004 | Radii (composes spine)
 Tier Applicability: T0
 

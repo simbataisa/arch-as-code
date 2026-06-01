@@ -1,6 +1,6 @@
 # PCI-DSS v4.0 — Payment Card Industry Data Security Standard
 
-Status: Draft | Catalog ID: COMP-004 | Owner: @ciso-delegate
+Status: Approved | Catalog ID: COMP-004 | Owner: @ciso-delegate
 Tier Applicability: N/A — applies to all systems in PCI scope (CDE + connected systems)
 
 ## Problem Statement

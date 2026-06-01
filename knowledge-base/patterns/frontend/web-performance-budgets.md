@@ -1,6 +1,6 @@
 # Web Performance Budgets
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @tech-lead-web
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @tech-lead-web
 Catalog ID: FE-001 | Radii
 Tier Applicability: T0, T1, T2
 

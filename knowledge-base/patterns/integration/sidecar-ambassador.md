@@ -1,6 +1,6 @@
 # Sidecar / Ambassador
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @sre-lead
 Catalog ID: INT-007 | Radii
 Tier Applicability: T0, T1
 

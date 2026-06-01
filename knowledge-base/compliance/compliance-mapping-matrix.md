@@ -1,6 +1,6 @@
 # Compliance Mapping Matrix — Pattern × Regulation
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @head-of-compliance
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @head-of-compliance
 Catalog ID: COMP-001 | **Spine**
 Tier Applicability: N/A (master cross-reference matrix)
 

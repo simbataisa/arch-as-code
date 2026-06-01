@@ -1,6 +1,6 @@
 # Data Quality Rules
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @data-platform-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @data-platform-domain-owner
 Catalog ID: DATA-011 | Radii
 Tier Applicability: T1, T2
 

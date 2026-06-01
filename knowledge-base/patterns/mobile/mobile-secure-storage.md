@@ -1,6 +1,6 @@
 # Mobile Secure Storage
 
-Status: Draft | Catalog ID: MOB-002 | Owner: @tech-lead-mobile
+Status: Approved | Catalog ID: MOB-002 | Owner: @tech-lead-mobile
 Tier Applicability: T0, T1
 
 ## Problem Statement

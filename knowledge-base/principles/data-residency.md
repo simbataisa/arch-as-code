@@ -1,6 +1,6 @@
 # Data Residency
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @head-of-compliance, @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @head-of-compliance, @ea-board
 Catalog ID: PRIN-007 | Radii
 Tier Applicability: T0, T1, T2, T3
 

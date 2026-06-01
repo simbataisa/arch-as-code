@@ -1,6 +1,6 @@
 # Reference Data Master
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @data-platform-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @data-platform-domain-owner
 Catalog ID: DATA-013 | Radii
 Tier Applicability: T0, T1
 

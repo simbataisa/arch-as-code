@@ -1,6 +1,6 @@
 # Mobile Biometric Authentication
 
-Status: Draft | Catalog ID: MOB-003 | Owner: @tech-lead-mobile
+Status: Approved | Catalog ID: MOB-003 | Owner: @tech-lead-mobile
 Tier Applicability: T0, T1
 
 ## Problem Statement

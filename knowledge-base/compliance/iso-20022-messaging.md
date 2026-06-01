@@ -1,6 +1,6 @@
 # ISO 20022 Messaging — Deep Dive
 
-Status: Draft | Last Reviewed: 2026-05-16 | Catalog ID: COMP-007 | Owner: @payments-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Catalog ID: COMP-007 | Owner: @payments-domain-owner
 Tier Applicability: N/A — applies to all payment message processing systems
 
 ## Problem Statement

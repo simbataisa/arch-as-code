@@ -1,6 +1,6 @@
 # Error Code Mapping and Propagation
 
-Status: Draft | Last Reviewed: 2026-05-10 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-10 | Owner: @tech-lead-backend
 Catalog ID: INT-012 | Radii
 Tier Applicability: T0, T1, T2
 

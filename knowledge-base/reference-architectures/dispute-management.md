@@ -1,6 +1,6 @@
 # Dispute Management
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @payments-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @payments-domain-owner
 Catalog ID: REF-012 | Radii
 Tier Applicability: T1
 

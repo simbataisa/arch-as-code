@@ -1,6 +1,6 @@
 # Observability-First
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @sre-lead
 Catalog ID: PRIN-009 | Radii
 Tier Applicability: T0, T1, T2, T3
 

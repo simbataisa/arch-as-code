@@ -1,6 +1,6 @@
 # Tokenization + HSM Key Management
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate
 Catalog ID: SEC-004 | Radii
 Tier Applicability: T0 (card flows mandatory), T1 (PII flows recommended)
 

@@ -1,6 +1,6 @@
 # Multi-Region Active-Active
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ea-board, @sre-lead
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ea-board, @sre-lead
 Catalog ID: REF-001 | **Spine**
 Tier Applicability: T0 (mandatory), T1 (recommended; otherwise active-passive hot)
 

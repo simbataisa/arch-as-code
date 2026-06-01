@@ -1,6 +1,6 @@
 # Credit Card Issuing Platform
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @payments-domain-owner
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @payments-domain-owner
 Catalog ID: REF-015 | Radii
 Tier Applicability: T0
 

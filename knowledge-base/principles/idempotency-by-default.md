@@ -1,6 +1,6 @@
 # Idempotency-by-default
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ea-board
 Catalog ID: PRIN-006 | **Spine**
 Tier Applicability: T0, T1, T2 (T3 may waive with explicit EA-Board approval)
 

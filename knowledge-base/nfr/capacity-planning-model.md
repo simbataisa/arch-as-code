@@ -1,6 +1,6 @@
 # Capacity Planning Model
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @sre-lead
 Catalog ID: NFR-003 | Spine
 Tier Applicability: T0, T1, T2
 

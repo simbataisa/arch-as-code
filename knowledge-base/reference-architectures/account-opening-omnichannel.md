@@ -1,6 +1,6 @@
 # Account Opening (Omnichannel)
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @digital-channels-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @digital-channels-domain-owner
 Catalog ID: REF-009 | Radii
 Tier Applicability: T1
 

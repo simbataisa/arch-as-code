@@ -1,6 +1,6 @@
 # Durable Subscriber
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
 Catalog ID: EIP-022 | Radii
 Tier Applicability: T0, T1
 

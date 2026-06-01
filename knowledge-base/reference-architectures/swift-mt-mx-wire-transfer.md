@@ -1,6 +1,6 @@
 # SWIFT MT/MX Wire Transfer
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @payments-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @payments-domain-owner
 Catalog ID: REF-005 | Radii
 Tier Applicability: T0
 

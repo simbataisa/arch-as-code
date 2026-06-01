@@ -1,6 +1,6 @@
 # Fee Engine
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @core-banking-domain-owner
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @core-banking-domain-owner
 Catalog ID: BSP-008 | Radii
 Tier Applicability: T0, T1, T2
 

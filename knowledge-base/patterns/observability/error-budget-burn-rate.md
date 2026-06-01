@@ -1,6 +1,6 @@
 # Error Budget Burn Rate Alerting
 
-Status: Draft | Last Reviewed: 2026-05-24 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-24 | Owner: @sre-lead
 Catalog ID: OBS-006 | Radii
 Tier Applicability: T0, T1, T2
 

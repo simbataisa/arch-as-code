@@ -1,6 +1,6 @@
 # Service Mesh Traffic Management
 
-Status: Draft | Last Reviewed: 2026-05-10 | Owner: @platform-lead
+Status: Approved | Last Reviewed: 2026-05-10 | Owner: @platform-lead
 Catalog ID: PLT-001 | Radii
 Tier Applicability: T0, T1
 

@@ -1,6 +1,6 @@
 # Mobile Force-Upgrade
 
-Status: Draft | Catalog ID: MOB-006 | Owner: @tech-lead-mobile
+Status: Approved | Catalog ID: MOB-006 | Owner: @tech-lead-mobile
 Tier Applicability: T0, T1, T2
 
 ## Problem Statement

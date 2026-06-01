@@ -1,6 +1,6 @@
 # Content Enricher
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @tech-lead-backend
 Catalog ID: EIP-007 | Radii: Ring 0, Ring 1, Ring 2
 Tier Applicability: T1, T2
 

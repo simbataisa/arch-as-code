@@ -1,6 +1,6 @@
 # Latency Budget Model (P50 / P95 / P99)
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @sre-lead
 Catalog ID: NFR-002 | **Spine**
 Tier Applicability: N/A (defines budgets)
 

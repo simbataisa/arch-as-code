@@ -1,6 +1,6 @@
 # Fraud Signal Collection
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @risk-management-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @risk-management-domain-owner
 Catalog ID: SEC-009 | Radii
 Tier Applicability: T0, T1
 

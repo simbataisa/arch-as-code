@@ -1,6 +1,6 @@
 # Idempotent Payment Key
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @payments-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @payments-domain-owner
 Catalog ID: BSP-002 | Radii
 Tier Applicability: T0
 

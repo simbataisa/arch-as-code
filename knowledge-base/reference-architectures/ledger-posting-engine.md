@@ -1,6 +1,6 @@
 # Ledger Posting Engine
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @core-banking-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @core-banking-domain-owner
 Catalog ID: REF-010 | Radii
 Tier Applicability: T0
 

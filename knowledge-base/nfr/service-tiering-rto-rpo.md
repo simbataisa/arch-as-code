@@ -1,6 +1,6 @@
 # Service Tiering + RTO/RPO Matrix
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @sre-lead
 Catalog ID: NFR-001 | **Spine**
 Tier Applicability: N/A (defines tiers)
 

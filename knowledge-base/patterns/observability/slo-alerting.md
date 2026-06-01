@@ -1,6 +1,6 @@
 # SLO Alerting
 
-Status: Draft | Last Reviewed: 2026-05-10 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-10 | Owner: @sre-lead
 Catalog ID: OBS-004 | Radii
 Tier Applicability: T0, T1, T2
 

@@ -1,6 +1,6 @@
 # Credit Limit Engine
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @risk-management-domain-owner
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @risk-management-domain-owner
 Catalog ID: BSP-011 | Radii
 Tier Applicability: T0, T1
 

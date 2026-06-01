@@ -1,6 +1,6 @@
 # Treasury and FX Platform
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @wealth-domain-owner
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @wealth-domain-owner
 Catalog ID: REF-018 | Radii
 Tier Applicability: T0
 

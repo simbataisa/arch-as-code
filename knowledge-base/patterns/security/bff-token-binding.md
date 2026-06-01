@@ -1,6 +1,6 @@
 # BFF + Token-Binding (Web, iOS, Android)
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate, @tech-lead-web, @tech-lead-mobile
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate, @tech-lead-web, @tech-lead-mobile
 Catalog ID: SEC-005 | Radii
 Tier Applicability: T0, T1
 

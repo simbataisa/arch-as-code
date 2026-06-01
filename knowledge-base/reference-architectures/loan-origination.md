@@ -1,6 +1,6 @@
 # Loan Origination
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @lending-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @lending-domain-owner
 Catalog ID: REF-006 | Radii
 Tier Applicability: T1
 

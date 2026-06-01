@@ -1,6 +1,6 @@
 # GitOps Deployment Pipeline
 
-Status: Draft | Last Reviewed: 2026-05-24 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-24 | Owner: @ea-board
 Catalog ID: PLT-003 | Radii
 Tier Applicability: T0, T1, T2
 

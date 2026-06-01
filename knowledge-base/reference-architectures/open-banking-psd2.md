@@ -1,6 +1,6 @@
 # Open Banking (PSD2)
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @digital-channels-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @digital-channels-domain-owner
 Catalog ID: REF-011 | Radii
 Tier Applicability: T1
 

@@ -1,6 +1,6 @@
 # Pattern Document Template
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ea-board
 Catalog ID: TPL-002
 Tier Applicability: N/A (meta-document — template for pattern authors)
 

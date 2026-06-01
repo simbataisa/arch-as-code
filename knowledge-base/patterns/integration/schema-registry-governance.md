@@ -1,6 +1,6 @@
 # Schema Registry Governance
 
-Status: Draft | Last Reviewed: 2026-05-27 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-27 | Owner: @tech-lead-backend
 Catalog ID: INT-013 | Radii
 Tier Applicability: T0, T1, T2
 

@@ -1,6 +1,6 @@
 # Retail Deposits Platform
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @core-banking-domain-owner
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @core-banking-domain-owner
 Catalog ID: REF-013 | Radii
 Tier Applicability: T0, T1
 

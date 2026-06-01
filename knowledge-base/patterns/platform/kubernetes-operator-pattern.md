@@ -1,6 +1,6 @@
 # Kubernetes Operator Pattern
 
-Status: Draft | Last Reviewed: 2026-05-26 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-26 | Owner: @ea-board
 Catalog ID: PLT-005 | Radii
 Tier Applicability: T0, T1, T2
 

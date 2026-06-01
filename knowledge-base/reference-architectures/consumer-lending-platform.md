@@ -1,6 +1,6 @@
 # Consumer Lending Platform
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @lending-domain-owner
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @lending-domain-owner
 Catalog ID: REF-014 | Radii
 Tier Applicability: T0, T1
 

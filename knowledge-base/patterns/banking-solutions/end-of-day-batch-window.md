@@ -1,6 +1,6 @@
 # End-of-Day Batch Window
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @core-banking-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @core-banking-domain-owner
 Catalog ID: BSP-004 | Radii
 Tier Applicability: T0, T1
 

@@ -1,6 +1,6 @@
 # Health Check Aggregation
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @sre-lead
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @sre-lead
 Catalog ID: RES-012 | Radii
 Tier Applicability: T0, T1, T2
 

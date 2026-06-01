@@ -1,6 +1,6 @@
 # SBV Circular 09/2020/TT-NHNN — IT Security in Banking
 
-Status: Draft | Catalog ID: COMP-002 | Owner: @head-of-compliance
+Status: Approved | Catalog ID: COMP-002 | Owner: @head-of-compliance
 Tier Applicability: N/A — applies to all systems
 
 > ⚠️ **Working summary** — verbatim Article text pending authoritative English translation from `@legal-vietnam`. Do NOT use in regulatory submissions without Legal sign-off.

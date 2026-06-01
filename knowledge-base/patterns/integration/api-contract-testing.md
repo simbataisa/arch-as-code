@@ -1,6 +1,6 @@
 # API Contract Testing
 
-Status: Draft | Last Reviewed: 2026-05-28 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-28 | Owner: @tech-lead-backend
 Catalog ID: INT-015 | Radii
 Tier Applicability: T0, T1
 

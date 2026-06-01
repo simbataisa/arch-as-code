@@ -1,6 +1,6 @@
 # KYC / AML Onboarding
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @risk-management-domain-owner, @ea-board, @head-of-compliance
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @risk-management-domain-owner, @ea-board, @head-of-compliance
 Catalog ID: REF-003 | Radii (composes spine)
 Tier Applicability: T1
 

@@ -1,6 +1,6 @@
 # BCBS 230 Operational Resilience Deep Dive
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @cro
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @cro
 Catalog ID: COMP-006 | Radii
 Tier Applicability: T0, T1
 

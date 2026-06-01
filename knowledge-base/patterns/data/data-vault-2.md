@@ -1,6 +1,6 @@
 # Data Vault 2.0
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @data-platform-domain-owner
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @data-platform-domain-owner
 Catalog ID: DATA-004 | Radii
 Tier Applicability: T2, T3
 

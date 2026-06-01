@@ -1,6 +1,6 @@
 # Tax Calculation Engine
 
-Status: Draft | Last Reviewed: 2026-05-21 | Owner: @head-of-compliance
+Status: Approved | Last Reviewed: 2026-05-21 | Owner: @head-of-compliance
 Catalog ID: BSP-009 | Radii
 Tier Applicability: T0, T1, T2
 

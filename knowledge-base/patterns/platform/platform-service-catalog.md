@@ -1,6 +1,6 @@
 # Platform Service Catalog
 
-Status: Draft | Last Reviewed: 2026-05-26 | Owner: @ea-board
+Status: Approved | Last Reviewed: 2026-05-26 | Owner: @ea-board
 Catalog ID: PLT-007 | Radii
 Tier Applicability: T0, T1, T2
 

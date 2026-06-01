@@ -1,6 +1,6 @@
 # Mobile Deep Link Attestation
 
-Status: Draft | Catalog ID: MOB-005 | Owner: @tech-lead-mobile
+Status: Approved | Catalog ID: MOB-005 | Owner: @tech-lead-mobile
 Tier Applicability: T0, T1
 
 ## Problem Statement

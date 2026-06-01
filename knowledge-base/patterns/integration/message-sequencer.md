@@ -1,6 +1,6 @@
 # Message Sequencer
 
-Status: Draft | Last Reviewed: 2026-05-28 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-28 | Owner: @tech-lead-backend
 Catalog ID: INT-017 | Radii
 Tier Applicability: T0, T1
 

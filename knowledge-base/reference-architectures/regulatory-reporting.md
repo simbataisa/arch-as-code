@@ -1,6 +1,6 @@
 # Regulatory Reporting
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @head-of-compliance
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @head-of-compliance
 Catalog ID: REF-008 | Radii
 Tier Applicability: T1
 

@@ -1,6 +1,6 @@
 # Real-Time Payments — NAPAS / Instant
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @payments-domain-owner, @ea-board
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @payments-domain-owner, @ea-board
 Catalog ID: REF-002 | Radii (composes spine)
 Tier Applicability: T0
 

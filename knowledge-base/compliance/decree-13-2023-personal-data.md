@@ -1,6 +1,6 @@
 # Decree 13/2023/ND-CP — Personal Data Protection (VPDP)
 
-Status: Draft | Catalog ID: COMP-003 | Owner: @head-of-compliance
+Status: Approved | Catalog ID: COMP-003 | Owner: @head-of-compliance
 Tier Applicability: N/A — applies to all systems processing Vietnamese personal data
 
 > ⚠️ **Working summary** — verbatim Article text pending authoritative English translation from `@legal-vietnam`. Do NOT use in regulatory submissions without Legal sign-off.

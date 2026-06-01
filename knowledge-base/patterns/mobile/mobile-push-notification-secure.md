@@ -1,6 +1,6 @@
 # Mobile Push Notification (Secure)
 
-Status: Draft | Catalog ID: MOB-004 | Owner: @tech-lead-mobile
+Status: Approved | Catalog ID: MOB-004 | Owner: @tech-lead-mobile
 Tier Applicability: T1, T2
 
 ## Problem Statement

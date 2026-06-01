@@ -1,6 +1,6 @@
 # Content-Based Router
 
-Status: Draft | Last Reviewed: 2026-05-16 | Owner: @tech-lead-backend
+Status: Approved | Last Reviewed: 2026-05-16 | Owner: @tech-lead-backend
 Catalog ID: INT-009 | Radii
 Tier Applicability: T0, T1
 

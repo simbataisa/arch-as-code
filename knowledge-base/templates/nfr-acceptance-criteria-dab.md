@@ -1,6 +1,6 @@
 # NFR Acceptance Criteria — DAB Submission Template
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @dab-chair
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @dab-chair
 Catalog ID: TPL-001 | **Spine**
 Tier Applicability: N/A (template)
 

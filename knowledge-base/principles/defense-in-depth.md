@@ -1,6 +1,6 @@
 # Defense-in-Depth
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate
 Catalog ID: PRIN-008 | Radii
 Tier Applicability: T0, T1, T2, T3
 

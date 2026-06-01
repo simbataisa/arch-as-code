@@ -1,6 +1,6 @@
 # PII Tokenization (Format-Preserving)
 
-Status: Draft | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate
+Status: Approved | Last Reviewed: 2026-05-09 | Owner: @ciso-delegate
 Catalog ID: SEC-013 | Radii
 Tier Applicability: T0, T1
 

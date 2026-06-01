@@ -1,6 +1,6 @@
 # Basel BCBS 239 — Risk Data Aggregation and Risk Reporting
 
-Status: Draft | Catalog ID: COMP-005 | Owner: @head-of-compliance
+Status: Approved | Catalog ID: COMP-005 | Owner: @head-of-compliance
 Tier Applicability: N/A — applies to all systems contributing to risk data or regulatory reports
 
 ## Problem Statement
