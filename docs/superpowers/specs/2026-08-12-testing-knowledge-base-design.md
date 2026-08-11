@@ -85,7 +85,7 @@ knowledge-base/testing/
     k6.md                                        TST-013
     locust.md                                    TST-014
   coverage/
-    _testing-coverage.yml                        (machine-readable, 191 rows)
+    _testing-coverage.yml                        (machine-readable, 231 rows)
     coverage-matrix.md                           TST-015   (generated)
   archetypes/
     ...24 documents...                           TST-020 … TST-043
@@ -212,8 +212,11 @@ Service Catalog) — take `disciplines: {…: governs}` rather than an archetype
 
 ## 6. Coverage Matrix Mechanics
 
-`knowledge-base/testing/coverage/_testing-coverage.yml` holds one row per existing catalog
-row. Schema mirrors `_catalog-inventory.yml` (flat `version` / `last_updated` / `rows`):
+`knowledge-base/testing/coverage/_testing-coverage.yml` holds one row per catalog inventory row.
+That is 231 rows once this work lands, not 191: the 39 new `TST-*` rows and `TPL-005` are
+themselves catalog rows, and check 1 iterates the inventory. They take `governs`, giving 79
+`governs` rows and 152 tested rows. Schema mirrors `_catalog-inventory.yml` (flat `version` /
+`last_updated` / `rows`):
 
 ```yaml
 version: 1
@@ -442,7 +445,7 @@ that discipline; a section is omitted rather than filled with "N/A".
 | **D** | Families C + D archetypes (TST-031 … TST-036) | 6 | 2 |
 | **E** | Families E + G archetypes (TST-037 … TST-039, TST-042 … TST-043) | 5 | 2 |
 | **F** | Family F archetypes (TST-040 … TST-041) — requires `@infosec-architect` review | 2 | 2 |
-| **G** | `_testing-coverage.yml` populated to all 191 rows; `coverage-matrix.md` generated; catalog reconciliation re-run | 1 | 3 |
+| **G** | `_testing-coverage.yml` populated to all 231 rows; `coverage-matrix.md` generated; catalog reconciliation re-run | 1 | 3 |
 
 Sequencing rationale:
 
