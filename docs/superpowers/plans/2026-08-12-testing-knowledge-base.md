@@ -4172,7 +4172,7 @@ Principle 9 (monitoring as an operational-resilience control). Ring 2 — SBV Ci
 monitoring obligations, `⚠️`.
 
 **Steps:** Standard Archetype Steps, `FILE=…/telemetry-verification.md`, `ID=TST-042`.
-`primary_tool: jmeter` for all ten coverage rows.
+`primary_tool: jmeter` for all thirteen coverage rows.
 
 ---
 
