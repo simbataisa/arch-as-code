@@ -784,3 +784,67 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-backend
     notes: ''
+  - catalog_id: EIP-015
+    title: Scatter-Gather
+    path: knowledge-base/patterns/eip/scatter-gather.md
+    tiers: [T0, T1]
+    archetypes: [TST-028]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-011
+    title: Aggregator
+    path: knowledge-base/patterns/eip/aggregator.md
+    tiers: [T0, T1]
+    archetypes: [TST-028]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-009
+    title: Claim Check
+    path: knowledge-base/patterns/eip/claim-check.md
+    tiers: [T0, T1]
+    archetypes: [TST-028]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-018
+    title: Message Store
+    path: knowledge-base/patterns/eip/message-store.md
+    tiers: [T0, T1]
+    archetypes: [TST-028]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
