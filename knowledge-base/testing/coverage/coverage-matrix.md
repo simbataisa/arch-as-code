@@ -40,6 +40,23 @@ Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 
 
 <!-- END GENERATED -->
 
+## Compliance Mapping
+
+> **Authoring note**: Every Approved catalog row needs this heading, unnumbered
+> (`## Compliance Mapping`, no leading digit) — `scripts/check-compliance-rows.py` enforces it
+> repo-wide with no exemption for generated or meta-documents; the four existing `TPL-*`
+> templates and all five `NFR-*` spine docs carry one even though they are themselves
+> meta-documents. This table's own compliance disposition is about the EVIDENCE the table
+> represents, not a control it implements — inherit `compliance_refs: {ring0: [], ring1: [],
+> ring2: []}` in the inventory (matching the `TPL-*` convention), since the table indexes
+> other documents' compliance postures rather than declaring its own.
+
+| Layer | Reference | Section/Control | How this satisfies |
+|---|---|---|---|
+| Ring 0 | ISTQB requirements-traceability matrix practice | Coverage-to-requirement traceability | This table is the traceability matrix from catalog row to test archetype |
+| Ring 1 | Basel BCBS 230 Principle 9 | Operational resilience — evidence that testing was performed | A generated, regenerable coverage table is durable evidence a pattern's test obligations were assigned and tracked, citable in a DAB submission |
+| Ring 2 | SBV Circular 09/2020 §IV.3 ⚠️ (working summary — pending Legal review) | System testing evidence | Satisfies the expectation that test coverage across the system is documented and auditable |
+
 ## Related
 
 - [TST-001](../strategy/test-strategy-standard.md) — disciplines and obligation levels
