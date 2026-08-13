@@ -1,0 +1,48 @@
+# Testing Coverage Matrix
+
+Status: Approved | Last Reviewed: 2026-08-12 | Owner: @qe-lead
+Catalog ID: TST-015 | Radii
+Tier Applicability: N/A (generated coverage report)
+
+## Purpose
+
+Maps every Approved catalog row to the test archetypes that cover it, the disciplines that are
+obligatory for it, and the performance profiles its tier requires. Coverage is enforced
+mechanically: `scripts/validate-testing-coverage.py` fails when an inventory row has no coverage
+row, so a new pattern cannot be added without deciding how it is tested.
+
+## How to Read This Table
+
+- **Disciplines** use the four obligation levels from
+  [TST-001](../strategy/test-strategy-standard.md): `required`, `recommended`, `n/a`, `governs`.
+- **`governs`** marks a meta-document that constrains testing rather than being tested.
+- **Profiles** are the eight defined in [TST-002](../strategy/performance-test-standard.md).
+- **Primary tool** is the default per [TST-010](../tooling/tool-selection-matrix.md); an
+  archetype's Tool Fit table may justify another.
+
+## Source of Truth
+
+Do not hand-edit the table below. Edit `_testing-coverage.yml` and regenerate:
+
+```bash
+python3 scripts/render-testing-coverage.py
+```
+
+<!-- BEGIN GENERATED -->
+
+| Catalog ID | Title | Tiers | Archetypes | Func | Perf | Resil | Contr | Sec | DQ | Profiles | Tool |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| BSP-002 | Idempotent Payment Key | T0 | TST-020 | R | R | R | r | — | R | baseline, load, stress, spike, soak | jmeter |
+| NFR-002 | Latency Budget Model | — | — | G | G | G | G | G | G | — | jmeter |
+| RES-002 | Circuit Breaker | T0, T1, T2 | TST-035, TST-031 | R | R | R | — | — | — | baseline, load, spike, failover-under-load | jmeter |
+
+Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 3 rows.
+
+<!-- END GENERATED -->
+
+## Related
+
+- [TST-001](../strategy/test-strategy-standard.md) — disciplines and obligation levels
+- [TST-002](../strategy/performance-test-standard.md) — performance profiles
+- [TST-010](../tooling/tool-selection-matrix.md) — tool selection
+- [`enterprise-architecture-catalog.md`](../../../governance/standards/enterprise-architecture-catalog.md) — the catalog this table covers
