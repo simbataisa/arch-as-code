@@ -1764,11 +1764,91 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-web
     notes: ''
+  - catalog_id: FE-001
+    title: Web Performance Budgets
+    path: knowledge-base/patterns/frontend/web-performance-budgets.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-043]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load]
+    primary_tool: k6
+    owner: tech-lead-web
+    notes: 'I5 (Core Web Vitals) measured via the k6 browser module on a throttled device/network profile -- see TST-043 §4.'
+  - catalog_id: FE-002
+    title: Web Resilience / Offline-First
+    path: knowledge-base/patterns/frontend/web-resilience-offline-first.md
+    tiers: [T1, T2]
+    archetypes: [TST-043]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load]
+    primary_tool: k6
+    owner: tech-lead-web
+    notes: ''
+  - catalog_id: FE-005
+    title: Web Error Boundary
+    path: knowledge-base/patterns/frontend/web-error-boundary.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-043]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load]
+    primary_tool: k6
+    owner: tech-lead-web
+    notes: ''
+  - catalog_id: FE-006
+    title: Web i18n / RTL
+    path: knowledge-base/patterns/frontend/web-i18n-rtl.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: [TST-043]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load]
+    primary_tool: k6
+    owner: tech-lead-web
+    notes: ''
+  - catalog_id: MOB-001
+    title: Mobile Offline Queue
+    path: knowledge-base/patterns/mobile/mobile-offline-queue.md
+    tiers: [T1, T2]
+    archetypes: [TST-043]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load]
+    primary_tool: k6
+    owner: tech-lead-mobile
+    notes: ''
   - catalog_id: MOB-006
     title: Mobile Force-Upgrade
     path: knowledge-base/patterns/mobile/mobile-force-upgrade.md
     tiers: [T0, T1, T2]
-    archetypes: [TST-036]
+    archetypes: [TST-036, TST-043]
     disciplines:
       functional: required
       performance: required
@@ -1776,10 +1856,10 @@ rows:
       contract: n/a
       security: required
       data_quality: n/a
-    perf_profiles: [baseline, load, failover-under-load]
-    primary_tool: jmeter
+    perf_profiles: [baseline, load]
+    primary_tool: k6
     owner: tech-lead-mobile
-    notes: ''
+    notes: 'primary_tool reflects TST-043 (k6 browser module, I5/I6 client-experience checks); TST-036 exercises this row separately via jmeter for its own rotation/traffic-shift assertions.'
   - catalog_id: DATA-001
     title: CQRS Pattern
     path: knowledge-base/patterns/data/cqrs-pattern.md
