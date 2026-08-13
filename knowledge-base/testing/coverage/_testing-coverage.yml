@@ -1044,3 +1044,51 @@ rows:
     primary_tool: gatling-karate
     owner: tech-lead-backend
     notes: ''
+  - catalog_id: RES-008
+    title: Throttling / Rate Limiting
+    path: knowledge-base/patterns/resilience/throttling-rate-limiting.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-031]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, spike, scalability]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-009
+    title: Load Shedding
+    path: knowledge-base/patterns/resilience/load-shedding.md
+    tiers: [T0, T1]
+    archetypes: [TST-031]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, spike, scalability]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-011
+    title: Queue-Based Load Levelling
+    path: knowledge-base/patterns/resilience/queue-based-load-levelling.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-031]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, spike, scalability]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
