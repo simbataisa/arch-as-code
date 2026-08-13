@@ -74,6 +74,10 @@ nav:
       - Test Data Management: knowledge-base/testing/strategy/test-data-management.md
       - Environments and Quality Gates: knowledge-base/testing/strategy/environments-quality-gates.md
       - Tool Selection: knowledge-base/testing/tooling/tool-selection-matrix.md
+      - JMeter: knowledge-base/testing/tooling/jmeter.md
+      - Gatling + Karate: knowledge-base/testing/tooling/gatling-karate.md
+      - k6: knowledge-base/testing/tooling/k6.md
+      - Locust: knowledge-base/testing/tooling/locust.md
       - Coverage Matrix: knowledge-base/testing/coverage/coverage-matrix.md
       - Archetypes: knowledge-base/testing/archetypes/
     - Technology Radar: knowledge-base/technology-radar.md

@@ -2,7 +2,7 @@
 
 Status: Approved | Last Reviewed: 2026-05-30 | Owner: @ea-board
 Catalog version: 1.0
-Coverage: 203 Approved catalog rows across 17 categories — 7 spine docs and 196 radii docs after Wave 15A testing corpus foundation.
+Coverage: 207 Approved catalog rows across 17 categories — 7 spine docs and 200 radii docs after Wave 15B tooling guides.
 
 > **For DAB authors**: every DAB submission must cite ≥3 catalog rows by ID (e.g., `RES-005`, `EIP-024`, `COMP-001`). See §10.
 
@@ -347,6 +347,10 @@ lives in the QE team's own repository.
 | TST-008 | Security Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/security-test-standard.md` | T0, T1 | OWASP ASVS/WSTG; NIST CA-8/AC-3; PCI-DSS 4.0 §6.4/§11.3/§11.4; SWIFT CSP 2024 Control 2.x; Decree 13/2023; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
 | TST-009 | Data Quality Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/data-quality-test-standard.md` | T0, T1, T2 | DAMA-DMBOK; BCBS 239 P3/P4/P5; SBV Circ. 09/2020/TT-NHNN | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
 | TST-010 | Test Tool Selection Matrix | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/tool-selection-matrix.md` | T0, T1, T2, T3 | ISTQB tool selection; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-011 | JMeter Guide | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/jmeter.md` | T0, T1, T2, T3 | ISTQB; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15B — tooling guides |
+| TST-012 | Gatling + Karate Guide | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/gatling-karate.md` | T0, T1, T2 | ISTQB test-tool selection guidance; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15B — tooling guides |
+| TST-013 | k6 Guide | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/k6.md` | T0, T1, T2, T3 | ISTQB test-tool selection guidance; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15B — tooling guides |
+| TST-014 | Locust Guide | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/locust.md` | T1, T2, T3 | ISTQB test-tool selection guidance; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15B — tooling guides |
 | TST-015 | Testing Coverage Matrix | testing | Approved | radii | @qe-lead | `knowledge-base/testing/coverage/coverage-matrix.md` | — | — | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
 
 ## 5. Gap Analysis
@@ -371,8 +375,8 @@ Coverage as of 2026-05-30 (auto-derivable by counting rows in `_catalog-inventor
 | resilience | 12 | 0 | 0 | 12 | 100% | Failure containment, recovery, and load management |
 | security | 13 | 0 | 0 | 13 | 100% | Identity, token, key, masking, fraud, audit controls |
 | templates | 5 | 0 | 0 | 5 | 100% | Required DAB, pattern, stub, reference, and test archetype templates |
-| testing | 11 | 0 | 0 | 11 | 100% | Test strategy, performance profiles, tooling, and coverage for the QE team |
-| **Total** | **203** | **0** | **0** | **203** | **100%** | |
+| testing | 15 | 0 | 0 | 15 | 100% | Test strategy, performance profiles, tooling, and coverage for the QE team |
+| **Total** | **207** | **0** | **0** | **207** | **100%** | |
 
 Wave 14 reconciled the YAML inventory, rendered catalog table, and document metadata so Draft/Proposed work does not survive as stale catalog state. Future gaps should enter the inventory as new Proposed rows before authoring begins.
 

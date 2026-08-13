@@ -3962,6 +3962,92 @@ rows:
   last_reviewed: '2026-08-12'
   notes: Wave 15A — testing corpus foundation
   target_wave: 4
+- id: TST-011
+  title: JMeter Guide
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/tooling/jmeter.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ISTQB
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15B — tooling guides
+  target_wave: 4
+- id: TST-012
+  title: Gatling + Karate Guide
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/tooling/gatling-karate.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ISTQB test-tool selection guidance
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15B — tooling guides
+  target_wave: 4
+- id: TST-013
+  title: k6 Guide
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/tooling/k6.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ISTQB test-tool selection guidance
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15B — tooling guides
+  target_wave: 4
+- id: TST-014
+  title: Locust Guide
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/tooling/locust.md
+  tiers:
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ISTQB test-tool selection guidance
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15B — tooling guides
+  target_wave: 4
 - id: TST-015
   title: Testing Coverage Matrix
   category: testing
