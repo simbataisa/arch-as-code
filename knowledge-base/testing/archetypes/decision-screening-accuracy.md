@@ -23,12 +23,15 @@ decisions collections treatment; SEC-009 scores fraud signals; SEC-010 evaluates
 policy. The decisioning subject differs in every row; the confusion-matrix method that proves the
 decision is correct does not.
 
-`SEC-010` is explicitly shared with a future archetype, **TST-040 AuthN/AuthZ Matrix & Token
-Lifecycle** (not yet published; see [TST-008 Related](../strategy/security-test-standard.md#related)),
-which will also claim this catalog row for its own token-lifecycle coverage. This document claims
-`SEC-010` first, for the decision-accuracy half of its testing obligation only; when TST-040 is
-created, that task appends `TST-040` to `SEC-010`'s `archetypes:` list in the coverage matrix
-rather than overwriting this archetype's claim.
+`SEC-010` is explicitly shared with
+[TST-040 AuthN/AuthZ Matrix & Token Lifecycle](./authn-authz-token-lifecycle.md), which also
+claims this catalog row, for its own authorisation-matrix-sweep and token-lifecycle coverage. This
+document claims `SEC-010` first, for the decision-accuracy half of its testing obligation only;
+TST-040 appends `TST-040` to `SEC-010`'s `archetypes:` list in the coverage matrix rather than
+overwriting this archetype's claim, and the two obligations remain independent halves of the same
+catalog row. See §6 for the row's `primary_tool` resolution — TST-040 has since claimed that
+single field as `jmeter` for its own matrix-sweep and mTLS-keystore obligation; this archetype's
+own confusion-matrix method and its `locust` recommendation for that method are unaffected.
 
 ## 2. Failure Taxonomy
 
@@ -271,12 +274,15 @@ primary-tool justification was established first in this corpus in
 | k6 | fair | k6's `Counter` custom metrics can tally TP/FP/TN/FN independently, but deriving precision/recall/false-positive-rate as a ratio at run end is not native to the metrics API and needs an external post-processing step |
 | Locust | BEST | Accumulating and evaluating a confusion matrix across iterations is natural in Python — a plain module-level counter updated inline, evaluated by one event listener at run end — and awkward in JMX (explicit cross-thread locking) or Scala (no idiomatic mutable shared state) |
 
-Record `primary_tool: locust` for all five coverage rows in §1, including `SEC-010` — the
-confusion-matrix accumulation problem is identical for every row regardless of decisioning
-subject — except `BSP-019`, where `TST-032` (Batch Window and Cutoff Throughput) has since claimed
-the row's `primary_tool` as `jmeter` for its own batch-restart obligation; see the coverage YAML's
-`notes` field on that row and TST-032 §1 for the resolution. `BSP-019`'s other four sibling rows in
-this archetype (`BSP-010`, `BSP-003`, `SEC-009`, `SEC-010`) remain `locust`.
+Record `primary_tool: locust` for all five coverage rows in §1 — the confusion-matrix accumulation
+problem is identical for every row regardless of decisioning subject — except `BSP-019`, where
+`TST-032` (Batch Window and Cutoff Throughput) has since claimed the row's `primary_tool` as
+`jmeter` for its own batch-restart obligation, and `SEC-010`, where
+[TST-040](./authn-authz-token-lifecycle.md) (AuthN/AuthZ Matrix & Token Lifecycle) has since
+claimed the row's `primary_tool` as `jmeter` for its own matrix-sweep and mTLS-keystore
+obligation; see the coverage YAML's `notes` field on each row, and TST-032 §1 / TST-040 §6, for
+the resolution. `BSP-019` and `SEC-010`'s remaining sibling rows in this archetype (`BSP-010`,
+`BSP-003`, `SEC-009`) remain `locust`.
 
 ## 7. Overlays
 
@@ -401,9 +407,10 @@ test_acceptance_criteria:
   restate.
 - [TST-024 Saga and Compensation Correctness](./saga-compensation.md) — applied the same
   primary-tool justification a second time; this archetype is the third, not a novel case.
-- TST-040 — AuthN/AuthZ Matrix & Token Lifecycle (not yet published): will append `TST-040` to
-  `SEC-010`'s `archetypes:` list in the coverage matrix for its own token-lifecycle coverage of the
-  same catalog row, rather than overwriting this archetype's decision-accuracy claim; see §1.
+- [TST-040 AuthN/AuthZ Matrix & Token Lifecycle](./authn-authz-token-lifecycle.md) — appends
+  `TST-040` to `SEC-010`'s `archetypes:` list in the coverage matrix for its own
+  authorisation-matrix-sweep and token-lifecycle coverage of the same catalog row, rather than
+  overwriting this archetype's decision-accuracy claim; see §1 and §6.
 - This archetype's own contribution, available to reuse rather than restate: the labelled-corpus
   confusion-matrix method (§3, §5) and the list-cardinality latency curve technique (§4, §5).
 

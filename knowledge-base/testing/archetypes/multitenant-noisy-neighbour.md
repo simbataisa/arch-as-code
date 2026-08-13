@@ -252,10 +252,11 @@ never merely unused by a well-behaved client. This is the same authorisation bou
 [TST-008 § Authorisation Matrix Method](../strategy/security-test-standard.md#authorisation-matrix-method)
 verifies generally; this archetype narrows it to the specific tenant-versus-tenant cell of that
 matrix and runs it concurrently with load, rather than in isolation, so a check that only passes
-when the system is idle cannot hide behind an untested concurrent case. TST-040 — Data
-Protection, Masking & Tokenisation (not yet published) — is expected to own the broader data-
-egress assertion this overlay's denial check is a narrow instance of; this document cross-links it
-as a plain forward reference and does not depend on it existing.
+when the system is idle cannot hide behind an untested concurrent case.
+[TST-040 AuthN/AuthZ Matrix & Token Lifecycle](./authn-authz-token-lifecycle.md) owns the general
+bypass-path assertion (I2: a deny cannot be bypassed by calling the service directly, around the
+gateway) that this overlay's cross-tenant denial check is a narrow, concurrent-load instance of;
+this document cross-links it rather than restating its method.
 
 Contract and Data-quality overlays are omitted: this archetype's failure modes are about resource
 and data isolation between tenants under concurrent load, not schema/wire compatibility or data
@@ -351,9 +352,9 @@ test_acceptance_criteria:
   makes no commitment about that future archetype's eventual scope, and the coverage row (§1) is
   structured as a normal appendable list so such a future claim, if it happens, requires no change
   here.
-- TST-040 — Data Protection, Masking & Tokenisation (not yet published): expected to own the
-  broader data-egress assertion this archetype's Security overlay (§7) narrows to a single
-  cross-tenant denial check.
+- [TST-040 AuthN/AuthZ Matrix & Token Lifecycle](./authn-authz-token-lifecycle.md) — owns the
+  general bypass-path assertion (I2) this archetype's Security overlay (§7) narrows to a single
+  cross-tenant denial check made under concurrent load.
 
 ## 14. Diagram
 

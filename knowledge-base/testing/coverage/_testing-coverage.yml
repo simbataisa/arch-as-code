@@ -498,7 +498,7 @@ rows:
     title: Attribute-Based Access Control
     path: knowledge-base/patterns/security/attribute-based-access-control.md
     tiers: [T0, T1, T2]
-    archetypes: [TST-025]
+    archetypes: [TST-025, TST-040]
     disciplines:
       functional: required
       performance: required
@@ -507,11 +507,15 @@ rows:
       security: required
       data_quality: required
     perf_profiles: [baseline, load, stress, soak]
-    primary_tool: locust
+    primary_tool: jmeter
     owner: ciso-delegate
-    notes: 'TST-025 claims decision-accuracy coverage; TST-040 (not yet published) will
-      append itself to archetypes: for this row''s token-lifecycle coverage of the same
-      catalog row -- append, never overwrite.'
+    notes: 'TST-025 claims decision-accuracy coverage (confusion-matrix method, locust
+      recommended for that method); TST-040 appends itself to archetypes: for this row''s
+      authorisation-matrix-sweep and token-lifecycle coverage -- append, never overwrite.
+      primary_tool set to jmeter (latest claimant, TST-040) per TST-040 task brief, for its
+      own matrix-sweep and mTLS-keystore obligation; TST-025''s confusion-matrix method and
+      its locust recommendation for that method are unaffected -- see TST-040 section 6 for
+      the resolution rationale.'
   - catalog_id: EIP-004
     title: Message Router
     path: knowledge-base/patterns/eip/message-router.md
@@ -2248,4 +2252,100 @@ rows:
     perf_profiles: [load, spike, soak]
     primary_tool: jmeter
     owner: sre-lead
+    notes: ''
+  - catalog_id: SEC-006
+    title: JWT Best Practices
+    path: knowledge-base/patterns/security/jwt-best-practices.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-040]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-002
+    title: OAuth2 Authorization
+    path: knowledge-base/patterns/security/oauth2-authorization.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-040]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-005
+    title: BFF + Token-Binding (web + iOS + Android)
+    path: knowledge-base/patterns/security/bff-token-binding.md
+    tiers: [T0, T1]
+    archetypes: [TST-040]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-011
+    title: Session Revocation
+    path: knowledge-base/patterns/security/session-revocation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-040]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-001
+    title: mTLS Service Mesh
+    path: knowledge-base/patterns/security/mtls-service-mesh.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-040]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: MOB-003
+    title: Mobile Biometric Auth
+    path: knowledge-base/patterns/mobile/mobile-biometric-auth.md
+    tiers: [T0, T1]
+    archetypes: [TST-040]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-mobile
     notes: ''
