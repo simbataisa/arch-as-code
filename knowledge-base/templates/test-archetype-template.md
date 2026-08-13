@@ -14,7 +14,7 @@ Tier Applicability: N/A (meta-document — template for archetype authors)
 3. Replace every `[PLACEHOLDER]` with real content. Delete every authoring note (lines
    beginning with `>`) once its section is complete.
 4. Keep the 14 section headings below, in this order, with this exact spelling. Omit an
-   overlay subsection in §8 entirely if the archetype does not apply to that discipline —
+   overlay subsection in §7 entirely if the archetype does not apply to that discipline —
    never leave it filled with "N/A".
 5. State no latency, throughput, RTO, RPO, or availability number. Link to the owning
    spine row instead: [NFR-001](../../nfr/service-tiering-rto-rpo.md),
