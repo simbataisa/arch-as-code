@@ -66,7 +66,7 @@ rows:
     title: Webhook Delivery Reliability
     path: knowledge-base/patterns/integration/webhook-delivery-reliability.md
     tiers: [T0, T1, T2]
-    archetypes: [TST-020]
+    archetypes: [TST-020, TST-029]
     disciplines:
       functional: required
       performance: required
@@ -845,6 +845,118 @@ rows:
       security: n/a
       data_quality: n/a
     perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-023
+    title: Guaranteed Delivery
+    path: knowledge-base/patterns/eip/guaranteed-delivery.md
+    tiers: [T0, T1]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-022
+    title: Durable Subscriber
+    path: knowledge-base/patterns/eip/durable-subscriber.md
+    tiers: [T0, T1]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-025
+    title: Dead Letter Channel
+    path: knowledge-base/patterns/eip/dead-letter-channel.md
+    tiers: [T0, T1]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-021
+    title: Channel Purger
+    path: knowledge-base/patterns/eip/channel-purger.md
+    tiers: [T1, T2]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-001
+    title: Message Channel
+    path: knowledge-base/patterns/eip/message-channel.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-002
+    title: Point-to-Point Channel
+    path: knowledge-base/patterns/eip/point-to-point-channel.md
+    tiers: [T0, T1]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-020
+    title: Test Message
+    path: knowledge-base/patterns/eip/test-message.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-029]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
     primary_tool: jmeter
     owner: tech-lead-backend
     notes: ''
