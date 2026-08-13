@@ -318,3 +318,51 @@ rows:
     primary_tool: jmeter
     owner: sre-lead
     notes: Spine doc — supplies latency thresholds; not itself under test
+  - catalog_id: BSP-011
+    title: Credit Limit Engine
+    path: knowledge-base/patterns/banking-solutions/credit-limit-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-023]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, spike]
+    primary_tool: jmeter
+    owner: risk-management-domain-owner
+    notes: ''
+  - catalog_id: BSP-012
+    title: Transaction Limit Engine
+    path: knowledge-base/patterns/banking-solutions/transaction-limit-engine.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-023]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, spike]
+    primary_tool: jmeter
+    owner: risk-management-domain-owner
+    notes: ''
+  - catalog_id: BSP-013
+    title: Collateral Management Engine
+    path: knowledge-base/patterns/banking-solutions/collateral-management-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-023]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, spike]
+    primary_tool: jmeter
+    owner: risk-management-domain-owner
+    notes: ''
