@@ -281,9 +281,13 @@ Tier Applicability: N/A (meta-document — template for archetype authors)
    `governance/standards/enterprise-architecture-catalog.md`. Never reuse an ID.
 3. Replace every `[PLACEHOLDER]` with real content. Delete every authoring note (lines
    beginning with `>`) once its section is complete.
-4. Keep the 14 section headings below, in this order, with this exact spelling. Omit an
-   overlay subsection in §7 entirely if the archetype does not apply to that discipline —
-   never leave it filled with "N/A".
+4. Keep the 14 section headings below, in this order, with this exact spelling — except
+   §11, which is deliberately unnumbered (`## Compliance Mapping`, no leading `11.`): the
+   repository's `scripts/check-compliance-rows.py` gate matches only a literal
+   `^## Compliance Mapping` heading with no numeric prefix, and every Approved/Draft
+   catalog row must pass it — including this template itself and every archetype that
+   copies it. Omit an overlay subsection in §7 entirely if the archetype does not apply to
+   that discipline — never leave it filled with "N/A".
 5. State no latency, throughput, RTO, RPO, or availability number. Link to the owning
    spine row instead: [NFR-001](../../nfr/service-tiering-rto-rpo.md),
    [NFR-002](../../nfr/latency-budget-model.md),
@@ -419,7 +423,12 @@ test_acceptance_criteria:
   # [PLACEHOLDER]
 ```
 
-## 11. Compliance Mapping
+## Compliance Mapping
+
+> **Authoring note**: This heading is deliberately unnumbered — see "How to Use This
+> Template" step 4. `scripts/check-compliance-rows.py` matches only a literal
+> `^## Compliance Mapping` heading; a numbered variant (`## 11. Compliance Mapping`) fails
+> the gate. Do not add a number back.
 
 | Layer | Reference | Section/Control | How this satisfies |
 |---|---|---|---|
@@ -466,8 +475,8 @@ grep -n '^## ' knowledge-base/templates/test-archetype-template.md
 Expected, in order: `How to Use This Template`, `1. Applies To`, `2. Failure Taxonomy`,
 `3. Functional Test Design`, `4. Performance Test Design`, `5. Canonical Harness — JMeter`,
 `6. Tool Fit`, `7. Overlays`, `8. Test Data Requirements`, `9. Evidence and Observability`,
-`10. Exit Criteria`, `11. Compliance Mapping`, `12. Related Patterns`,
-`13. Related Archetypes`, `14. Diagram`.
+`10. Exit Criteria`, `Compliance Mapping` (deliberately unnumbered — see step 4 of "How to Use
+This Template"), `12. Related Patterns`, `13. Related Archetypes`, `14. Diagram`.
 
 - [ ] **Step 4: Commit**
 
@@ -1850,6 +1859,23 @@ python3 scripts/render-testing-coverage.py
 <!-- BEGIN GENERATED -->
 <!-- END GENERATED -->
 
+## Compliance Mapping
+
+> **Authoring note**: Every Approved catalog row needs this heading, unnumbered
+> (`## Compliance Mapping`, no leading digit) — `scripts/check-compliance-rows.py` enforces it
+> repo-wide with no exemption for generated or meta-documents; the four existing `TPL-*`
+> templates and all five `NFR-*` spine docs carry one even though they are themselves
+> meta-documents. This table's own compliance disposition is about the EVIDENCE the table
+> represents, not a control it implements — inherit `compliance_refs: {ring0: [], ring1: [],
+> ring2: []}` in the inventory (matching the `TPL-*` convention), since the table indexes
+> other documents' compliance postures rather than declaring its own.
+
+| Layer | Reference | Section/Control | How this satisfies |
+|---|---|---|---|
+| Ring 0 | ISTQB requirements-traceability matrix practice | Coverage-to-requirement traceability | This table is the traceability matrix from catalog row to test archetype |
+| Ring 1 | Basel BCBS 230 Principle 9 | Operational resilience — evidence that testing was performed | A generated, regenerable coverage table is durable evidence a pattern's test obligations were assigned and tracked, citable in a DAB submission |
+| Ring 2 | SBV Circular 09/2020 §IV.3 ⚠️ (working summary — pending Legal review) | System testing evidence | Satisfies the expectation that test coverage across the system is documented and auditable |
+
 ## Related
 
 - [TST-001](../strategy/test-strategy-standard.md) — disciplines and obligation levels
@@ -2005,8 +2031,9 @@ markdownlint knowledge-base/testing/coverage/coverage-matrix.md
 
 Expected: three data rows in catalog-ID order — `BSP-002`, `NFR-002`, `RES-002` — with the
 `NFR-002` row showing `G` in all six discipline columns and `—` for both archetypes and profiles;
-the `grep -c '^## '` count is exactly `4` (`Purpose`, `How to Read This Table`, `Source of Truth`,
-`Related`), proving the narrative above and below the markers survived; and lint exits `0`.
+the `grep -c '^## '` count is exactly `5` (`Purpose`, `How to Read This Table`, `Source of Truth`,
+`Compliance Mapping`, `Related`), proving the narrative above and below the markers survived; and
+lint exits `0`.
 
 The legend line closing the generated block reads:
 `Legend: \`R\` required · \`r\` recommended · \`—\` not applicable · \`G\` governs. 3 rows.`
