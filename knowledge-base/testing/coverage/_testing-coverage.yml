@@ -1,0 +1,64 @@
+# Testing coverage — source of truth.
+#
+# One row per Approved row in governance/standards/_catalog-inventory.yml.
+# Validated by scripts/validate-testing-coverage.py.
+# Rendered into coverage-matrix.md by scripts/render-testing-coverage.py.
+#
+# Field domains:
+#   disciplines.*   required | recommended | n/a | governs
+#   perf_profiles[] baseline | load | stress | spike | soak | mixed |
+#                   scalability | failover-under-load
+#   primary_tool    jmeter | gatling-karate | k6 | locust
+#   archetypes[]    TST-020 .. TST-043; may be empty only when every
+#                   discipline is 'governs'
+version: 1
+last_updated: '2026-08-12'
+rows:
+  - catalog_id: RES-002
+    title: Circuit Breaker
+    path: knowledge-base/patterns/resilience/circuit-breaker.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-035, TST-031]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: BSP-002
+    title: Idempotent Payment Key
+    path: knowledge-base/patterns/banking-solutions/idempotent-payment-key.md
+    tiers: [T0]
+    archetypes: [TST-020]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: recommended
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, spike, soak]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: NFR-002
+    title: Latency Budget Model
+    path: knowledge-base/nfr/latency-budget-model.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Spine doc — supplies latency thresholds; not itself under test
