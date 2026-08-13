@@ -32,14 +32,19 @@ python3 scripts/render-testing-coverage.py
 
 | Catalog ID | Title | Tiers | Archetypes | Func | Perf | Resil | Contr | Sec | DQ | Profiles | Tool |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| BSP-001 | Double-Entry Ledger | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
 | BSP-002 | Idempotent Payment Key | T0 | TST-020 | R | R | R | — | — | R | baseline, load, stress, spike, soak | jmeter |
+| BSP-005 | Reversal and Chargeback | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
+| BSP-015 | Position Keeping Engine | T0, T1 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
+| BSP-016 | Settlement Engine | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
 | EIP-024 | Idempotent Receiver | T0, T1 | TST-020 | R | R | R | — | — | R | baseline, load, stress, spike, soak | jmeter |
 | INT-014 | Webhook Delivery Reliability | T0, T1, T2 | TST-020 | R | R | R | — | — | R | baseline, load, stress, spike, soak | jmeter |
 | NFR-002 | Latency Budget Model | — | — | G | G | G | G | G | G | — | jmeter |
+| REF-010 | Ledger Posting Engine | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
 | RES-002 | Circuit Breaker | T0, T1, T2 | TST-035, TST-031 | R | R | R | — | — | — | baseline, load, spike, failover-under-load | jmeter |
 | RES-003 | Retry with Backoff | T0, T1, T2 | TST-020 | R | R | R | — | — | R | baseline, load, stress, spike, soak | jmeter |
 
-Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 6 rows.
+Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 11 rows.
 
 <!-- END GENERATED -->
 

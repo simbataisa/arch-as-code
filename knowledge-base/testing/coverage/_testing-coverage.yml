@@ -94,6 +94,86 @@ rows:
     primary_tool: jmeter
     owner: sre-lead
     notes: ''
+  - catalog_id: BSP-001
+    title: Double-Entry Ledger
+    path: knowledge-base/patterns/banking-solutions/double-entry-ledger.md
+    tiers: [T0]
+    archetypes: [TST-021]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: BSP-015
+    title: Position Keeping Engine
+    path: knowledge-base/patterns/banking-solutions/position-keeping-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-021]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: wealth-domain-owner
+    notes: ''
+  - catalog_id: BSP-016
+    title: Settlement Engine
+    path: knowledge-base/patterns/banking-solutions/settlement-engine.md
+    tiers: [T0]
+    archetypes: [TST-021]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: BSP-005
+    title: Reversal and Chargeback
+    path: knowledge-base/patterns/banking-solutions/reversal-and-chargeback.md
+    tiers: [T0]
+    archetypes: [TST-021]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: REF-010
+    title: Ledger Posting Engine
+    path: knowledge-base/reference-architectures/ledger-posting-engine.md
+    tiers: [T0]
+    archetypes: [TST-021]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: core-banking-domain-owner
+    notes: ''
   - catalog_id: NFR-002
     title: Latency Budget Model
     path: knowledge-base/nfr/latency-budget-model.md
