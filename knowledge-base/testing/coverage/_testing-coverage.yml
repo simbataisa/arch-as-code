@@ -1876,3 +1876,72 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-backend
     notes: ''
+  - catalog_id: DATA-011
+    title: Data Quality Rules
+    path: knowledge-base/patterns/data/data-quality-rules.md
+    tiers: [T1, T2]
+    archetypes: [TST-039]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    # primary_tool: locust, not jmeter -- independent recomputation and per-dimension defect
+    # accounting are natural in Python and awkward everywhere else; see TST-039 §6.
+    primary_tool: locust
+    owner: data-platform-domain-owner
+    notes: ''
+  - catalog_id: DATA-013
+    title: Reference Data Master
+    path: knowledge-base/patterns/data/reference-data-master.md
+    tiers: [T0, T1]
+    archetypes: [TST-039]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    # primary_tool: locust, not jmeter -- see TST-039 §6 justification.
+    primary_tool: locust
+    owner: data-platform-domain-owner
+    notes: ''
+  - catalog_id: DATA-009
+    title: Data Lineage
+    path: knowledge-base/patterns/data/data-lineage.md
+    tiers: [T1, T2]
+    archetypes: [TST-039]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    # primary_tool: locust, not jmeter -- see TST-039 §6 justification.
+    primary_tool: locust
+    owner: data-platform-domain-owner
+    notes: ''
+  - catalog_id: DATA-002
+    title: Data Mesh Ownership
+    path: knowledge-base/patterns/data/data-mesh-ownership.md
+    tiers: [T1, T2]
+    archetypes: [TST-039]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    # primary_tool: locust, not jmeter -- see TST-039 §6 justification.
+    primary_tool: locust
+    owner: data-platform-domain-owner
+    notes: ''
