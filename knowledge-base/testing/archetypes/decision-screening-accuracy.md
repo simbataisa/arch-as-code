@@ -273,7 +273,10 @@ primary-tool justification was established first in this corpus in
 
 Record `primary_tool: locust` for all five coverage rows in §1, including `SEC-010` — the
 confusion-matrix accumulation problem is identical for every row regardless of decisioning
-subject.
+subject — except `BSP-019`, where `TST-032` (Batch Window and Cutoff Throughput) has since claimed
+the row's `primary_tool` as `jmeter` for its own batch-restart obligation; see the coverage YAML's
+`notes` field on that row and TST-032 §1 for the resolution. `BSP-019`'s other four sibling rows in
+this archetype (`BSP-010`, `BSP-003`, `SEC-009`, `SEC-010`) remain `locust`.
 
 ## 7. Overlays
 
