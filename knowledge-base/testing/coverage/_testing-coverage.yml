@@ -1140,3 +1140,67 @@ rows:
     primary_tool: jmeter
     owner: data-platform-domain-owner
     notes: ''
+  - catalog_id: PLT-008
+    title: Multi-Tenancy Isolation
+    path: knowledge-base/patterns/platform/multi-tenancy-isolation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-033]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, mixed, failover-under-load]
+    primary_tool: jmeter
+    owner: ea-board
+    notes: ''
+  - catalog_id: RES-001
+    title: Bulkhead Isolation
+    path: knowledge-base/patterns/resilience/bulkhead-isolation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-033]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, mixed, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-005
+    title: Cell-Based Architecture
+    path: knowledge-base/patterns/resilience/cell-based-architecture.md
+    tiers: [T0, T1]
+    archetypes: [TST-033]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, mixed, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: PLT-006
+    title: FinOps Cost Allocation
+    path: knowledge-base/patterns/platform/finops-cost-allocation.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: [TST-033]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, mixed, failover-under-load]
+    primary_tool: jmeter
+    owner: ea-board
+    notes: ''
