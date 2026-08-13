@@ -736,3 +736,51 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-backend
     notes: ''
+  - catalog_id: EIP-013
+    title: Resequencer
+    path: knowledge-base/patterns/eip/resequencer.md
+    tiers: [T0, T1]
+    archetypes: [TST-027]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-017
+    title: Message Sequencer
+    path: knowledge-base/patterns/integration/message-sequencer.md
+    tiers: [T0, T1]
+    archetypes: [TST-027]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-003
+    title: Publish-Subscribe Channel
+    path: knowledge-base/patterns/eip/publish-subscribe-channel.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-027]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
