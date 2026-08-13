@@ -1961,3 +1961,211 @@ rows:
     primary_tool: locust
     owner: data-platform-domain-owner
     notes: ''
+  - catalog_id: OBS-001
+    title: OpenTelemetry Instrumentation
+    path: knowledge-base/patterns/observability/otel-instrumentation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-002
+    title: Distributed Trace Propagation
+    path: knowledge-base/patterns/observability/distributed-trace-propagation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-003
+    title: Structured Logging Standard
+    path: knowledge-base/patterns/observability/structured-logging-standard.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-004
+    title: SLO Alerting
+    path: knowledge-base/patterns/observability/slo-alerting.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-005
+    title: Async Middleware Observability
+    path: knowledge-base/patterns/observability/async-middleware-observability.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-006
+    title: Error Budget Burn Rate Alerting
+    path: knowledge-base/patterns/observability/error-budget-burn-rate.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-007
+    title: Distributed Tracing Sampling Strategy
+    path: knowledge-base/patterns/observability/tracing-sampling-strategy.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-008
+    title: Log Aggregation Pipeline
+    path: knowledge-base/patterns/observability/log-aggregation-pipeline.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-009
+    title: Synthetic Monitoring and Canary Probes
+    path: knowledge-base/patterns/observability/synthetic-monitoring-canary.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: OBS-010
+    title: Metrics Cardinality Management
+    path: knowledge-base/patterns/observability/metrics-cardinality-management.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: BP-004
+    title: Observability Standards
+    path: knowledge-base/best-practices/observability-standards.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: BP-007
+    title: Golden Signals (SRE)
+    path: knowledge-base/best-practices/golden-signals-sre.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: BP-008
+    title: Error Budgets
+    path: knowledge-base/best-practices/error-budgets.md
+    tiers: [T0, T1]
+    archetypes: [TST-042]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [load, spike, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
