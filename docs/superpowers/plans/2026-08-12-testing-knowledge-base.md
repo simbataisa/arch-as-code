@@ -3750,7 +3750,7 @@ is the plausible scenario). Ring 2 — SBV Circular 09/2020, `⚠️`.
 
 **Tier Applicability:** T0, T1
 
-**Applies To:** nine rows — `RES-002` Circuit Breaker
+**Applies To:** ten rows — `RES-002` Circuit Breaker
 (`../../patterns/resilience/circuit-breaker.md`); `RES-007` Fallback Strategies
 (`../../patterns/resilience/fallback-strategies.md`); `RES-004` Graceful Degradation
 (`../../patterns/resilience/graceful-degradation.md`); `RES-006` Timeout Budget
@@ -3804,7 +3804,7 @@ Engineering. Ring 1 — BCBS 230 Principle 9 and §27. Ring 2 — SBV Circular 0
 obligations, `⚠️`.
 
 **Steps:** Standard Archetype Steps, `FILE=…/fault-injection-degradation.md`, `ID=TST-035`.
-`primary_tool: jmeter` for all nine coverage rows.
+`primary_tool: jmeter` for all ten coverage rows.
 
 ---
 
