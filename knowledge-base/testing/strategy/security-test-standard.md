@@ -81,7 +81,7 @@ them.
 | `wrong-issuer-rejected` | Token's `iss` claim does not match the resource server's configured trusted issuer. | Request is rejected. |
 | `tampered-signature-rejected` | Any byte of the token's payload or signature is altered after issuance. | Request is rejected — including the specific case of an `alg` field changed to `none`. |
 | `revoked-before-expiry-rejected` | Token is explicitly revoked (logout, admin action, compromise response) while its `exp` claim is still in the future. | Request is rejected from the moment of revocation, not merely at natural expiry. |
-| `refresh-rotation-invalidates-prior` | A refresh token is used to obtain a new access/refresh pair. | The prior refresh token no longer works — a second attempt to use it is rejected, proving rotation actually invalidates the old token rather than just issuing a new one alongside it. |
+| `refresh-rotation-invalidates-prior-refresh` | A refresh token is used to obtain a new access/refresh pair. | The prior refresh token no longer works — a second attempt to use it is rejected, proving rotation actually invalidates the old token rather than just issuing a new one alongside it. |
 | `cross-client-replay-rejected` | A token bound to one client (via `cnf`/DPoP, mTLS-bound token, or a BFF-issued session cookie scoped to one client) is replayed by a different client. | Request is rejected — the binding is enforced, not merely recorded. |
 
 Each case is exercised against the running resource server or authorization server, not asserted
@@ -99,9 +99,9 @@ logs, distributed traces, metrics labels, error payloads (including stack traces
 bodies, batch exports, and support/admin tooling views.
 
 This is where masking most often fails, because each of these paths is typically built on a
-different serialization path than the primary response:
+different serialisation path than the primary response:
 
-- A structured logging call that serializes an entire request or response object directly,
+- A structured logging call that serialises an entire request or response object directly,
   bypassing the masking interceptor wired into the API response pipeline.
 - A stack trace embedded in an error payload that includes the raw exception message, and the
   exception message happens to contain the unmasked value that triggered the exception.
