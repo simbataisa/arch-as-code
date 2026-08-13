@@ -960,3 +960,87 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-backend
     notes: ''
+  - catalog_id: INT-015
+    title: API Contract Testing
+    path: knowledge-base/patterns/integration/api-contract-testing.md
+    tiers: [T1, T2]
+    archetypes: [TST-030]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline]
+    # primary_tool is gatling-karate, not jmeter, for this row and the four
+    # below it: the Karate .feature file that already is the contract suite
+    # for these catalog rows is reused unchanged as the baseline performance
+    # scenario via karate-gatling (TST-012) -- see TST-030 §5-6.
+    primary_tool: gatling-karate
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-010
+    title: AsyncAPI Specification Standard
+    path: knowledge-base/patterns/integration/asyncapi-specification.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-030]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline]
+    primary_tool: gatling-karate
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-011
+    title: CloudEvents Envelope Standard
+    path: knowledge-base/patterns/integration/cloudevents-envelope.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-030]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline]
+    primary_tool: gatling-karate
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-013
+    title: Schema Registry Governance
+    path: knowledge-base/patterns/integration/schema-registry-governance.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-030]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline]
+    primary_tool: gatling-karate
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-003
+    title: API Gateway Routing
+    path: knowledge-base/patterns/integration/api-gateway-routing.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: [TST-030]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline]
+    primary_tool: gatling-karate
+    owner: tech-lead-backend
+    notes: ''
