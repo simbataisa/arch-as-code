@@ -2,7 +2,7 @@
 
 Status: Approved | Last Reviewed: 2026-05-30 | Owner: @ea-board
 Catalog version: 1.0
-Coverage: 224 Approved catalog rows across 17 categories — 7 spine docs and 217 radii docs after Wave 15D load, capacity, and resilience archetypes.
+Coverage: 229 Approved catalog rows across 17 categories — 7 spine docs and 222 radii docs after Wave 15E data, observability, and client archetypes.
 
 > **For DAB authors**: every DAB submission must cite ≥3 catalog rows by ID (e.g., `RES-005`, `EIP-024`, `COMP-001`). See §10.
 
@@ -369,6 +369,11 @@ lives in the QE team's own repository.
 | TST-034 | Blended Journey Workload Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/blended-journey-workload.md` | T0, T1 | SRE Workbook Ch.5; BCBS 230 P9; SBV Circ. 09/2020 | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
 | TST-035 | Fault Injection and Graceful Degradation Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/fault-injection-degradation.md` | T0, T1 | NIST CP-4; Principles of Chaos Engineering; BCBS 230 P9/§27; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
 | TST-036 | Zero-Downtime Deploy, Traffic Shift and Rotation Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/zero-downtime-deploy-rotation.md` | T0, T1 | NIST CM-3; Twelve-Factor App — Disposability; PCI-DSS 4.0 §6.5.2; BCBS 230 P9; SBV Circ. 09/2020/TT-NHNN | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
+| TST-037 | Read-Model Convergence and CDC Lag | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/read-model-convergence-lag.md` | T0, T1 | CQRS/Event Sourcing; BCBS 239 P3/P5; SBV Circ. 09/2020 | 2026-08-12 | 4 | Wave 15E — data, observability, and client archetypes. TST-040/041 reserved for Wave F; TST-039→TST-042 ID gap is intentional |
+| TST-038 | Temporal and Historisation Correctness | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/temporal-historisation.md` | T1, T2 | Kimball & Ross Ch.5 SCD Type 2; Data Vault 2.0 Satellite historisation; BCBS 239 P3; SBV Circ. 09/2020/TT-NHNN §IV Art. 24-25 | 2026-08-12 | 4 | Wave 15E — data, observability, and client archetypes. TST-040/041 reserved for Wave F; TST-039→TST-042 ID gap is intentional |
+| TST-039 | Data Quality and Reconciliation | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/data-quality-reconciliation.md` | T0, T1, T2 | DAMA-DMBOK; BCBS 239 P3/P4/P5; SBV Circ. 09/2020/TT-NHNN | 2026-08-12 | 4 | Wave 15E — data, observability, and client archetypes. TST-040/041 reserved for Wave F; TST-039→TST-042 ID gap is intentional |
+| TST-042 | Telemetry and Observability Verification | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/telemetry-verification.md` | T0, T1, T2 | OpenTelemetry spec; Google SRE golden signals (BP-007); BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15E — data, observability, and client archetypes. TST-040/041 reserved for Wave F; TST-039→TST-042 ID gap is intentional |
+| TST-043 | Client Experience, Offline Sync and Performance Budget Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/client-experience-offline-perf.md` | T1, T2 | Core Web Vitals; WCAG 2.2 AA §3.1.1; GDPR Art. 32; SBV Circ. 09/2020 §III Art. 12 | 2026-08-12 | 4 | Wave 15E — data, observability, and client archetypes. TST-040/041 reserved for Wave F; TST-039→TST-042 ID gap is intentional |
 
 ## 5. Gap Analysis
 
@@ -392,8 +397,8 @@ Coverage as of 2026-05-30 (auto-derivable by counting rows in `_catalog-inventor
 | resilience | 12 | 0 | 0 | 12 | 100% | Failure containment, recovery, and load management |
 | security | 13 | 0 | 0 | 13 | 100% | Identity, token, key, masking, fraud, audit controls |
 | templates | 5 | 0 | 0 | 5 | 100% | Required DAB, pattern, stub, reference, and test archetype templates |
-| testing | 32 | 0 | 0 | 32 | 100% | Test strategy, performance profiles, tooling, coverage, and correctness/messaging/load/resilience archetypes for the QE team |
-| **Total** | **224** | **0** | **0** | **224** | **100%** | |
+| testing | 37 | 0 | 0 | 37 | 100% | Test strategy, performance profiles, tooling, coverage, and correctness/messaging/load/resilience/data/observability/client archetypes for the QE team |
+| **Total** | **229** | **0** | **0** | **229** | **100%** | |
 
 Wave 14 reconciled the YAML inventory, rendered catalog table, and document metadata so Draft/Proposed work does not survive as stale catalog state. Future gaps should enter the inventory as new Proposed rows before authoring begins.
 

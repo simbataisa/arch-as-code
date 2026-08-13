@@ -4425,3 +4425,121 @@ rows:
   last_reviewed: '2026-08-12'
   notes: Wave 15D — load, capacity, resilience archetypes
   target_wave: 4
+- id: TST-037
+  title: Read-Model Convergence and CDC Lag
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/read-model-convergence-lag.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - CQRS and Event Sourcing (canonical pattern definitions)
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - Basel BCBS 239 Principle 5
+    ring2:
+    - SBV Circular 09/2020
+  last_reviewed: '2026-08-12'
+  notes: Wave 15E — data, observability, and client archetypes. TST-040/TST-041
+    are reserved for Wave F (InfoSec review); the TST-039 -> TST-042 gap in ID
+    sequence is intentional, not an error.
+  target_wave: 4
+- id: TST-038
+  title: Temporal and Historisation Correctness
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/temporal-historisation.md
+  tiers:
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Kimball & Ross — The Data Warehouse Toolkit Ch.5 (Slowly Changing Dimensions Type 2)
+    - Data Vault 2.0 (Linstedt & Olschimke) — Satellite historisation
+    ring1:
+    - Basel BCBS 239 Principle 3
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN §IV Art. 24-25
+  last_reviewed: '2026-08-12'
+  notes: Wave 15E — data, observability, and client archetypes. TST-040/TST-041
+    are reserved for Wave F (InfoSec review); the TST-039 -> TST-042 gap in ID
+    sequence is intentional, not an error.
+  target_wave: 4
+- id: TST-039
+  title: Data Quality and Reconciliation
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/data-quality-reconciliation.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - DAMA-DMBOK Data Quality Dimensions
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - Basel BCBS 239 Principle 4
+    - Basel BCBS 239 Principle 5
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN — reporting-accuracy obligations
+  last_reviewed: '2026-08-12'
+  notes: Wave 15E — data, observability, and client archetypes. TST-040/TST-041
+    are reserved for Wave F (InfoSec review); the TST-039 -> TST-042 gap in ID
+    sequence is intentional, not an error.
+  target_wave: 4
+- id: TST-042
+  title: Telemetry and Observability Verification
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/telemetry-verification.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - OpenTelemetry specification
+    - Google SRE golden signals (BP-007)
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15E — data, observability, and client archetypes. TST-040/TST-041
+    are reserved for Wave F (InfoSec review); the TST-039 -> TST-042 gap in ID
+    sequence is intentional, not an error.
+  target_wave: 4
+- id: TST-043
+  title: Client Experience, Offline Sync and Performance Budget Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/client-experience-offline-perf.md
+  tiers:
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Core Web Vitals
+    - WCAG 2.2 AA §3.1.1
+    ring1:
+    - GDPR Art. 32 (Security of Processing)
+    ring2:
+    - SBV Circular 09/2020 §III Art. 12
+  last_reviewed: '2026-08-12'
+  notes: Wave 15E — data, observability, and client archetypes. TST-040/TST-041
+    are reserved for Wave F (InfoSec review); the TST-039 -> TST-042 gap in ID
+    sequence is intentional, not an error.
+  target_wave: 4

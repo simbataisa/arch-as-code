@@ -97,6 +97,11 @@ nav:
         - Blended Journey Workload Testing: knowledge-base/testing/archetypes/blended-journey-workload.md
         - Fault Injection and Graceful Degradation Testing: knowledge-base/testing/archetypes/fault-injection-degradation.md
         - Zero-Downtime Deploy, Traffic Shift and Rotation Testing: knowledge-base/testing/archetypes/zero-downtime-deploy-rotation.md
+        - Read-Model Convergence and CDC Lag: knowledge-base/testing/archetypes/read-model-convergence-lag.md
+        - Temporal and Historisation Correctness: knowledge-base/testing/archetypes/temporal-historisation.md
+        - Data Quality and Reconciliation: knowledge-base/testing/archetypes/data-quality-reconciliation.md
+        - Telemetry and Observability Verification: knowledge-base/testing/archetypes/telemetry-verification.md
+        - Client Experience, Offline Sync and Performance Budget Testing: knowledge-base/testing/archetypes/client-experience-offline-perf.md
     - Technology Radar: knowledge-base/technology-radar.md
     - Glossary: knowledge-base/glossary.md
 

@@ -61,11 +61,13 @@ Grouped into seven families by shared method of verification, not by domain. See
 [TST-001](./strategy/test-strategy-standard.md) for what an archetype is and how oracles are
 assigned.
 
-> Families A, B, C, and D (TST-020…TST-036) have landed — all seventeen documents exist and are
-> Approved. The links below Family D still point at files that do not exist until later waves of
-> this plan complete. `scripts/validate-internal-links.py` reports those as warnings in the
-> interim — that CI job runs with `allow_failure: true`, so it does not block. The link gate is
-> asserted clean once every archetype file lands.
+> Families A through E, and Family G (TST-020…TST-039, TST-042, TST-043) have landed — all
+> twenty-two documents exist and are Approved. `TST-040` and `TST-041` (Family F) are reserved
+> for Wave F, sequenced last because both require `@infosec-architect` review — that is a
+> deliberate ID gap in the catalog, not an error to "fix". The links below Family F still point
+> at files that do not exist until Wave F completes. `scripts/validate-internal-links.py` reports
+> those as warnings in the interim — that CI job runs with `allow_failure: true`, so it does not
+> block. The link gate is asserted clean once every archetype file lands.
 
 ### Family A — Correctness & State (landed)
 
@@ -104,7 +106,7 @@ assigned.
 | TST-035 | [Fault Injection & Graceful Degradation](./archetypes/fault-injection-degradation.md) | RES-002, RES-007, RES-004, RES-006, RES-012, RES-010, RES-001, RES-003, BP-005 |
 | TST-036 | [Zero-Downtime Deploy, Traffic Shift & Rotation](./archetypes/zero-downtime-deploy-rotation.md) | PLT-003, PLT-001, PLT-005, INT-006, SEC-007, SEC-003, FE-004, MOB-006 |
 
-### Family E — Data
+### Family E — Data (landed)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|
@@ -112,18 +114,18 @@ assigned.
 | TST-038 | [Temporal & Historisation Correctness](./archetypes/temporal-historisation.md) | DATA-005, DATA-003, DATA-004, DATA-010 |
 | TST-039 | [Data Quality & Reconciliation](./archetypes/data-quality-reconciliation.md) | DATA-011, DATA-013, DATA-009, DATA-002 |
 
-### Family F — Security
+### Family F — Security (reserved for Wave F)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|
 | TST-040 | [AuthN/AuthZ Matrix & Token Lifecycle](./archetypes/authn-authz-token-lifecycle.md) | SEC-010, SEC-006, SEC-002, SEC-005, SEC-011, SEC-001, MOB-003 |
 | TST-041 | [Data Protection, Masking & Tokenisation](./archetypes/data-protection-masking-tokenisation.md) | SEC-008, SEC-013, SEC-004, SEC-012, MOB-002, FE-003, MOB-005, MOB-004 |
 
-### Family G — Observability & Client
+### Family G — Observability & Client (landed)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|
-| TST-042 | [Telemetry & Observability Verification](./archetypes/telemetry-verification.md) | OBS-001 … OBS-010 |
+| TST-042 | [Telemetry & Observability Verification](./archetypes/telemetry-verification.md) | OBS-001, OBS-002, OBS-003, OBS-004, OBS-005, OBS-006, OBS-007, OBS-008, OBS-009, OBS-010, BP-004, BP-007, BP-008 |
 | TST-043 | [Client Experience, Offline Sync & Perf Budget](./archetypes/client-experience-offline-perf.md) | FE-005, FE-006, FE-001, FE-002, MOB-001, MOB-006 |
 
 ## Coverage
