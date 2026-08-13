@@ -17,9 +17,10 @@ Tier Applicability: T0, T1
 | RES-001 | Bulkhead Isolation | [../../patterns/resilience/bulkhead-isolation.md](../../patterns/resilience/bulkhead-isolation.md) |
 | RES-003 | Retry with Backoff | [../../patterns/resilience/retry-with-backoff.md](../../patterns/resilience/retry-with-backoff.md) |
 | BP-005 | Chaos Engineering | [../../best-practices/chaos-engineering.md](../../best-practices/chaos-engineering.md) |
+| BP-002 | Disaster Recovery Playbook | [../../best-practices/disaster-recovery-playbook.md](../../best-practices/disaster-recovery-playbook.md) |
 
-These nine rows share one archetype because each is one link in the same fault-response chain,
-and the method of verification is identical across all nine: inject one of
+These ten rows share one archetype because each is one link in the same fault-response chain,
+and the method of verification is identical across all ten: inject one of
 [TST-006](../strategy/resilience-test-standard.md#fault-class-taxonomy)'s ten fault classes
 against a service under real traffic and assert what each link in the chain does in response —
 not one design claim per row, evaluated in isolation. RES-006 Timeout Budget is the first
@@ -38,7 +39,11 @@ test in the same sense as the other eight rows — it is the practice this arche
 executes as a codified, assertable test obligation, exactly the division of labour
 [TST-006 § Relationship to BP-005](../strategy/resilience-test-standard.md#relationship-to-bp-005)
 draws: BP-005 owns the drill cadence and game-day culture; this archetype owns the pass/fail
-assertions that prove a drill actually exercised what it claims to have exercised.
+assertions that prove a drill actually exercised what it claims to have exercised. BP-002 Disaster
+Recovery Playbook belongs here for the same reason as BP-005: a DR playbook is not a document to
+cross-reference, it is a procedure this archetype's `failover-under-load` profile (§4) — this
+archetype's primary profile — actually executes end to end, so the playbook's own steps are
+verified against a real fault injection rather than merely reviewed on paper.
 
 ## 2. Failure Taxonomy
 
@@ -262,7 +267,7 @@ view of offered load spikes.
 | k6 | good | A `constant-arrival-rate` scenario for steady traffic plus a second scripted scenario polling the dependency's counter can approximate the same separation, with k6's tagged custom metrics distinguishing the two measurement streams, but it lacks a built-in barrier or shared cross-VU store as direct as JMeter's `props` | 
 | Locust | fair | Locust can run two `User` classes concurrently — one driving traffic, one polling the dependency — but per [TST-014](../tooling/locust.md#when-to-use-this-tool) its closed population model is a poor fit for the `spike` profile's retry storm, and the dual-measurement separation must be hand-built rather than configured |
 
-Every coverage row for the nine catalog entries in §1 records `primary_tool: jmeter`, for the
+Every coverage row for the ten catalog entries in §1 records `primary_tool: jmeter`, for the
 reason stated above and demonstrated in §5.
 
 ## 7. Overlays
@@ -359,7 +364,7 @@ every value is an example, not a normative one, per [TST-001](../strategy/test-s
 test_acceptance_criteria:
   service_name: synthetic-payment-gateway
   archetypes: [TST-035]
-  catalog_refs: [RES-002, RES-007, RES-004, RES-006, RES-012, RES-010, RES-001, RES-003, BP-005]
+  catalog_refs: [RES-002, RES-007, RES-004, RES-006, RES-012, RES-010, RES-001, RES-003, BP-005, BP-002]
   functional:
     invariants_covered: 9                 # I1-I9, all nine assertable
     negative_paths_covered: 4
@@ -393,6 +398,7 @@ test_acceptance_criteria:
 - [RES-001 Bulkhead Isolation](../../patterns/resilience/bulkhead-isolation.md)
 - [RES-003 Retry with Backoff](../../patterns/resilience/retry-with-backoff.md)
 - [BP-005 Chaos Engineering](../../best-practices/chaos-engineering.md)
+- [BP-002 Disaster Recovery Playbook](../../best-practices/disaster-recovery-playbook.md)
 
 ## 13. Related Archetypes
 
