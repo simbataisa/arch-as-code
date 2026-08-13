@@ -3135,7 +3135,7 @@ Ring 2 — SBV anti-money-laundering screening obligations, `⚠️`.
 
 **Tier Applicability:** T0, T1
 
-**Applies To:** twelve rows — `EIP-004` Message Router (`../../patterns/eip/message-router.md`);
+**Applies To:** fourteen rows — `EIP-004` Message Router (`../../patterns/eip/message-router.md`);
 `EIP-005` Content-Based Router (`../../patterns/eip/content-based-router.md`); `EIP-006` Message
 Translator (`../../patterns/eip/message-translator.md`); `EIP-007` Content Enricher
 (`../../patterns/eip/content-enricher.md`); `EIP-008` Content Filter
@@ -3192,7 +3192,7 @@ conformance; BCBS 239 Principle 3. Ring 2 — SBV Circular 09/2020, `⚠️`; no
 field handling as a practical Ring 2 requirement.
 
 **Steps:** Apply the Standard Archetype Steps with `FILE=…/message-transformation-routing.md` and
-`ID=TST-026`. `primary_tool: jmeter` for all twelve coverage rows.
+`ID=TST-026`. `primary_tool: jmeter` for all fourteen coverage rows.
 
 ---
 
