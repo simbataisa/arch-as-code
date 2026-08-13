@@ -13,9 +13,7 @@ Tier Applicability: N/A (meta-document — template for archetype authors)
    `governance/standards/enterprise-architecture-catalog.md`. Never reuse an ID.
 3. Replace every `[PLACEHOLDER]` with real content. Delete every authoring note (lines
    beginning with `>`) once its section is complete.
-4. Keep the 14 section headings below, in this order, with this exact spelling. Omit an
-   overlay subsection in §7 entirely if the archetype does not apply to that discipline —
-   never leave it filled with "N/A".
+4. Keep the 14 section headings below, in this order, with this exact spelling — except §11, which is deliberately unnumbered (`## Compliance Mapping`, no leading `11.`): the repository's `scripts/check-compliance-rows.py` gate matches only a literal `^## Compliance Mapping` heading with no numeric prefix, and every Approved/Draft catalog row must pass it — including this template itself and every archetype that copies it. Omit an overlay subsection in §7 entirely if the archetype does not apply to that discipline — never leave it filled with "N/A".
 5. State no latency, throughput, RTO, RPO, or availability number. Link to the owning
    spine row instead: [NFR-001](../../nfr/service-tiering-rto-rpo.md),
    [NFR-002](../../nfr/latency-budget-model.md),
@@ -151,7 +149,12 @@ test_acceptance_criteria:
   # [PLACEHOLDER]
 ```
 
-## 11. Compliance Mapping
+## Compliance Mapping
+
+> **Authoring note**: This heading is deliberately unnumbered — see "How to Use This
+> Template" step 4. `scripts/check-compliance-rows.py` matches only a literal
+> `^## Compliance Mapping` heading; a numbered variant (`## 11. Compliance Mapping`) fails
+> the gate. Do not add a number back.
 
 | Layer | Reference | Section/Control | How this satisfies |
 |---|---|---|---|
