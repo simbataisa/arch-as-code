@@ -243,7 +243,13 @@ merely because the underlying data changed between calls.
 | Locust | fair | Locust's open-model `constant_throughput`-style shape can hold arrival load through the change event, but per [TST-014](../tooling/locust.md#when-to-use-this-tool) the timestamp-attribution and dual-route shadow-comparison logic must be hand-built in Python rather than configured declaratively |
 
 Every coverage row for the eight catalog entries in §1 records `primary_tool: jmeter`, for the
-reason stated above and demonstrated in §5.
+reason stated above and demonstrated in §5 — except `MOB-006`, where
+[TST-043](./client-experience-offline-perf.md) (Client Experience, Offline Sync and Performance
+Budget) has since claimed the row's `primary_tool` as `k6` for its own Core Web Vitals obligation;
+see the coverage YAML's `notes` field on that row and TST-043 §6 for the resolution. `MOB-006`'s
+remaining role in *this* archetype — force-upgrade state preservation under a deploy/traffic-shift
+event — is still asserted via JMeter as described in §5; only the row's single `primary_tool`
+designation changed.
 
 ## 7. Overlays
 
