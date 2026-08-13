@@ -54,3 +54,13 @@
 
 # Default ownership
 *                                               @techcombank/ea-board
+
+# --- Testing knowledge base (IT Quality Engineering) ---
+knowledge-base/testing/                         @qe-lead
+knowledge-base/templates/test-archetype-template.md  @qe-lead
+knowledge-base/testing/strategy/performance-test-standard.md  @qe-lead @sre-lead
+knowledge-base/testing/strategy/workload-modelling.md  @qe-lead @sre-lead
+knowledge-base/testing/tooling/                 @qe-lead @sre-lead
+knowledge-base/testing/strategy/security-test-standard.md  @qe-lead @infosec-architect
+scripts/validate-testing-coverage.py            @qe-lead
+scripts/render-testing-coverage.py              @qe-lead

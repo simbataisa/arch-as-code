@@ -2,7 +2,7 @@
 
 Status: Approved | Last Reviewed: 2026-05-30 | Owner: @ea-board
 Catalog version: 1.0
-Coverage: 191 Approved catalog rows across 16 categories — 6 spine docs and 185 radii docs after Wave 14 source-of-truth reconciliation.
+Coverage: 203 Approved catalog rows across 17 categories — 7 spine docs and 196 radii docs after Wave 15A testing corpus foundation.
 
 > **For DAB authors**: every DAB submission must cite ≥3 catalog rows by ID (e.g., `RES-005`, `EIP-024`, `COMP-001`). See §10.
 
@@ -53,13 +53,14 @@ A pattern's Compliance Mapping table has one row per ring it satisfies. Patterns
 
 Catalog rows divide into two normative classes:
 
-- **Spine docs** are *normative*. They define numbers, taxonomies, or templates that other docs **must inherit and may not contradict**. There are 6 spine docs in this delivery (Wave 0 / Phase 2):
+- **Spine docs** are *normative*. They define numbers, taxonomies, or templates that other docs **must inherit and may not contradict**. There are 7 spine docs in this delivery (Wave 0 / Phase 2):
   1. [NFR-001 Service Tiering + RTO/RPO Matrix](../../knowledge-base/nfr/service-tiering-rto-rpo.md)
   2. [NFR-002 Latency Budget Model](../../knowledge-base/nfr/latency-budget-model.md)
   3. [PRIN-006 Idempotency-by-default](../../knowledge-base/principles/idempotency-by-default.md)
   4. [TPL-001 NFR Acceptance Criteria DAB Template](../../knowledge-base/templates/nfr-acceptance-criteria-dab.md)
   5. [COMP-001 Compliance Mapping Matrix](../../knowledge-base/compliance/compliance-mapping-matrix.md)
   6. [REF-001 Multi-Region Active-Active](../../knowledge-base/reference-architectures/multi-region-active-active.md)
+  7. [TST-001 Test Strategy Standard](../../knowledge-base/testing/strategy/test-strategy-standard.md)
 - **Radii docs** are everything else: patterns, reference architectures, best-practices. They **inherit from spine docs** by reference and may not redefine spine concepts.
 
 ### 2.3 HA / HP / HR
@@ -125,6 +126,16 @@ Reusable doc skeletons. NFR-AC DAB Template (TPL-001) is spine and required by e
 ### 3.14 Best Practices (`knowledge-base/best-practices/`)
 
 Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microservice decomposition, observability, chaos engineering, capacity planning, golden signals, error budgets, runbooks, postmortems. Distinct from patterns (which are *what* to build) — best practices are *how to operate*.
+
+### 3.15 Testing (`knowledge-base/testing/`)
+
+Test strategy owned by the QE team, organised by verification method rather than by domain. A
+strategy layer fixes six disciplines, eight performance profiles, and the
+`test_acceptance_criteria` contract; 24 archetypes group catalog rows by their shared verification
+method; a generated coverage matrix proves every catalog row is addressed.
+
+**Inclusion**: guidance on how to verify a catalog row. **Excludes** the runnable test harness, which
+lives in the QE team's own repository.
 
 ---
 
@@ -325,6 +336,18 @@ Operational and process guidelines. **Inclusion**: CI/CD, DR playbook, microserv
 | TPL-002 | Pattern Doc Template | templates | Approved | radii | @ea-board | `knowledge-base/templates/pattern-doc-template.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
 | TPL-003 | Stub Doc Template | templates | Approved | radii | @ea-board | `knowledge-base/templates/stub-doc-template.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
 | TPL-004 | Reference Architecture Doc Template | templates | Approved | radii | @ea-board | `knowledge-base/templates/ref-arch-doc-template.md` | — | — | 2026-05-18 | 1 | Wave 6F — self-review complete |
+| TPL-005 | Test Archetype Doc Template | templates | Approved | radii | @qe-lead | `knowledge-base/templates/test-archetype-template.md` | — | — | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-001 | Test Strategy Standard | testing | Approved | spine | @qe-lead | `knowledge-base/testing/strategy/test-strategy-standard.md` | — | ISTQB test levels; BCBS 230 P9; BCBS 239 P3; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-002 | Performance Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/performance-test-standard.md` | T0, T1, T2, T3 | SRE Workbook Ch.5; ISTQB; BCBS 230 P9; PCI-DSS 4.0 §6.4; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-003 | Workload Modelling | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/workload-modelling.md` | T0, T1, T2 | Little's Law; SRE Workbook Ch.5; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-004 | Test Data Management | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/test-data-management.md` | T0, T1, T2, T3 | NIST SA-15; OWASP/CIS; PCI-DSS 4.0 §6.5.5 & §3; GDPR Art. 5(1)(c); Decree 13/2023 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-005 | Test Environments and Quality Gates | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/environments-quality-gates.md` | T0, T1, T2, T3 | NIST CM-4/CA-2; PCI-DSS 4.0 §6.5.3/§6.5.5; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-006 | Resilience Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/resilience-test-standard.md` | T0, T1 | NIST CP-4; Principles of Chaos Engineering; BCBS 230 P9/§27; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-007 | Contract and Integration Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/contract-integration-test-standard.md` | T0, T1, T2 | Pact; OpenAPI; AsyncAPI; ISO 20022; SWIFT CSP 2024 Control 2.x; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-008 | Security Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/security-test-standard.md` | T0, T1 | OWASP ASVS/WSTG; NIST CA-8/AC-3; PCI-DSS 4.0 §6.4/§11.3/§11.4; SWIFT CSP 2024 Control 2.x; Decree 13/2023; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-009 | Data Quality Test Standard | testing | Approved | radii | @qe-lead | `knowledge-base/testing/strategy/data-quality-test-standard.md` | T0, T1, T2 | DAMA-DMBOK; BCBS 239 P3/P4/P5; SBV Circ. 09/2020/TT-NHNN | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-010 | Test Tool Selection Matrix | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/tool-selection-matrix.md` | T0, T1, T2, T3 | ISTQB tool selection; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-015 | Testing Coverage Matrix | testing | Approved | radii | @qe-lead | `knowledge-base/testing/coverage/coverage-matrix.md` | — | — | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
 
 ## 5. Gap Analysis
 
@@ -347,8 +370,9 @@ Coverage as of 2026-05-30 (auto-derivable by counting rows in `_catalog-inventor
 | reference-architectures | 20 | 0 | 0 | 20 | 100% | End-to-end banking platform reference architectures |
 | resilience | 12 | 0 | 0 | 12 | 100% | Failure containment, recovery, and load management |
 | security | 13 | 0 | 0 | 13 | 100% | Identity, token, key, masking, fraud, audit controls |
-| templates | 4 | 0 | 0 | 4 | 100% | Required DAB, pattern, stub, and reference templates |
-| **Total** | **191** | **0** | **0** | **191** | **100%** | |
+| templates | 5 | 0 | 0 | 5 | 100% | Required DAB, pattern, stub, reference, and test archetype templates |
+| testing | 11 | 0 | 0 | 11 | 100% | Test strategy, performance profiles, tooling, and coverage for the QE team |
+| **Total** | **203** | **0** | **0** | **203** | **100%** | |
 
 Wave 14 reconciled the YAML inventory, rendered catalog table, and document metadata so Draft/Proposed work does not survive as stale catalog state. Future gaps should enter the inventory as new Proposed rows before authoring begins.
 

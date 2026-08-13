@@ -66,6 +66,16 @@ nav:
   - Architecture Knowledge Base:
     - Principles: knowledge-base/principles/README.md
     - Design Patterns: knowledge-base/patterns/
+    - Testing (QE):
+      - Overview: knowledge-base/testing/README.md
+      - Test Strategy Standard: knowledge-base/testing/strategy/test-strategy-standard.md
+      - Performance Test Standard: knowledge-base/testing/strategy/performance-test-standard.md
+      - Workload Modelling: knowledge-base/testing/strategy/workload-modelling.md
+      - Test Data Management: knowledge-base/testing/strategy/test-data-management.md
+      - Environments and Quality Gates: knowledge-base/testing/strategy/environments-quality-gates.md
+      - Tool Selection: knowledge-base/testing/tooling/tool-selection-matrix.md
+      - Coverage Matrix: knowledge-base/testing/coverage/coverage-matrix.md
+      - Archetypes: knowledge-base/testing/archetypes/
     - Technology Radar: knowledge-base/technology-radar.md
     - Glossary: knowledge-base/glossary.md
 

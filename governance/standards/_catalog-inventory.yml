@@ -3718,3 +3718,262 @@ rows:
   last_reviewed: '2026-05-18'
   notes: Wave 6F — self-review complete
   target_wave: 1
+- id: TPL-005
+  title: Test Archetype Doc Template
+  category: templates
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/templates/test-archetype-template.md
+  tiers: []
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: []
+    ring1: []
+    ring2: []
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-001
+  title: Test Strategy Standard
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/test-strategy-standard.md
+  tiers: []
+  spine_or_radii: spine
+  compliance_refs:
+    ring0:
+    - ISTQB Foundation — test levels and test types
+    - NIST SP 800-53 CA-2
+    ring1:
+    - Basel BCBS 230 Principle 9
+    - Basel BCBS 239 Principle 3
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-002
+  title: Performance Test Standard
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/performance-test-standard.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Google SRE Workbook — Ch.5 load and stress testing
+    - ISTQB — performance-testing test types
+    ring1:
+    - Basel BCBS 230 Principle 9
+    - PCI-DSS 4.0 §6.4
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-003
+  title: Workload Modelling
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/workload-modelling.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Little's Law / queueing theory
+    - Google SRE Workbook — Ch.5 load and stress testing
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-004
+  title: Test Data Management
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/test-data-management.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - NIST SP 800-53 SA-15
+    - OWASP Testing Guide / CIS Controls
+    ring1:
+    - PCI-DSS 4.0 §6.5.5 and §3
+    - GDPR Art. 5(1)(c)
+    ring2:
+    - Decree 13/2023/ND-CP — personal-data protection
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-005
+  title: Test Environments and Quality Gates
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/environments-quality-gates.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - NIST SP 800-53 CM-4
+    - NIST SP 800-53 CA-2
+    ring1:
+    - PCI-DSS 4.0 §6.5.3
+    - PCI-DSS 4.0 §6.5.5
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-006
+  title: Resilience Test Standard
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/resilience-test-standard.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - NIST SP 800-53 CP-4
+    - Principles of Chaos Engineering
+    ring1:
+    - Basel BCBS 230 Principle 9
+    - Basel BCBS 230 §27
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-007
+  title: Contract and Integration Test Standard
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/contract-integration-test-standard.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Pact — Consumer-Driven Contract Specification
+    - OpenAPI Specification
+    - AsyncAPI Specification
+    ring1:
+    - ISO 20022 Messaging
+    - SWIFT CSP v2024 Control 2.x
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-008
+  title: Security Test Standard
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/security-test-standard.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - OWASP ASVS V3/V4
+    - OWASP WSTG
+    - NIST SP 800-53 CA-8/AC-3
+    ring1:
+    - PCI-DSS 4.0 §6.4, §11.3, §11.4
+    - SWIFT CSP v2024 Control 2.x
+    ring2:
+    - Decree 13/2023 and SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-009
+  title: Data Quality Test Standard
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/strategy/data-quality-test-standard.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - DAMA-DMBOK Data Quality Dimensions
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - Basel BCBS 239 Principle 4
+    - Basel BCBS 239 Principle 5
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN — reporting-accuracy expectations
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-010
+  title: Test Tool Selection Matrix
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/tooling/tool-selection-matrix.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ISTQB test-tool selection guidance
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
+- id: TST-015
+  title: Testing Coverage Matrix
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/coverage/coverage-matrix.md
+  tiers: []
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: []
+    ring1: []
+    ring2: []
+  last_reviewed: '2026-08-12'
+  notes: Wave 15A — testing corpus foundation
+  target_wave: 4
