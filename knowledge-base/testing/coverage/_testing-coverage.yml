@@ -1588,3 +1588,131 @@ rows:
     primary_tool: jmeter
     owner: core-banking-domain-owner
     notes: ''
+  - catalog_id: PLT-003
+    title: GitOps Deployment Pipeline
+    path: knowledge-base/patterns/platform/gitops-deployment-pipeline.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: ea-board
+    notes: ''
+  - catalog_id: PLT-001
+    title: Service Mesh Traffic Management
+    path: knowledge-base/patterns/platform/service-mesh-traffic.md
+    tiers: [T0, T1]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: platform-lead
+    notes: ''
+  - catalog_id: PLT-005
+    title: Kubernetes Operator Pattern
+    path: knowledge-base/patterns/platform/kubernetes-operator-pattern.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: ea-board
+    notes: ''
+  - catalog_id: INT-006
+    title: Strangler Fig
+    path: knowledge-base/patterns/integration/strangler-fig.md
+    tiers: [T1, T2]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: SEC-007
+    title: Secrets Rotation
+    path: knowledge-base/patterns/security/secrets-rotation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-003
+    title: Vault Secret Management
+    path: knowledge-base/patterns/security/vault-secret-management.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: FE-004
+    title: Web Feature Flags
+    path: knowledge-base/patterns/frontend/web-feature-flags.md
+    tiers: [T1, T2, T3]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-web
+    notes: ''
+  - catalog_id: MOB-006
+    title: Mobile Force-Upgrade
+    path: knowledge-base/patterns/mobile/mobile-force-upgrade.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-036]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: required
+      data_quality: n/a
+    perf_profiles: [baseline, load, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-mobile
+    notes: ''
