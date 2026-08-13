@@ -82,7 +82,7 @@ rows:
     title: Retry with Backoff
     path: knowledge-base/patterns/resilience/retry-with-backoff.md
     tiers: [T0, T1, T2]
-    archetypes: [TST-020]
+    archetypes: [TST-020, TST-035]
     disciplines:
       functional: required
       performance: required
@@ -1160,7 +1160,7 @@ rows:
     title: Bulkhead Isolation
     path: knowledge-base/patterns/resilience/bulkhead-isolation.md
     tiers: [T0, T1, T2]
-    archetypes: [TST-033]
+    archetypes: [TST-033, TST-035]
     disciplines:
       functional: required
       performance: required
@@ -1185,6 +1185,102 @@ rows:
       security: required
       data_quality: n/a
     perf_profiles: [baseline, load, stress, mixed, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-004
+    title: Graceful Degradation
+    path: knowledge-base/patterns/resilience/graceful-degradation.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-035]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-006
+    title: Timeout Budget
+    path: knowledge-base/patterns/resilience/timeout-budget.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-035]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-007
+    title: Fallback Strategies
+    path: knowledge-base/patterns/resilience/fallback-strategies.md
+    tiers: [T0, T1]
+    archetypes: [TST-035]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-010
+    title: Leader Election
+    path: knowledge-base/patterns/resilience/leader-election.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-035]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: RES-012
+    title: Health Check Aggregation
+    path: knowledge-base/patterns/resilience/health-check-aggregation.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: [TST-035]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: BP-005
+    title: Chaos Engineering
+    path: knowledge-base/best-practices/chaos-engineering.md
+    tiers: [T0, T1]
+    archetypes: [TST-035]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, spike, failover-under-load]
     primary_tool: jmeter
     owner: sre-lead
     notes: ''
