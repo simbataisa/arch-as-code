@@ -15,13 +15,13 @@ Tier Applicability: N/A (meta-document — template for archetype authors)
    beginning with `>`) once its section is complete.
 4. Keep the 14 section headings below, in this order, with this exact spelling — except §11, which is deliberately unnumbered (`## Compliance Mapping`, no leading `11.`): the repository's `scripts/check-compliance-rows.py` gate matches only a literal `^## Compliance Mapping` heading with no numeric prefix, and every Approved/Draft catalog row must pass it — including this template itself and every archetype that copies it. Omit an overlay subsection in §7 entirely if the archetype does not apply to that discipline — never leave it filled with "N/A".
 5. State no latency, throughput, RTO, RPO, or availability number. Link to the owning
-   spine row instead: [NFR-001](../../nfr/service-tiering-rto-rpo.md),
-   [NFR-002](../../nfr/latency-budget-model.md),
-   [NFR-003](../../nfr/capacity-planning-model.md),
-   [NFR-004](../../nfr/throughput-model.md),
-   [NFR-005](../../nfr/error-budget-policy.md).
+   spine row instead: [NFR-001](../nfr/service-tiering-rto-rpo.md),
+   [NFR-002](../nfr/latency-budget-model.md),
+   [NFR-003](../nfr/capacity-planning-model.md),
+   [NFR-004](../nfr/throughput-model.md),
+   [NFR-005](../nfr/error-budget-policy.md).
 6. Use synthetic data in every example. No PII or PHI. See
-   [TST-004](../../testing/strategy/test-data-management.md).
+   [TST-004](../testing/strategy/test-data-management.md).
 7. Set Status to `Draft` while authoring. The EA Board moves it to `Approved` after review.
 8. This template file itself must never be modified to describe a real archetype.
 
@@ -76,9 +76,9 @@ Tier Applicability: [T0 | T1 | T2 | T3 — the tiers for which this archetype is
 
 ## 4. Performance Test Design
 
-> **Authoring note**: Name only the profiles from [TST-002](../../testing/strategy/performance-test-standard.md)
+> **Authoring note**: Name only the profiles from [TST-002](../testing/strategy/performance-test-standard.md)
 > that apply, and say why each applies to *this* archetype. State the workload model —
-> `open` or `closed` per [TST-003](../../testing/strategy/workload-modelling.md) — and the
+> `open` or `closed` per [TST-003](../testing/strategy/workload-modelling.md) — and the
 > spine row supplying each threshold. Do not restate the threshold value.
 
 | Profile | Applies | Why | Threshold source |
@@ -130,7 +130,7 @@ jmeter -n -t [plan].jmx \
 
 > **Authoring note**: Synthetic only. State the entities needed, the cardinality driver, the
 > referential-integrity requirement, and the teardown. Cross-link
-> [TST-004](../../testing/strategy/test-data-management.md).
+> [TST-004](../testing/strategy/test-data-management.md).
 
 ## 9. Evidence and Observability
 
@@ -140,7 +140,7 @@ jmeter -n -t [plan].jmx \
 ## 10. Exit Criteria
 
 > **Authoring note**: The archetype's `test_acceptance_criteria` fragment, as defined in
-> [TST-001](../../testing/strategy/test-strategy-standard.md). Only the fields this archetype
+> [TST-001](../testing/strategy/test-strategy-standard.md). Only the fields this archetype
 > constrains.
 
 ```yaml
