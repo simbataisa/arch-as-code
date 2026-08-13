@@ -512,3 +512,227 @@ rows:
     notes: 'TST-025 claims decision-accuracy coverage; TST-040 (not yet published) will
       append itself to archetypes: for this row''s token-lifecycle coverage of the same
       catalog row -- append, never overwrite.'
+  - catalog_id: EIP-004
+    title: Message Router
+    path: knowledge-base/patterns/eip/message-router.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-005
+    title: Content-Based Router
+    path: knowledge-base/patterns/eip/content-based-router.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-006
+    title: Message Translator
+    path: knowledge-base/patterns/eip/message-translator.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-007
+    title: Content Enricher
+    path: knowledge-base/patterns/eip/content-enricher.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-008
+    title: Content Filter
+    path: knowledge-base/patterns/eip/content-filter.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-010
+    title: Normalizer
+    path: knowledge-base/patterns/eip/normalizer.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-014
+    title: Composed Message Processor
+    path: knowledge-base/patterns/eip/composed-message-processor.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-012
+    title: Splitter
+    path: knowledge-base/patterns/eip/splitter.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: EIP-019
+    title: Smart Proxy
+    path: knowledge-base/patterns/eip/smart-proxy.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-009
+    title: Content-Based Router
+    path: knowledge-base/patterns/integration/content-based-router.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-005
+    title: Anti-Corruption Layer
+    path: knowledge-base/patterns/integration/anti-corruption-layer.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-012
+    title: Error Code Mapping Standard
+    path: knowledge-base/patterns/integration/error-code-mapping.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-007
+    title: Sidecar / Ambassador
+    path: knowledge-base/patterns/integration/sidecar-ambassador.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: ''
+  - catalog_id: INT-008
+    title: Backend-for-Frontend Routing
+    path: knowledge-base/patterns/integration/backend-for-frontend-routing.md
+    tiers: [T0, T1]
+    archetypes: [TST-026]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: required
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [baseline, load, soak]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
