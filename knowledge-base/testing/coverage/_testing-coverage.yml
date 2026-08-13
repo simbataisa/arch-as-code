@@ -466,18 +466,18 @@ rows:
     title: Collections Engine
     path: knowledge-base/patterns/banking-solutions/collections-engine.md
     tiers: [T1, T2]
-    archetypes: [TST-025]
+    archetypes: [TST-025, TST-032]
     disciplines:
       functional: required
       performance: required
-      resilience: n/a
+      resilience: required
       contract: n/a
       security: n/a
       data_quality: required
-    perf_profiles: [baseline, load, stress, soak]
-    primary_tool: locust
+    perf_profiles: [baseline, load, stress, soak, scalability, mixed]
+    primary_tool: jmeter
     owner: lending-domain-owner
-    notes: ''
+    notes: 'primary_tool set to jmeter (latest claimant, TST-032) per TST-032 task brief; TST-025 rated locust BEST for its own confusion-matrix accumulation and still recommends it for that half of this row''s obligation — see TST-032 report for the resolution rationale.'
   - catalog_id: SEC-009
     title: Fraud Signal Collection
     path: knowledge-base/patterns/security/fraud-signal-collection.md
@@ -1091,4 +1091,52 @@ rows:
     perf_profiles: [baseline, load, stress, spike, scalability]
     primary_tool: jmeter
     owner: sre-lead
+    notes: ''
+  - catalog_id: BSP-004
+    title: End-of-Day Batch Window
+    path: knowledge-base/patterns/banking-solutions/end-of-day-batch-window.md
+    tiers: [T0, T1]
+    archetypes: [TST-032]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, scalability, soak, mixed]
+    primary_tool: jmeter
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: REF-008
+    title: Regulatory Reporting
+    path: knowledge-base/reference-architectures/regulatory-reporting.md
+    tiers: [T1]
+    archetypes: [TST-032]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, scalability, soak, mixed]
+    primary_tool: jmeter
+    owner: head-of-compliance
+    notes: ''
+  - catalog_id: DATA-004
+    title: Data Vault 2.0
+    path: knowledge-base/patterns/data/data-vault-2.md
+    tiers: [T2, T3]
+    archetypes: [TST-032]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, scalability, soak, mixed]
+    primary_tool: jmeter
+    owner: data-platform-domain-owner
     notes: ''
