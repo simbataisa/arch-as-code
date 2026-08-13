@@ -1716,3 +1716,115 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-mobile
     notes: ''
+  - catalog_id: DATA-001
+    title: CQRS Pattern
+    path: knowledge-base/patterns/data/cqrs-pattern.md
+    tiers: [T1, T2]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: DATA-008
+    title: Change Data Capture (general)
+    path: knowledge-base/patterns/data/change-data-capture.md
+    tiers: [T0, T1]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: DATA-007
+    title: Kappa Architecture
+    path: knowledge-base/patterns/data/kappa-architecture.md
+    tiers: [T2, T3]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: data-platform-domain-owner
+    notes: ''
+  - catalog_id: DATA-006
+    title: Lambda Architecture
+    path: knowledge-base/patterns/data/lambda-architecture.md
+    tiers: [T2, T3]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: data-platform-domain-owner
+    notes: ''
+  - catalog_id: DATA-012
+    title: Data Virtualization
+    path: knowledge-base/patterns/data/data-virtualization.md
+    tiers: [T2, T3]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: data-platform-domain-owner
+    notes: ''
+  - catalog_id: INT-002
+    title: Transactional Outbox + CDC
+    path: knowledge-base/patterns/integration/cdc-outbox-pattern.md
+    tiers: [T0, T1]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: INT-004
+    title: Event Sourcing
+    path: knowledge-base/patterns/integration/event-sourcing.md
+    tiers: [T0, T1]
+    archetypes: [TST-037]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, spike, soak, failover-under-load]
+    primary_tool: jmeter
+    owner: tech-lead-backend
+    notes: ''
