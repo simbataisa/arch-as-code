@@ -61,11 +61,11 @@ Grouped into seven families by shared method of verification, not by domain. See
 [TST-001](./strategy/test-strategy-standard.md) for what an archetype is and how oracles are
 assigned.
 
-> Families A and B (TST-020…TST-030) have landed — all eleven documents exist and are Approved.
-> The links below Family B still point at files that do not exist until later waves of this plan
-> complete. `scripts/validate-internal-links.py` reports those as warnings in the interim — that
-> CI job runs with `allow_failure: true`, so it does not block. The link gate is asserted clean
-> once every archetype file lands.
+> Families A, B, C, and D (TST-020…TST-036) have landed — all seventeen documents exist and are
+> Approved. The links below Family D still point at files that do not exist until later waves of
+> this plan complete. `scripts/validate-internal-links.py` reports those as warnings in the
+> interim — that CI job runs with `allow_failure: true`, so it does not block. The link gate is
+> asserted clean once every archetype file lands.
 
 ### Family A — Correctness & State (landed)
 
@@ -88,7 +88,7 @@ assigned.
 | TST-029 | [Delivery Guarantee, Retry & DLQ](./archetypes/delivery-guarantee-dlq.md) | EIP-023, EIP-022, EIP-025, EIP-021, EIP-001, EIP-002, EIP-020, INT-014 |
 | TST-030 | [Contract & Schema Compatibility](./archetypes/contract-schema-compatibility.md) | INT-015, INT-010, INT-011, INT-013, INT-003 |
 
-### Family C — Load & Capacity
+### Family C — Load & Capacity (landed)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|
@@ -97,7 +97,7 @@ assigned.
 | TST-033 | [Multi-Tenant Isolation & Noisy Neighbour](./archetypes/multitenant-noisy-neighbour.md) | PLT-008, RES-001, RES-005, PLT-006 |
 | TST-034 | [Blended Journey Workload](./archetypes/blended-journey-workload.md) | All 20 `REF-*` reference architectures; owns the `mixed` and journey-level `soak` profiles |
 
-### Family D — Resilience
+### Family D — Resilience (landed)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|

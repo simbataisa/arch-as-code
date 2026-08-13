@@ -4298,3 +4298,130 @@ rows:
   last_reviewed: '2026-08-12'
   notes: Wave 15C — correctness and messaging archetypes
   target_wave: 4
+- id: TST-031
+  title: Rate Limit, Throttle & Breakpoint Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/rate-limit-breakpoint.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - AWS Well-Architected Reliability Pillar — REL 6 (Throttle requests)
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020
+  last_reviewed: '2026-08-12'
+  notes: Wave 15D — load, capacity, resilience archetypes
+  target_wave: 4
+- id: TST-032
+  title: Batch Window and Cutoff Throughput
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/batch-window-cutoff.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ISO 22301 (Business continuity)
+    ring1:
+    - Basel BCBS 239 Principle 5 (Timeliness)
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV regulatory reporting submission deadlines
+  last_reviewed: '2026-08-12'
+  notes: Wave 15D — load, capacity, resilience archetypes
+  target_wave: 4
+- id: TST-033
+  title: Multi-Tenant Isolation and Noisy-Neighbour Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/multitenant-noisy-neighbour.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - AWS Well-Architected Reliability Pillar — cell-based isolation
+    ring1:
+    - Basel BCBS 230 §27
+    - PCI-DSS 4.0 — network and tenant segmentation
+    ring2:
+    - SBV Circular 09/2020
+  last_reviewed: '2026-08-12'
+  notes: Wave 15D — load, capacity, resilience archetypes
+  target_wave: 4
+- id: TST-034
+  title: Blended Journey Workload Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/blended-journey-workload.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Google SRE Workbook Ch.5
+    ring1:
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020
+  last_reviewed: '2026-08-12'
+  notes: Wave 15D — load, capacity, resilience archetypes
+  target_wave: 4
+- id: TST-035
+  title: Fault Injection and Graceful Degradation Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/fault-injection-degradation.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - NIST SP 800-53 CP-4
+    - Principles of Chaos Engineering
+    ring1:
+    - Basel BCBS 230 Principle 9
+    - Basel BCBS 230 §27
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15D — load, capacity, resilience archetypes
+  target_wave: 4
+- id: TST-036
+  title: Zero-Downtime Deploy, Traffic Shift and Rotation Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/zero-downtime-deploy-rotation.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - NIST SP 800-53 CM-3
+    - The Twelve-Factor App — Disposability
+    ring1:
+    - PCI-DSS 4.0 §6.5.2
+    - Basel BCBS 230 Principle 9
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN
+  last_reviewed: '2026-08-12'
+  notes: Wave 15D — load, capacity, resilience archetypes
+  target_wave: 4

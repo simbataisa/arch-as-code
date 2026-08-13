@@ -91,6 +91,12 @@ nav:
         - Fan-out / Fan-in Correlation: knowledge-base/testing/archetypes/fanout-fanin-correlation.md
         - Delivery Guarantee, Retry, and Dead Letter Queue Testing: knowledge-base/testing/archetypes/delivery-guarantee-dlq.md
         - Contract and Schema Compatibility: knowledge-base/testing/archetypes/contract-schema-compatibility.md
+        - Rate Limit, Throttle and Breakpoint Testing: knowledge-base/testing/archetypes/rate-limit-breakpoint.md
+        - Batch Window and Cutoff Throughput: knowledge-base/testing/archetypes/batch-window-cutoff.md
+        - Multi-Tenant Isolation and Noisy-Neighbour Testing: knowledge-base/testing/archetypes/multitenant-noisy-neighbour.md
+        - Blended Journey Workload Testing: knowledge-base/testing/archetypes/blended-journey-workload.md
+        - Fault Injection and Graceful Degradation Testing: knowledge-base/testing/archetypes/fault-injection-degradation.md
+        - Zero-Downtime Deploy, Traffic Shift and Rotation Testing: knowledge-base/testing/archetypes/zero-downtime-deploy-rotation.md
     - Technology Radar: knowledge-base/technology-radar.md
     - Glossary: knowledge-base/glossary.md
 

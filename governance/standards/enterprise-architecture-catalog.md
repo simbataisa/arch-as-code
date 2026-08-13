@@ -2,7 +2,7 @@
 
 Status: Approved | Last Reviewed: 2026-05-30 | Owner: @ea-board
 Catalog version: 1.0
-Coverage: 218 Approved catalog rows across 17 categories — 7 spine docs and 211 radii docs after Wave 15C correctness and messaging archetypes.
+Coverage: 224 Approved catalog rows across 17 categories — 7 spine docs and 217 radii docs after Wave 15D load, capacity, and resilience archetypes.
 
 > **For DAB authors**: every DAB submission must cite ≥3 catalog rows by ID (e.g., `RES-005`, `EIP-024`, `COMP-001`). See §10.
 
@@ -363,6 +363,12 @@ lives in the QE team's own repository.
 | TST-028 | Fan-out / Fan-in Correlation | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/fanout-fanin-correlation.md` | T0, T1 | EIP §7 Aggregator/Scatter-Gather; BCBS 239 P4; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
 | TST-029 | Delivery Guarantee, Retry, and Dead Letter Queue Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/delivery-guarantee-dlq.md` | T0, T1 | EIP §4 Guaranteed Delivery; EIP §10 Dead Letter Channel; BCBS 239 P4; ISO 20022; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
 | TST-030 | Contract and Schema Compatibility | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/contract-schema-compatibility.md` | T0, T1, T2 | Pact CDC; OpenAPI/AsyncAPI/CloudEvents; ISO 20022; SWIFT CSP 2024 Control 2.x; SBV Circ. 09/2020/TT-NHNN §IV.3 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-031 | Rate Limit, Throttle & Breakpoint Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/rate-limit-breakpoint.md` | T0, T1, T2 | AWS Well-Architected Reliability Pillar REL 6; BCBS 230 P9; SBV Circ. 09/2020 | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
+| TST-032 | Batch Window and Cutoff Throughput | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/batch-window-cutoff.md` | T0, T1 | ISO 22301; BCBS 239 P5; BCBS 230 P9; SBV reporting submission deadlines | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
+| TST-033 | Multi-Tenant Isolation and Noisy-Neighbour Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/multitenant-noisy-neighbour.md` | T0, T1 | AWS Well-Architected Reliability Pillar — cell-based isolation; BCBS 230 §27; PCI-DSS 4.0 tenant segmentation; SBV Circ. 09/2020 | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
+| TST-034 | Blended Journey Workload Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/blended-journey-workload.md` | T0, T1 | SRE Workbook Ch.5; BCBS 230 P9; SBV Circ. 09/2020 | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
+| TST-035 | Fault Injection and Graceful Degradation Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/fault-injection-degradation.md` | T0, T1 | NIST CP-4; Principles of Chaos Engineering; BCBS 230 P9/§27; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
+| TST-036 | Zero-Downtime Deploy, Traffic Shift and Rotation Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/zero-downtime-deploy-rotation.md` | T0, T1 | NIST CM-3; Twelve-Factor App — Disposability; PCI-DSS 4.0 §6.5.2; BCBS 230 P9; SBV Circ. 09/2020/TT-NHNN | 2026-08-12 | 4 | Wave 15D — load, capacity, resilience archetypes |
 
 ## 5. Gap Analysis
 
@@ -386,8 +392,8 @@ Coverage as of 2026-05-30 (auto-derivable by counting rows in `_catalog-inventor
 | resilience | 12 | 0 | 0 | 12 | 100% | Failure containment, recovery, and load management |
 | security | 13 | 0 | 0 | 13 | 100% | Identity, token, key, masking, fraud, audit controls |
 | templates | 5 | 0 | 0 | 5 | 100% | Required DAB, pattern, stub, reference, and test archetype templates |
-| testing | 26 | 0 | 0 | 26 | 100% | Test strategy, performance profiles, tooling, coverage, and correctness/messaging archetypes for the QE team |
-| **Total** | **218** | **0** | **0** | **218** | **100%** | |
+| testing | 32 | 0 | 0 | 32 | 100% | Test strategy, performance profiles, tooling, coverage, and correctness/messaging/load/resilience archetypes for the QE team |
+| **Total** | **224** | **0** | **0** | **224** | **100%** | |
 
 Wave 14 reconciled the YAML inventory, rendered catalog table, and document metadata so Draft/Proposed work does not survive as stale catalog state. Future gaps should enter the inventory as new Proposed rows before authoring begins.
 
