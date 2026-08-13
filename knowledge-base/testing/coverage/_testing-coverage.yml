@@ -174,6 +174,134 @@ rows:
     primary_tool: jmeter
     owner: core-banking-domain-owner
     notes: ''
+  - catalog_id: BSP-018
+    title: Accrual Engine
+    path: knowledge-base/patterns/banking-solutions/accrual-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: BSP-007
+    title: Interest Calculation Engine
+    path: knowledge-base/patterns/banking-solutions/interest-calculation-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: BSP-008
+    title: Fee Engine
+    path: knowledge-base/patterns/banking-solutions/fee-engine.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: BSP-009
+    title: Tax Calculation Engine
+    path: knowledge-base/patterns/banking-solutions/tax-calculation-engine.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: head-of-compliance
+    notes: ''
+  - catalog_id: BSP-006
+    title: Pricing Engine
+    path: knowledge-base/patterns/banking-solutions/pricing-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: BSP-020
+    title: Relationship Pricing Engine
+    path: knowledge-base/patterns/banking-solutions/relationship-pricing-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: BSP-014
+    title: FX Rate Engine
+    path: knowledge-base/patterns/banking-solutions/fx-rate-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: BSP-017
+    title: Product Factory
+    path: knowledge-base/patterns/banking-solutions/product-factory.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: [TST-022]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load]
+    primary_tool: locust
+    owner: ea-board
+    notes: ''
   - catalog_id: NFR-002
     title: Latency Budget Model
     path: knowledge-base/nfr/latency-budget-model.md
