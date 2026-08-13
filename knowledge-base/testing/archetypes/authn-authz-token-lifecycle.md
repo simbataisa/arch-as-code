@@ -1,6 +1,6 @@
 # AuthN/AuthZ Matrix & Token Lifecycle
 
-Status: Draft | Last Reviewed: 2026-08-12 | Owner: @qe-lead
+Status: Approved | Last Reviewed: 2026-08-12 | Owner: @qe-lead
 Catalog ID: TST-040 | Radii
 Tier Applicability: T0, T1
 
@@ -66,7 +66,7 @@ is inferred from configuration.
 |---|---|---|
 | I1 | Every authorisation-matrix cell returns its expected allow or deny | `assert actual_verdict(identity, resource, operation) == expected_verdict` for every cell in [TST-008 § Authorisation Matrix Method](../strategy/security-test-standard.md#authorisation-matrix-method)'s cross-product — never a sampled subset |
 | I2 | A deny cannot be bypassed by calling the service directly, around the gateway | `assert direct_to_service_call(identity, resource, operation) == gateway_call(identity, resource, operation)` for every cell whose expected verdict is deny, issued from a second Thread Group with no gateway hop (§5) |
-| I3 | Expired, wrong-audience, wrong-issuer, and tampered-signature tokens are all rejected | `assert response.status == rejected` for each of [TST-008 § Token Lifecycle Cases](../strategy/security-test-standard.md#token-lifecycle-cases)'s `expired-rejected`, `wrong-audience-rejected`, `wrong-issuer-rejected`, and `tampered-signature-rejected` cases, including the `alg: none` variant |
+| I3 | Expired, wrong-audience, wrong-issuer, and tampered-signature tokens are all rejected | `assert response.status == rejected` for each of [TST-008 § Token Lifecycle Cases](../strategy/security-test-standard.md#token-lifecycle-cases)'s `expired-rejected`, `wrong-audience-rejected`, `wrong-issuer-rejected`, and `tampered-signature-rejected` cases, including the `alg: none` variant; and, bounding the leeway itself rather than only the boundary around it, `assert declared_clock_skew_tolerance <= declared_max_clock_skew_tolerance` against [SEC-006 JWT Best Practices](../../patterns/security/jwt-best-practices.md)'s validator configuration (boundary detail in §3) |
 | I4 | A revoked token is rejected before its natural expiry, within the declared propagation window | `assert time_to_rejection <= declared_propagation_window`, measured from the revocation action (logout, admin action, compromise response) to the first rejected request, on a token whose `exp` claim is still in the future |
 | I5 | A used refresh token cannot be reused | `assert second_use(refresh_token) == rejected` after a first successful rotation, per TST-008's `refresh-rotation-invalidates-prior-refresh` case |
 | I6 | A client-bound token replayed by another client is rejected | `assert replay_by_other_client(bound_token) == rejected` for a token bound via `cnf`/DPoP, an mTLS-bound token, or a BFF-issued session cookie scoped to one client — binding is enforced at the resource server, not merely recorded in the token |
@@ -92,9 +92,30 @@ fronted by the gateway fails I2 even though it passes I1.
   of default-deny (I1).
 - The same deny cell, called directly against the service with no gateway hop — I2's bypass check,
   and the boundary between "policy declared" and "policy actually enforced everywhere it must be".
-- A token exactly at its `exp` boundary — one second before expiry must be accepted, one second
-  after must be rejected, isolating the clock-skew-tolerance failure mode from a genuinely expired
-  token (I3).
+- A cell whose role or attribute is held constant and would earn an allow verdict against the
+  resource *type*, but whose resource is a specific instance owned by an identity other than the
+  caller — e.g. a teller authorised for `account:read` at their own branch calling that same
+  operation against an account owned by a different customer at that branch. This is OWASP API
+  Security Top 10 API1:2023 (Broken Object Level Authorization / IDOR), and it is its own
+  equivalence class distinct from the class-level role/attribute mismatches above: I1's
+  cross-product only exercises it when the `resource` column (§5) is populated with specific
+  owned instances, not merely resource *types* — a matrix that varies resource type but never
+  resource ownership can report full nominal cell coverage while never testing the case a QE
+  engineer must actually vary (I1).
+- A token whose `exp` falls exactly at the system's *declared* clock-skew tolerance boundary — one
+  second inside that declared tolerance must be accepted, one second beyond it must be rejected.
+  The boundary is defined relative to `declared_clock_skew_tolerance`, per
+  [SEC-006 JWT Best Practices](../../patterns/security/jwt-best-practices.md)'s validator
+  configuration, not a fixed number: a boundary fixed at "one second past `exp`" assumes zero
+  tolerance and can never detect the Failure Taxonomy's own named defect, because a tolerance
+  configured far wider than intended still passes a fixed boundary cleanly (I3).
+- The declared tolerance value itself, checked against the maximum
+  [SEC-006 JWT Best Practices](../../patterns/security/jwt-best-practices.md)'s validator
+  configuration must declare for it —
+  `assert declared_clock_skew_tolerance <= declared_max_clock_skew_tolerance`. This is the
+  assertion that actually catches "someone configured skew tolerance too wide": the boundary
+  bullet above only proves the system enforces *whichever* tolerance happens to be configured,
+  wide or not, so a second, independent check on the configured value itself is required (I3).
 - A revoked token checked immediately after revocation, and again at the edge of the declared
   propagation window — both must reject; only the *measured* time-to-rejection is a boundary
   concern, not the verdict itself (I4).
@@ -141,6 +162,15 @@ runs is a declared dimension size, not open-model arrival rate, so a fixed, `clo
 re-run once per matrix-size snapshot rather than ramped once against a single fixed matrix.
 
 ## 5. Canonical Harness — JMeter
+
+The `resource` column in the CSV Data Set Config below encodes a specific, owned resource
+*instance* (e.g. a synthetic account ID together with its owning identity), not a resource *type*
+such as `account`. This is what makes §3's BOLA/IDOR equivalence class exercisable at all: it
+requires the same `role_or_attribute` and `operation` to appear against resource instances owned
+by more than one identity, with `expected_verdict` differing by ownership alone rather than by
+role, attribute, or resource type. Every BOLA equivalence class named in §3 must therefore be
+present as its own row in `authz_matrix_cells_*.csv`, not left to be inferred from a role/attribute
+× resource-*type* cross-product that never varies ownership.
 
 ```xml
 <!-- Thread Group 1: the authorisation-matrix sweep, through the gateway. Every cell from the
@@ -271,13 +301,17 @@ overlays applies.
 
 Synthetic only, per [TST-004](../strategy/test-data-management.md). Entities needed: a set of
 synthetic identities spanning every declared role or attribute combination; a set of synthetic
-protected resources and the operations declared on each; the full authorisation-matrix cell list
-with its `expected_verdict` column, sourced from
+protected resources and the operations declared on each, with at least two distinct owning
+identities per resource type so §3's BOLA/IDOR equivalence class is representable without
+introducing a new dimension; the full authorisation-matrix cell list with its `expected_verdict`
+column, sourced from
 [TST-008 § Authorisation Matrix Method](../strategy/security-test-standard.md#authorisation-matrix-method)'s
 cross-product rather than re-derived here; a synthetic token set covering every case in
 [TST-008 § Token Lifecycle Cases](../strategy/security-test-standard.md#token-lifecycle-cases)
 (valid, expired, wrong-audience, wrong-issuer, tampered-signature, revoked-before-expiry,
-refresh-rotation); a synthetic client-certificate pair per mTLS identity case (valid chain plus
+refresh-rotation), plus a token pair bracketing the declared clock-skew tolerance boundary (one
+second inside, one second beyond `declared_clock_skew_tolerance`, per §3); a synthetic
+client-certificate pair per mTLS identity case (valid chain plus
 correct identity, valid chain plus wrong identity, invalid chain); a declared biometric-fallback
 policy fixture; and a synthetic entitlement-change event with its commit timestamp. The
 cardinality driver for §3's boundary matrix is the authorisation-matrix cell count itself — every
@@ -337,11 +371,12 @@ test_acceptance_criteria:
 | Layer | Reference | Section/Control | How this satisfies |
 |---|---|---|---|
 | Ring 0 | OWASP ASVS — V1 (Architecture), V4 (Access Control) | Secure-architecture and access-control verification | I1 and I2 are the assertable form of V4's access-control requirement, exercised exhaustively over every declared matrix cell and checked at the point of enforcement, not merely at the gateway; V1's architecture requirement is satisfied by I2's explicit distinction between a gateway-fronted call and a direct-to-service call |
-| Ring 0 | OAuth 2.0 (RFC 6749, RFC 6750) | Authorization framework and bearer-token usage | I3 and I5 are the assertable form of the bearer-token validation and refresh-rotation obligations these RFCs define — checked against a running authorization server, not inferred from configuration |
+| Ring 0 | OAuth 2.0 (RFC 6749, RFC 6750); OAuth Security Best Current Practice (RFC 9700) | Authorization framework, bearer-token usage, and refresh-token rotation | I3 is the assertable form of the bearer-token validation obligation RFC 6749/6750 define; I5's refresh-token-reuse rejection is the assertable form of RFC 9700's rotation recommendation specifically — RFC 6749/6750 alone do not mandate rotation — both checked against a running authorization server, not inferred from configuration |
 | Ring 0 | RFC 8705 — mTLS client authentication and certificate-bound tokens | OAuth client authentication with mutual TLS | I6 and I7 are the assertable form of RFC 8705's certificate-binding requirement: a bound token must be rejected when replayed by another client, and a peer certificate must be checked for identity, not merely chain validity |
 | Ring 0 | NIST SP 800-53 — AC-3 (Access Enforcement) | Access enforcement | I1 and I2 together are the control-verification evidence that access enforcement is exercised at every declared point, including the point a gateway-only implementation would otherwise leave unchecked |
 | Ring 1 | [PCI-DSS 4.0](../../compliance/pci-dss-4-0.md) — §7 (least privilege), §8 (authentication) | Restrict access by business need to know; identify and authenticate access to system components | §7's least-privilege obligation is satisfied by I1's exhaustive matrix-cell verification; §8's authentication obligation is satisfied by I3, I4, and I5's token-lifecycle enforcement checks |
-| Ring 1 | SWIFT Customer Security Programme (CSP) — control 2.x | Restrict internet access and identify privileged users | I2's direct-to-service bypass check and I7's mTLS peer-identity assertion are the assertable evidence that access to internal services is restricted to identified, authorised callers, not merely to callers that happen to pass through a public entry point |
+| Ring 1 | SWIFT Customer Security Programme (CSP) — Control 1.4 (Restriction of Internet Access) | Restrict internet access to the secure zone | I2's direct-to-service bypass check is the assertable evidence that a call reaching a service without transiting the declared gateway path is still denied, not merely trusted because it originated inside the network boundary |
+| Ring 1 | SWIFT Customer Security Programme (CSP) — Objective 5, Control 5.1 (Logical Access Control) | Identify and restrict privileged access to systems and data | I7's mTLS peer-identity assertion is the assertable evidence that a caller's identity, not merely possession of a chain-valid certificate, is checked before privileged service-to-service access is granted |
 | Ring 2 | SBV Circular 09/2020/TT-NHNN — authentication requirements ⚠️ (working summary — pending Legal review); Decree 13/2023 ⚠️ (working summary — pending Legal review) | Authentication and access-control obligations for information systems handling personal or financial data | This archetype's authorisation-matrix and token-lifecycle invariants (I1-I7) are the technical control most directly responsible for satisfying these authentication and access-control expectations for an SBV review |
 
 ## 12. Related Patterns
