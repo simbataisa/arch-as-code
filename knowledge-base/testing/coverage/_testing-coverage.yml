@@ -162,7 +162,7 @@ rows:
     title: Ledger Posting Engine
     path: knowledge-base/reference-architectures/ledger-posting-engine.md
     tiers: [T0]
-    archetypes: [TST-021]
+    archetypes: [TST-021, TST-034]
     disciplines:
       functional: required
       performance: required
@@ -170,7 +170,7 @@ rows:
       contract: n/a
       security: n/a
       data_quality: required
-    perf_profiles: [baseline, load, stress, soak, failover-under-load]
+    perf_profiles: [baseline, load, stress, soak, mixed, failover-under-load]
     primary_tool: jmeter
     owner: core-banking-domain-owner
     notes: ''
@@ -1112,7 +1112,7 @@ rows:
     title: Regulatory Reporting
     path: knowledge-base/reference-architectures/regulatory-reporting.md
     tiers: [T1]
-    archetypes: [TST-032]
+    archetypes: [TST-032, TST-034]
     disciplines:
       functional: required
       performance: required
@@ -1120,7 +1120,7 @@ rows:
       contract: n/a
       security: n/a
       data_quality: required
-    perf_profiles: [baseline, load, scalability, soak, mixed]
+    perf_profiles: [baseline, load, scalability, soak, mixed, failover-under-load]
     primary_tool: jmeter
     owner: head-of-compliance
     notes: ''
@@ -1203,4 +1203,292 @@ rows:
     perf_profiles: [baseline, load, stress, mixed, failover-under-load]
     primary_tool: jmeter
     owner: ea-board
+    notes: ''
+  - catalog_id: REF-001
+    title: Multi-Region Active-Active
+    path: knowledge-base/reference-architectures/multi-region-active-active.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: ea-board
+    notes: ''
+  - catalog_id: REF-002
+    title: Real-Time Payments — NAPAS / Instant
+    path: knowledge-base/reference-architectures/real-time-payments-napas.md
+    tiers: [T0]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: REF-003
+    title: KYC / AML Onboarding
+    path: knowledge-base/reference-architectures/kyc-aml-onboarding.md
+    tiers: [T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: risk-management-domain-owner
+    notes: ''
+  - catalog_id: REF-004
+    title: Card Authorization (3DS2)
+    path: knowledge-base/reference-architectures/card-authorization-3ds2.md
+    tiers: [T0]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: REF-005
+    title: SWIFT MT/MX Wire Transfer
+    path: knowledge-base/reference-architectures/swift-mt-mx-wire-transfer.md
+    tiers: [T0]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: REF-006
+    title: Loan Origination
+    path: knowledge-base/reference-architectures/loan-origination.md
+    tiers: [T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: lending-domain-owner
+    notes: ''
+  - catalog_id: REF-007
+    title: Fraud Screening Platform
+    path: knowledge-base/reference-architectures/fraud-screening-platform.md
+    tiers: [T0]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: risk-management-domain-owner
+    notes: ''
+  - catalog_id: REF-009
+    title: Account Opening (Omnichannel)
+    path: knowledge-base/reference-architectures/account-opening-omnichannel.md
+    tiers: [T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: digital-channels-domain-owner
+    notes: ''
+  - catalog_id: REF-011
+    title: Open Banking (PSD2)
+    path: knowledge-base/reference-architectures/open-banking-psd2.md
+    tiers: [T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: digital-channels-domain-owner
+    notes: ''
+  - catalog_id: REF-012
+    title: Dispute Management
+    path: knowledge-base/reference-architectures/dispute-management.md
+    tiers: [T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: REF-013
+    title: Retail Deposits Platform
+    path: knowledge-base/reference-architectures/retail-deposits-platform.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: REF-014
+    title: Consumer Lending Platform
+    path: knowledge-base/reference-architectures/consumer-lending-platform.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: lending-domain-owner
+    notes: ''
+  - catalog_id: REF-015
+    title: Credit Card Issuing Platform
+    path: knowledge-base/reference-architectures/credit-card-issuing-platform.md
+    tiers: [T0]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: ''
+  - catalog_id: REF-016
+    title: Corporate Lending and Syndications
+    path: knowledge-base/reference-architectures/corporate-lending-syndications.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: lending-domain-owner
+    notes: ''
+  - catalog_id: REF-017
+    title: Trade Finance Platform
+    path: knowledge-base/reference-architectures/trade-finance-platform.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: core-banking-domain-owner
+    notes: ''
+  - catalog_id: REF-018
+    title: Treasury and FX Platform
+    path: knowledge-base/reference-architectures/treasury-fx-platform.md
+    tiers: [T0]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: wealth-domain-owner
+    notes: ''
+  - catalog_id: REF-019
+    title: Wealth Management Platform
+    path: knowledge-base/reference-architectures/wealth-management-platform.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: wealth-domain-owner
+    notes: ''
+  - catalog_id: REF-020
+    title: Cash Management and Liquidity
+    path: knowledge-base/reference-architectures/cash-management-liquidity.md
+    tiers: [T0, T1]
+    archetypes: [TST-034]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: required
+      contract: n/a
+      security: n/a
+      data_quality: n/a
+    perf_profiles: [mixed, soak, load, failover-under-load]
+    primary_tool: jmeter
+    owner: core-banking-domain-owner
     notes: ''

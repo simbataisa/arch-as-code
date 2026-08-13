@@ -95,8 +95,26 @@ python3 scripts/render-testing-coverage.py
 | NFR-002 | Latency Budget Model | — | — | G | G | G | G | G | G | — | jmeter |
 | PLT-006 | FinOps Cost Allocation | T0, T1, T2, T3 | TST-033 | R | R | R | — | R | — | baseline, load, stress, mixed, failover-under-load | jmeter |
 | PLT-008 | Multi-Tenancy Isolation | T0, T1, T2 | TST-033 | R | R | R | — | R | — | baseline, load, stress, mixed, failover-under-load | jmeter |
-| REF-008 | Regulatory Reporting | T1 | TST-032 | R | R | R | — | — | R | baseline, load, scalability, soak, mixed | jmeter |
-| REF-010 | Ledger Posting Engine | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
+| REF-001 | Multi-Region Active-Active | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-002 | Real-Time Payments — NAPAS / Instant | T0 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-003 | KYC / AML Onboarding | T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-004 | Card Authorization (3DS2) | T0 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-005 | SWIFT MT/MX Wire Transfer | T0 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-006 | Loan Origination | T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-007 | Fraud Screening Platform | T0 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-008 | Regulatory Reporting | T1 | TST-032, TST-034 | R | R | R | — | — | R | baseline, load, scalability, soak, mixed, failover-under-load | jmeter |
+| REF-009 | Account Opening (Omnichannel) | T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-010 | Ledger Posting Engine | T0 | TST-021, TST-034 | R | R | R | — | — | R | baseline, load, stress, soak, mixed, failover-under-load | jmeter |
+| REF-011 | Open Banking (PSD2) | T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-012 | Dispute Management | T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-013 | Retail Deposits Platform | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-014 | Consumer Lending Platform | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-015 | Credit Card Issuing Platform | T0 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-016 | Corporate Lending and Syndications | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-017 | Trade Finance Platform | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-018 | Treasury and FX Platform | T0 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-019 | Wealth Management Platform | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
+| REF-020 | Cash Management and Liquidity | T0, T1 | TST-034 | R | R | R | — | — | — | mixed, soak, load, failover-under-load | jmeter |
 | RES-001 | Bulkhead Isolation | T0, T1, T2 | TST-033 | R | R | R | — | R | — | baseline, load, stress, mixed, failover-under-load | jmeter |
 | RES-002 | Circuit Breaker | T0, T1, T2 | TST-035, TST-031 | R | R | R | — | — | — | baseline, load, spike, failover-under-load | jmeter |
 | RES-003 | Retry with Backoff | T0, T1, T2 | TST-020 | R | R | R | — | — | R | baseline, load, stress, spike, soak | jmeter |
@@ -107,7 +125,7 @@ python3 scripts/render-testing-coverage.py
 | SEC-009 | Fraud Signal Collection | T0, T1 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | locust |
 | SEC-010 | Attribute-Based Access Control | T0, T1, T2 | TST-025 | R | R | — | — | R | R | baseline, load, stress, soak | locust |
 
-Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 74 rows.
+Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 92 rows.
 
 <!-- END GENERATED -->
 
