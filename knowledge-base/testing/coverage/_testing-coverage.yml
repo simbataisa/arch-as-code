@@ -430,3 +430,85 @@ rows:
     primary_tool: locust
     owner: tech-lead-backend
     notes: ''
+  - catalog_id: BSP-010
+    title: Rule / Decisioning Engine
+    path: knowledge-base/patterns/banking-solutions/rule-decisioning-engine.md
+    tiers: [T0, T1]
+    archetypes: [TST-025]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: locust
+    owner: tech-lead-backend
+    notes: ''
+  - catalog_id: BSP-003
+    title: Sanction Screening Pipeline
+    path: knowledge-base/patterns/banking-solutions/sanction-screening-pipeline.md
+    tiers: [T0]
+    archetypes: [TST-025]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: locust
+    owner: risk-management-domain-owner
+    notes: ''
+  - catalog_id: BSP-019
+    title: Collections Engine
+    path: knowledge-base/patterns/banking-solutions/collections-engine.md
+    tiers: [T1, T2]
+    archetypes: [TST-025]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: locust
+    owner: lending-domain-owner
+    notes: ''
+  - catalog_id: SEC-009
+    title: Fraud Signal Collection
+    path: knowledge-base/patterns/security/fraud-signal-collection.md
+    tiers: [T0, T1]
+    archetypes: [TST-025]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: n/a
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: locust
+    owner: risk-management-domain-owner
+    notes: ''
+  - catalog_id: SEC-010
+    title: Attribute-Based Access Control
+    path: knowledge-base/patterns/security/attribute-based-access-control.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-025]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: locust
+    owner: ciso-delegate
+    notes: 'TST-025 claims decision-accuracy coverage; TST-040 (not yet published) will
+      append itself to archetypes: for this row''s token-lifecycle coverage of the same
+      catalog row -- append, never overwrite.'
