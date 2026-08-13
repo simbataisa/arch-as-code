@@ -4063,3 +4063,238 @@ rows:
   last_reviewed: '2026-08-12'
   notes: Wave 15A — testing corpus foundation
   target_wave: 4
+- id: TST-020
+  title: Idempotency Replay Safety
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/idempotency-replay.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - EIP §10.1 (Hohpe/Woolf) — Idempotent Receiver
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - ISO 20022
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-021
+  title: Ledger and Monetary Invariant
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/ledger-monetary-invariant.md
+  tiers:
+  - T0
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Double-entry bookkeeping (canonical accounting invariant)
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - Basel BCBS 239 Principle 4
+    - IFRS 9
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-022
+  title: Deterministic Calculation Engine
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/deterministic-calculation-engine.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Decimal arithmetic over IEEE 754 for monetary values
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - IFRS 9 §B5.4
+    ring2:
+    - SBV Circular 09/2020 §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-023
+  title: Concurrent Limit & Counter Contention
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/concurrent-limit-contention.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - ACID isolation levels; optimistic vs pessimistic concurrency control
+    ring1:
+    - Basel BCBS 239 Principle 3
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-024
+  title: Saga and Compensation Correctness
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/saga-compensation.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Saga pattern (Garcia-Molina and Salem)
+    - Microsoft Cloud Design Patterns — Saga
+    ring1:
+    - Basel BCBS 239 Principle 3
+    - ISO 20022 multi-leg message flows
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-025
+  title: Decision Table and Screening Accuracy
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/decision-screening-accuracy.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Confusion matrix / classifier evaluation
+    - OWASP ASVS V4 (Access Control)
+    ring1:
+    - FATF Recommendation 6
+    - Basel BCBS 239 Principle 3
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN §III.5
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-026
+  title: Message Transformation and Routing Correctness
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/message-transformation-routing.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - EIP §4 Routing (Hohpe/Woolf)
+    - EIP §8 Transformation (Hohpe/Woolf)
+    ring1:
+    - ISO 20022 element conformance
+    - Basel BCBS 239 Principle 3
+    ring2:
+    - SBV Circular 09/2020
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-027
+  title: Ordering, Sequencing and Resequencing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/ordering-resequencing.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - EIP §7 Resequencer (Hohpe/Woolf)
+    ring1:
+    - ISO 20022
+    - Basel BCBS 239 Principle 3
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-028
+  title: Fan-out / Fan-in Correlation
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/fanout-fanin-correlation.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - EIP §7 Aggregator and Scatter-Gather (Hohpe/Woolf)
+    ring1:
+    - Basel BCBS 239 Principle 4
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-029
+  title: Delivery Guarantee, Retry, and Dead Letter Queue Testing
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/delivery-guarantee-dlq.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - EIP §4 Guaranteed Delivery (Hohpe/Woolf)
+    - EIP §10 Dead Letter Channel (Hohpe/Woolf)
+    ring1:
+    - Basel BCBS 239 Principle 4
+    - ISO 20022 non-repudiation of delivery
+    ring2:
+    - SBV Circular 09/2020 §IV.2
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4
+- id: TST-030
+  title: Contract and Schema Compatibility
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/contract-schema-compatibility.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - Pact — Consumer-Driven Contract Specification
+    - OpenAPI, AsyncAPI, and CloudEvents Specifications
+    ring1:
+    - ISO 20022 message conformance
+    - SWIFT CSP v2024 Control 2.x
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN §IV.3
+  last_reviewed: '2026-08-12'
+  notes: Wave 15C — correctness and messaging archetypes
+  target_wave: 4

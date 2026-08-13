@@ -61,12 +61,13 @@ Grouped into seven families by shared method of verification, not by domain. See
 [TST-001](./strategy/test-strategy-standard.md) for what an archetype is and how oracles are
 assigned.
 
-> The links below point at files that do not exist until Wave F of this plan completes.
-> `scripts/validate-internal-links.py` reports these as warnings in the interim — that CI job
-> runs with `allow_failure: true`, so it does not block. The link gate is asserted clean once
-> every archetype file lands.
+> Families A and B (TST-020…TST-030) have landed — all eleven documents exist and are Approved.
+> The links below Family B still point at files that do not exist until later waves of this plan
+> complete. `scripts/validate-internal-links.py` reports those as warnings in the interim — that
+> CI job runs with `allow_failure: true`, so it does not block. The link gate is asserted clean
+> once every archetype file lands.
 
-### Family A — Correctness & State
+### Family A — Correctness & State (landed)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|
@@ -77,7 +78,7 @@ assigned.
 | TST-024 | [Saga & Compensation Correctness](./archetypes/saga-compensation.md) | INT-001, INT-016, EIP-017, EIP-016 |
 | TST-025 | [Decision Table & Screening Accuracy](./archetypes/decision-screening-accuracy.md) | BSP-010, BSP-003, BSP-019, SEC-009, SEC-010 |
 
-### Family B — Messaging & Integration
+### Family B — Messaging & Integration (landed)
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|

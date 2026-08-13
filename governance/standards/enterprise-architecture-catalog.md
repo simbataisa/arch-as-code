@@ -2,7 +2,7 @@
 
 Status: Approved | Last Reviewed: 2026-05-30 | Owner: @ea-board
 Catalog version: 1.0
-Coverage: 207 Approved catalog rows across 17 categories — 7 spine docs and 200 radii docs after Wave 15B tooling guides.
+Coverage: 218 Approved catalog rows across 17 categories — 7 spine docs and 211 radii docs after Wave 15C correctness and messaging archetypes.
 
 > **For DAB authors**: every DAB submission must cite ≥3 catalog rows by ID (e.g., `RES-005`, `EIP-024`, `COMP-001`). See §10.
 
@@ -352,6 +352,17 @@ lives in the QE team's own repository.
 | TST-013 | k6 Guide | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/k6.md` | T0, T1, T2, T3 | ISTQB test-tool selection guidance; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15B — tooling guides |
 | TST-014 | Locust Guide | testing | Approved | radii | @qe-lead | `knowledge-base/testing/tooling/locust.md` | T1, T2, T3 | ISTQB test-tool selection guidance; BCBS 230 P9; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15B — tooling guides |
 | TST-015 | Testing Coverage Matrix | testing | Approved | radii | @qe-lead | `knowledge-base/testing/coverage/coverage-matrix.md` | — | — | 2026-08-12 | 4 | Wave 15A — testing corpus foundation |
+| TST-020 | Idempotency Replay Safety | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/idempotency-replay.md` | T0, T1 | EIP §10.1 Idempotent Receiver; BCBS 239 P3; ISO 20022; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-021 | Ledger and Monetary Invariant | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/ledger-monetary-invariant.md` | T0 | Double-entry bookkeeping; BCBS 239 P3/P4; IFRS 9; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-022 | Deterministic Calculation Engine | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/deterministic-calculation-engine.md` | T0, T1 | Decimal arithmetic over IEEE 754; BCBS 239 P3; IFRS 9 §B5.4; SBV Circ. 09/2020 §IV.3 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-023 | Concurrent Limit & Counter Contention | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/concurrent-limit-contention.md` | T0, T1 | ACID isolation levels; BCBS 239 P3; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-024 | Saga and Compensation Correctness | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/saga-compensation.md` | T0, T1 | Saga pattern (Garcia-Molina/Salem); MS Cloud Design Patterns — Saga; BCBS 239 P3; ISO 20022; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-025 | Decision Table and Screening Accuracy | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/decision-screening-accuracy.md` | T0, T1 | Confusion matrix evaluation; OWASP ASVS V4; FATF Rec. 6; BCBS 239 P3; SBV Circ. 09/2020/TT-NHNN §III.5 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-026 | Message Transformation and Routing Correctness | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/message-transformation-routing.md` | T0, T1 | EIP §4 Routing; EIP §8 Transformation; ISO 20022; BCBS 239 P3; SBV Circ. 09/2020 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-027 | Ordering, Sequencing and Resequencing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/ordering-resequencing.md` | T0, T1 | EIP §7 Resequencer; ISO 20022; BCBS 239 P3; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-028 | Fan-out / Fan-in Correlation | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/fanout-fanin-correlation.md` | T0, T1 | EIP §7 Aggregator/Scatter-Gather; BCBS 239 P4; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-029 | Delivery Guarantee, Retry, and Dead Letter Queue Testing | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/delivery-guarantee-dlq.md` | T0, T1 | EIP §4 Guaranteed Delivery; EIP §10 Dead Letter Channel; BCBS 239 P4; ISO 20022; SBV Circ. 09/2020 §IV.2 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
+| TST-030 | Contract and Schema Compatibility | testing | Approved | radii | @qe-lead | `knowledge-base/testing/archetypes/contract-schema-compatibility.md` | T0, T1, T2 | Pact CDC; OpenAPI/AsyncAPI/CloudEvents; ISO 20022; SWIFT CSP 2024 Control 2.x; SBV Circ. 09/2020/TT-NHNN §IV.3 | 2026-08-12 | 4 | Wave 15C — correctness and messaging archetypes |
 
 ## 5. Gap Analysis
 
@@ -375,8 +386,8 @@ Coverage as of 2026-05-30 (auto-derivable by counting rows in `_catalog-inventor
 | resilience | 12 | 0 | 0 | 12 | 100% | Failure containment, recovery, and load management |
 | security | 13 | 0 | 0 | 13 | 100% | Identity, token, key, masking, fraud, audit controls |
 | templates | 5 | 0 | 0 | 5 | 100% | Required DAB, pattern, stub, reference, and test archetype templates |
-| testing | 15 | 0 | 0 | 15 | 100% | Test strategy, performance profiles, tooling, and coverage for the QE team |
-| **Total** | **207** | **0** | **0** | **207** | **100%** | |
+| testing | 26 | 0 | 0 | 26 | 100% | Test strategy, performance profiles, tooling, coverage, and correctness/messaging archetypes for the QE team |
+| **Total** | **218** | **0** | **0** | **218** | **100%** | |
 
 Wave 14 reconciled the YAML inventory, rendered catalog table, and document metadata so Draft/Proposed work does not survive as stale catalog state. Future gaps should enter the inventory as new Proposed rows before authoring begins.
 
