@@ -348,10 +348,12 @@ directly (not through the app's own API) and assert the payload is never present
 which [MOB-001](../../patterns/mobile/mobile-offline-queue.md) itself already depends on. For web,
 IndexedDB provides no at-rest encryption guarantee of its own — assert the application-layer
 encryption wrapper FE-002 must apply before a queued payload is written is actually present,
-rather than assuming browser storage is encrypted by default. TST-041 — Client and Device Secure
-Storage & Encryption-at-Rest Verification (not yet published) — is expected to own the broader
-at-rest encryption-verification obligation this overlay's queued-item check is a narrow instance
-of; this document cross-links it as a plain forward reference and does not depend on it existing.
+rather than assuming browser storage is encrypted by default.
+[TST-041](./data-protection-masking-tokenisation.md) — Data Protection, Masking & Tokenisation —
+owns the device-keystore verification obligation this overlay's mobile queued-item check narrows to
+the offline queue's specific case, via its MOB-002 row (I6). Its Applies To scope stops at the
+mobile keystore, though, and does not extend to web/IndexedDB storage, so the browser-side check
+above remains this document's own concern.
 
 Resilience, Contract, and Data-quality overlays are omitted. A Resilience overlay exists to inject
 a [TST-006](../strategy/resilience-test-standard.md) fault atop an otherwise-nominal run and prove
@@ -421,7 +423,7 @@ test_acceptance_criteria:
     authz_matrix_cells_covered: 0         # out of scope for this archetype; see TST-008/TST-040
     token_lifecycle_cases: 0              # out of scope for this archetype; see TST-040
     # this archetype's own Security overlay (§7) is an at-rest storage inspection, not an
-    # authorisation-matrix or token-lifecycle case; see TST-041 for that broader obligation
+    # authorisation-matrix or token-lifecycle case; see TST-041 for the mobile keystore case
 ```
 
 ## Compliance Mapping
@@ -457,9 +459,10 @@ test_acceptance_criteria:
 - [TST-013 k6 Guide](../tooling/k6.md) — supplies the browser module, pinned toolchain, and
   `thresholds`/merge-gate mechanism this archetype's §5 k6 script and §9 evidence both depend on
   directly.
-- TST-041 — Client and Device Secure Storage & Encryption-at-Rest Verification (not yet
-  published): expected to own the broader at-rest encryption-verification obligation the Security
-  overlay's (§7) queued-item check narrows to this archetype's specific case.
+- [TST-041 Data Protection, Masking & Tokenisation](./data-protection-masking-tokenisation.md) —
+  owns the device-keystore verification obligation the Security overlay's (§7) mobile queued-item
+  check narrows to this archetype's specific case; does not cover the web/IndexedDB side of that
+  same overlay.
 
 ## 14. Diagram
 
