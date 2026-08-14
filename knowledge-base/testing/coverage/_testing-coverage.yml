@@ -2349,3 +2349,131 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-mobile
     notes: ''
+  - catalog_id: SEC-008
+    title: Data Masking
+    path: knowledge-base/patterns/security/data-masking.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-013
+    title: PII Tokenization (Format-Preserving)
+    path: knowledge-base/patterns/security/pii-tokenization-format-preserving.md
+    tiers: [T0, T1]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-004
+    title: Tokenization + HSM Key Management
+    path: knowledge-base/patterns/security/tokenization-hsm.md
+    tiers: [T0, T1]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: SEC-012
+    title: Tamper-Evident Audit Logging
+    path: knowledge-base/patterns/security/audit-logging-tamper-evident.md
+    tiers: [T0, T1]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: ''
+  - catalog_id: MOB-002
+    title: Mobile Secure Storage
+    path: knowledge-base/patterns/mobile/mobile-secure-storage.md
+    tiers: [T0, T1]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-mobile
+    notes: ''
+  - catalog_id: FE-003
+    title: Web CSP Hardening
+    path: knowledge-base/patterns/frontend/web-csp-hardening.md
+    tiers: [T0, T1, T2]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-web
+    notes: ''
+  - catalog_id: MOB-005
+    title: Mobile Deep Link Attestation
+    path: knowledge-base/patterns/mobile/mobile-deep-link-attestation.md
+    tiers: [T0, T1]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-mobile
+    notes: ''
+  - catalog_id: MOB-004
+    title: Mobile Push Notification (Secure)
+    path: knowledge-base/patterns/mobile/mobile-push-notification-secure.md
+    tiers: [T1, T2]
+    archetypes: [TST-041]
+    disciplines:
+      functional: required
+      performance: required
+      resilience: n/a
+      contract: n/a
+      security: required
+      data_quality: required
+    perf_profiles: [baseline, load, stress, soak]
+    primary_tool: jmeter
+    owner: tech-lead-mobile
+    notes: ''
