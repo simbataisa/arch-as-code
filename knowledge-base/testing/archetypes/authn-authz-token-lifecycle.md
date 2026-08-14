@@ -1,6 +1,6 @@
 # AuthN/AuthZ Matrix & Token Lifecycle
 
-Status: Approved | Last Reviewed: 2026-08-12 | Owner: @qe-lead
+Status: Draft | Last Reviewed: 2026-08-12 | Owner: @qe-lead
 Catalog ID: TST-040 | Radii
 Tier Applicability: T0, T1
 
