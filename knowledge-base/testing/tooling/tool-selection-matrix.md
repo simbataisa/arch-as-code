@@ -91,8 +91,7 @@ core tool — for example, Gatling's own core is Apache 2.0 while Gatling Enterp
 only for distributed execution) is commercial, and any `xk6` extension carries its own,
 independently declared licence — that plugin's licence is checked at the point of adoption, not
 assumed to inherit the core tool's terms. Any new plugin or extension added to this stack
-follows the same technology radar intake process as any other dependency; see
-[`knowledge-base/technology-radar.md`](../../technology-radar.md).
+follows the same technology radar intake process as any other dependency.
 
 ## Compliance Mapping
 
