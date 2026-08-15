@@ -63,8 +63,9 @@ assigned.
 
 > All seven families have landed — all twenty-four documents exist and are Approved. `TST-040`
 > and `TST-041` (Family F) were sequenced last because both required `@infosec-architect` review;
-> that review is now complete for both. The `TST-039` → `TST-042` ID gap in the catalog is a
-> deliberate artefact of that sequencing, not an error to "fix".
+> that review is now complete for both. Archetype IDs run contiguously from `TST-020` to
+> `TST-043`; `TST-016`–`TST-019` are unallocated headroom reserved for future strategy
+> documents, not missing archetypes.
 
 ### Family A — Correctness & State (landed)
 
