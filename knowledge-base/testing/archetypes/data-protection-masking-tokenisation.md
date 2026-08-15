@@ -1,6 +1,6 @@
 # Data Protection, Masking & Tokenisation
 
-Status: Draft | Last Reviewed: 2026-08-12 | Owner: @qe-lead
+Status: Approved | Last Reviewed: 2026-08-12 | Owner: @qe-lead
 Catalog ID: TST-041 | Radii
 Tier Applicability: T0, T1
 
