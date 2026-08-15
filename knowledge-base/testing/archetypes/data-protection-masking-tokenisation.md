@@ -277,7 +277,10 @@ asserts, and at a volume derived from a probability bound rather than from the d
   check alone.
 - A hardware-backed key alias that a root-privileged on-device process can invoke to decrypt with
   no authentication prompt — treated as an I6 violation even when every other alias in the app
-  correctly requires it, because the attacker chooses the alias.
+  correctly requires it, because the attacker chooses the alias. This document requires every
+  declared alias to enforce the declared authentication factor, including the
+  `tcb_mobile_master_key` alias MOB-002's own reference implementation currently sets to
+  `setUserAuthenticationRequired(false)`.
 
 ## 4. Performance Test Design
 
@@ -363,9 +366,12 @@ are named here so the coverage claim in §10 is honest rather than aspirational:
     if (vars.get("cross_domain_probe") != "true") { return }
     def token = new groovy.json.JsonSlurper().parseText(prev.getResponseDataAsString()).token
     def priorKey   = "probe_token_" + vars.get("plaintext_id")
-    def priorToken = props.get(priorKey)          // props: cross-thread, JMeter-managed
+    // putIfAbsent on the shared props map is atomic: a null return means this thread just
+    // registered the first domain of the pair; get-then-put here would race two threads into
+    // both observing null and both registering, so the comparison branch below would never run.
+    def priorToken = props.putIfAbsent(priorKey, token)
     if (priorToken == null) {
-        props.put(priorKey, token)                // first domain of the pair seen
+        // first domain of the pair seen -- this thread just registered it
     } else if (priorToken == token) {
         AssertionResult.setFailure(true);
         AssertionResult.setFailureMessage(
