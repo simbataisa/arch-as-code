@@ -11,6 +11,16 @@
 #   primary_tool    jmeter | gatling-karate | k6 | locust
 #   archetypes[]    TST-020 .. TST-043; may be empty only when every
 #                   discipline is 'governs'
+#
+# 'governs' rows — NFR spine docs, principles, templates, compliance
+# deep-dives, process best-practices, platform meta-docs and the testing
+# corpus itself — constrain how other rows are tested rather than being
+# under test themselves. They carry no archetypes and no perf_profiles.
+# primary_tool is a required field with no meaningful value on such a row,
+# so every 'governs' row sets it to 'jmeter' uniformly. That is a schema
+# placeholder, NOT a real tool assignment — do not read it as one. The
+# 'notes' field names the archetype that verifies the doc in practice,
+# where one applies.
 version: 1
 last_updated: '2026-08-13'
 rows:
@@ -2477,3 +2487,1251 @@ rows:
     primary_tool: jmeter
     owner: tech-lead-mobile
     notes: ''
+  - catalog_id: NFR-001
+    title: Service Tiering + RTO/RPO Matrix
+    path: knowledge-base/nfr/service-tiering-rto-rpo.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Spine doc — supplies service tiers and RTO/RPO targets; exercised via TST-035
+  - catalog_id: NFR-003
+    title: Capacity Planning Model
+    path: knowledge-base/nfr/capacity-planning-model.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Spine doc — supplies capacity envelopes; exercised via TST-031
+  - catalog_id: NFR-004
+    title: Throughput Model
+    path: knowledge-base/nfr/throughput-model.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Spine doc — supplies throughput targets; exercised via TST-034
+  - catalog_id: NFR-005
+    title: Error Budget Policy
+    path: knowledge-base/nfr/error-budget-policy.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Spine doc — supplies error-budget thresholds; not itself under test
+  - catalog_id: PRIN-001
+    title: API-First Design
+    path: knowledge-base/principles/api-first-design.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; verified via TST-030
+  - catalog_id: PRIN-002
+    title: Event-Driven Architecture
+    path: knowledge-base/principles/event-driven-architecture.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; verified via TST-029
+  - catalog_id: PRIN-003
+    title: Zero-Trust Security
+    path: knowledge-base/principles/zero-trust-security.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: Principle — constrains design; verified via TST-040
+  - catalog_id: PRIN-004
+    title: Database-Per-Service
+    path: knowledge-base/principles/database-per-service.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; verified via TST-037
+  - catalog_id: PRIN-005
+    title: Cloud-Native-First
+    path: knowledge-base/principles/cloud-native-first.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; verified via TST-036
+  - catalog_id: PRIN-006
+    title: Idempotency-by-default
+    path: knowledge-base/principles/idempotency-by-default.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; verified via TST-020
+  - catalog_id: PRIN-007
+    title: Data Residency
+    path: knowledge-base/principles/data-residency.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: head-of-compliance
+    notes: Principle — constrains design; verified via TST-041
+  - catalog_id: PRIN-008
+    title: Defense-in-Depth
+    path: knowledge-base/principles/defense-in-depth.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: Principle — constrains design; verified via TST-040
+  - catalog_id: PRIN-009
+    title: Observability-First
+    path: knowledge-base/principles/observability-first.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Principle — constrains design; verified via TST-042
+  - catalog_id: PRIN-010
+    title: Fail-Safe Defaults
+    path: knowledge-base/principles/fail-safe-defaults.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: Principle — constrains design; verified via TST-035
+  - catalog_id: PRIN-011
+    title: Least-Privilege
+    path: knowledge-base/principles/least-privilege.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: Principle — constrains design; verified via TST-040
+  - catalog_id: PRIN-012
+    title: Async-by-default
+    path: knowledge-base/principles/async-by-default.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; verified via TST-028
+  - catalog_id: PRIN-013
+    title: Modular Monolith Preference
+    path: knowledge-base/principles/modular-monolith-preference.md
+    tiers: [T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Principle — constrains design; no archetype verifies it directly
+  - catalog_id: TPL-001
+    title: NFR Acceptance Criteria — DAB Submission Template
+    path: knowledge-base/templates/nfr-acceptance-criteria-dab.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: dab-chair
+    notes: Template — prescribes DAB NFR acceptance-criteria structure; not itself under test
+  - catalog_id: TPL-002
+    title: Pattern Doc Template
+    path: knowledge-base/templates/pattern-doc-template.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Template — prescribes pattern document structure; not itself under test
+  - catalog_id: TPL-003
+    title: Stub Doc Template
+    path: knowledge-base/templates/stub-doc-template.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Template — prescribes stub document structure; not itself under test
+  - catalog_id: TPL-004
+    title: Reference Architecture Doc Template
+    path: knowledge-base/templates/ref-arch-doc-template.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Template — prescribes reference architecture document structure; not itself under test
+  - catalog_id: TPL-005
+    title: Test Archetype Doc Template
+    path: knowledge-base/templates/test-archetype-template.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Template — prescribes test archetype document structure; not itself under test
+  - catalog_id: COMP-001
+    title: Compliance Mapping Matrix (master)
+    path: knowledge-base/compliance/compliance-mapping-matrix.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: head-of-compliance
+    notes: Compliance master matrix — indexes control mappings; not itself under test
+  - catalog_id: COMP-002
+    title: SBV Circular 09/2020/TT-NHNN — Deep Dive
+    path: knowledge-base/compliance/sbv-circular-09-2020.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: head-of-compliance
+    notes: Compliance deep-dive — supplies SBV Circular 09/2020 obligations; exercised across TST-020 to TST-043
+  - catalog_id: COMP-003
+    title: Decree 13/2023 (Personal Data) — Deep Dive
+    path: knowledge-base/compliance/decree-13-2023-personal-data.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: head-of-compliance
+    notes: Compliance deep-dive — supplies Decree 13/2023 personal-data obligations; exercised via TST-041
+  - catalog_id: COMP-004
+    title: PCI-DSS 4.0 — Deep Dive
+    path: knowledge-base/compliance/pci-dss-4-0.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: Compliance deep-dive — supplies PCI-DSS 4.0 obligations; exercised via TST-041
+  - catalog_id: COMP-005
+    title: Basel BCBS 239 — Deep Dive
+    path: knowledge-base/compliance/basel-bcbs-239.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: head-of-compliance
+    notes: Compliance deep-dive — supplies Basel BCBS 239 obligations; exercised via TST-039
+  - catalog_id: COMP-006
+    title: Basel BCBS 230 (Operational Resilience) — Deep Dive
+    path: knowledge-base/compliance/basel-bcbs-230.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Compliance deep-dive — supplies Basel BCBS 230 obligations; exercised via TST-035
+  - catalog_id: COMP-007
+    title: ISO 20022 Messaging — Deep Dive
+    path: knowledge-base/compliance/iso-20022-messaging.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: payments-domain-owner
+    notes: Compliance deep-dive — supplies ISO 20022 obligations; exercised via TST-026
+  - catalog_id: COMP-008
+    title: SWIFT CSP v2024 — Deep Dive
+    path: knowledge-base/compliance/swift-csp-2024.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ciso-delegate
+    notes: Compliance deep-dive — supplies SWIFT CSP v2024 obligations; exercised via TST-040
+  - catalog_id: BP-001
+    title: CI/CD Pipeline Design
+    path: knowledge-base/best-practices/ci-cd-pipeline-design.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Process best practice — governs the delivery pipeline; exercised via TST-036
+  - catalog_id: BP-003
+    title: Microservice Decomposition
+    path: knowledge-base/best-practices/microservice-decomposition.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Process best practice — constrains service decomposition; not itself under test
+  - catalog_id: BP-006
+    title: Capacity Planning
+    path: knowledge-base/best-practices/capacity-planning.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Process best practice — governs capacity sizing; exercised via TST-031
+  - catalog_id: BP-009
+    title: Runbook Authoring
+    path: knowledge-base/best-practices/runbook-authoring.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Process best practice — governs operational response; exercised via TST-035
+  - catalog_id: BP-010
+    title: Incident Postmortem
+    path: knowledge-base/best-practices/incident-postmortem.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Process best practice — governs post-incident learning; not itself under test
+  - catalog_id: BP-011
+    title: Blameless Culture
+    path: knowledge-base/best-practices/blameless-culture.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: sre-lead
+    notes: Process best practice — governs team behaviour; not itself under test
+  - catalog_id: PLT-002
+    title: CNCF Stack Selection
+    path: knowledge-base/patterns/platform/cncf-stack-selection.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: ea-board
+    notes: Platform meta-doc — records stack selection; not itself under test
+  - catalog_id: PLT-004
+    title: Internal Developer Platform
+    path: knowledge-base/patterns/platform/internal-developer-platform.md
+    tiers: [T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: platform-lead
+    notes: Platform meta-doc — records platform capability set; not itself under test
+  - catalog_id: PLT-007
+    title: Platform Service Catalog
+    path: knowledge-base/patterns/platform/platform-service-catalog.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: platform-lead
+    notes: Platform meta-doc — indexes platform services; not itself under test
+  - catalog_id: TST-001
+    title: Test Strategy Standard
+    path: knowledge-base/testing/strategy/test-strategy-standard.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — defines the tier obligation matrix; not itself under test
+  - catalog_id: TST-002
+    title: Performance Test Standard
+    path: knowledge-base/testing/strategy/performance-test-standard.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs performance test design; not itself under test
+  - catalog_id: TST-003
+    title: Workload Modelling
+    path: knowledge-base/testing/strategy/workload-modelling.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs workload model construction; not itself under test
+  - catalog_id: TST-004
+    title: Test Data Management
+    path: knowledge-base/testing/strategy/test-data-management.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs test data provisioning; not itself under test
+  - catalog_id: TST-005
+    title: Test Environments and Quality Gates
+    path: knowledge-base/testing/strategy/environments-quality-gates.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs test environments and quality gates; not itself under test
+  - catalog_id: TST-006
+    title: Resilience Test Standard
+    path: knowledge-base/testing/strategy/resilience-test-standard.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs resilience test design; not itself under test
+  - catalog_id: TST-007
+    title: Contract and Integration Test Standard
+    path: knowledge-base/testing/strategy/contract-integration-test-standard.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs contract and integration test design; not itself under test
+  - catalog_id: TST-008
+    title: Security Test Standard
+    path: knowledge-base/testing/strategy/security-test-standard.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs security test design; not itself under test
+  - catalog_id: TST-009
+    title: Data Quality Test Standard
+    path: knowledge-base/testing/strategy/data-quality-test-standard.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Testing standard — governs data quality test design; not itself under test
+  - catalog_id: TST-010
+    title: Test Tool Selection Matrix
+    path: knowledge-base/testing/tooling/tool-selection-matrix.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Tooling doc — governs load-tool selection; not itself under test
+  - catalog_id: TST-011
+    title: JMeter Guide
+    path: knowledge-base/testing/tooling/jmeter.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Tool guide — governs JMeter harness implementation; not itself under test
+  - catalog_id: TST-012
+    title: Gatling + Karate Guide
+    path: knowledge-base/testing/tooling/gatling-karate.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Tool guide — governs Gatling + Karate harness implementation; not itself under test
+  - catalog_id: TST-013
+    title: k6 Guide
+    path: knowledge-base/testing/tooling/k6.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Tool guide — governs k6 harness implementation; not itself under test
+  - catalog_id: TST-014
+    title: Locust Guide
+    path: knowledge-base/testing/tooling/locust.md
+    tiers: [T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Tool guide — governs Locust harness implementation; not itself under test
+  - catalog_id: TST-015
+    title: Testing Coverage Matrix
+    path: knowledge-base/testing/coverage/coverage-matrix.md
+    tiers: []
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Generated coverage matrix — records the archetype mapping; not itself under test
+  - catalog_id: TST-020
+    title: Idempotency Replay Safety
+    path: knowledge-base/testing/archetypes/idempotency-replay.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-021
+    title: Ledger and Monetary Invariant
+    path: knowledge-base/testing/archetypes/ledger-monetary-invariant.md
+    tiers: [T0]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-022
+    title: Deterministic Calculation Engine
+    path: knowledge-base/testing/archetypes/deterministic-calculation-engine.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-023
+    title: Concurrent Limit & Counter Contention
+    path: knowledge-base/testing/archetypes/concurrent-limit-contention.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-024
+    title: Saga and Compensation Correctness
+    path: knowledge-base/testing/archetypes/saga-compensation.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-025
+    title: Decision Table and Screening Accuracy
+    path: knowledge-base/testing/archetypes/decision-screening-accuracy.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-026
+    title: Message Transformation and Routing Correctness
+    path: knowledge-base/testing/archetypes/message-transformation-routing.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-027
+    title: Ordering, Sequencing and Resequencing
+    path: knowledge-base/testing/archetypes/ordering-resequencing.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-028
+    title: Fan-out / Fan-in Correlation
+    path: knowledge-base/testing/archetypes/fanout-fanin-correlation.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-029
+    title: Delivery Guarantee, Retry, and Dead Letter Queue Testing
+    path: knowledge-base/testing/archetypes/delivery-guarantee-dlq.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-030
+    title: Contract and Schema Compatibility
+    path: knowledge-base/testing/archetypes/contract-schema-compatibility.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-031
+    title: Rate Limit, Throttle & Breakpoint Testing
+    path: knowledge-base/testing/archetypes/rate-limit-breakpoint.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-032
+    title: Batch Window and Cutoff Throughput
+    path: knowledge-base/testing/archetypes/batch-window-cutoff.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-033
+    title: Multi-Tenant Isolation and Noisy-Neighbour Testing
+    path: knowledge-base/testing/archetypes/multitenant-noisy-neighbour.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-034
+    title: Blended Journey Workload Testing
+    path: knowledge-base/testing/archetypes/blended-journey-workload.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-035
+    title: Fault Injection and Graceful Degradation Testing
+    path: knowledge-base/testing/archetypes/fault-injection-degradation.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-036
+    title: Zero-Downtime Deploy, Traffic Shift and Rotation Testing
+    path: knowledge-base/testing/archetypes/zero-downtime-deploy-rotation.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-037
+    title: Read-Model Convergence and CDC Lag
+    path: knowledge-base/testing/archetypes/read-model-convergence-lag.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-038
+    title: Temporal and Historisation Correctness
+    path: knowledge-base/testing/archetypes/temporal-historisation.md
+    tiers: [T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-039
+    title: Data Quality and Reconciliation
+    path: knowledge-base/testing/archetypes/data-quality-reconciliation.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-040
+    title: AuthN/AuthZ Matrix & Token Lifecycle
+    path: knowledge-base/testing/archetypes/authn-authz-token-lifecycle.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-041
+    title: Data Protection, Masking & Tokenisation
+    path: knowledge-base/testing/archetypes/data-protection-masking-tokenisation.md
+    tiers: [T0, T1]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-042
+    title: Telemetry and Observability Verification
+    path: knowledge-base/testing/archetypes/telemetry-verification.md
+    tiers: [T0, T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
+  - catalog_id: TST-043
+    title: Client Experience, Offline Sync and Performance Budget Testing
+    path: knowledge-base/testing/archetypes/client-experience-offline-perf.md
+    tiers: [T1, T2]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Test archetype — prescribes how other catalog rows are tested; not itself under test
