@@ -4543,3 +4543,46 @@ rows:
     are reserved for Wave F (InfoSec review); the TST-039 -> TST-042 gap in ID
     sequence is intentional, not an error.
   target_wave: 4
+- id: TST-040
+  title: AuthN/AuthZ Matrix & Token Lifecycle
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/authn-authz-token-lifecycle.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0:
+    - OWASP ASVS — V1 (Architecture), V4 (Access Control)
+    - OAuth 2.0 (RFC 6749, RFC 6750); OAuth Security Best Current Practice (RFC 9700)
+    - RFC 8705 — mTLS client authentication and certificate-bound tokens
+    - NIST SP 800-53 — AC-3 (Access Enforcement)
+    ring1:
+    - PCI-DSS 4.0 — §7 (least privilege), §8 (authentication)
+    - SWIFT Customer Security Programme (CSP) — Control 2.1 (Internal Data Flow Security)
+    - SWIFT Customer Security Programme (CSP) — Objective 5, Control 5.1 (Logical Access Control)
+    ring2:
+    - SBV Circular 09/2020/TT-NHNN — authentication requirements ⚠️ (working summary — pending Legal review)
+    - Decree 13/2023 ⚠️ (working summary — pending Legal review)
+  last_reviewed: '2026-08-12'
+  notes: Wave 15F — security archetypes (InfoSec reviewed)
+  target_wave: 4
+- id: TST-041
+  title: Data Protection, Masking & Tokenisation
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: knowledge-base/testing/archetypes/data-protection-masking-tokenisation.md
+  tiers:
+  - T0
+  - T1
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: []
+    ring1: []
+    ring2: []
+  last_reviewed: '2026-08-12'
+  notes: Wave 15F — security archetypes (InfoSec reviewed)
+  target_wave: 4

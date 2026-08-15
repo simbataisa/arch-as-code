@@ -100,6 +100,8 @@ nav:
         - Read-Model Convergence and CDC Lag: knowledge-base/testing/archetypes/read-model-convergence-lag.md
         - Temporal and Historisation Correctness: knowledge-base/testing/archetypes/temporal-historisation.md
         - Data Quality and Reconciliation: knowledge-base/testing/archetypes/data-quality-reconciliation.md
+        - AuthN/AuthZ Matrix and Token Lifecycle: knowledge-base/testing/archetypes/authn-authz-token-lifecycle.md
+        - Data Protection, Masking and Tokenisation: knowledge-base/testing/archetypes/data-protection-masking-tokenisation.md
         - Telemetry and Observability Verification: knowledge-base/testing/archetypes/telemetry-verification.md
         - Client Experience, Offline Sync and Performance Budget Testing: knowledge-base/testing/archetypes/client-experience-offline-perf.md
     - Technology Radar: knowledge-base/technology-radar.md

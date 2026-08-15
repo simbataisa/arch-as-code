@@ -125,6 +125,8 @@ assigned.
 
 | Catalog ID | Archetype | Covers |
 |---|---|---|
+| TST-040 | [AuthN/AuthZ Matrix & Token Lifecycle](./archetypes/authn-authz-token-lifecycle.md) | SEC-010, SEC-006, SEC-002, SEC-005, SEC-011, SEC-001, MOB-003 |
+| TST-041 | [Data Protection, Masking & Tokenisation](./archetypes/data-protection-masking-tokenisation.md) | SEC-008, SEC-013, SEC-004, SEC-012, MOB-002, FE-003, MOB-005, MOB-004 |
 | TST-042 | [Telemetry & Observability Verification](./archetypes/telemetry-verification.md) | OBS-001, OBS-002, OBS-003, OBS-004, OBS-005, OBS-006, OBS-007, OBS-008, OBS-009, OBS-010, BP-004, BP-007, BP-008 |
 | TST-043 | [Client Experience, Offline Sync & Perf Budget](./archetypes/client-experience-offline-perf.md) | FE-005, FE-006, FE-001, FE-002, MOB-001, MOB-006 |
 
