@@ -19,6 +19,10 @@ pass_criteria:
   - assert p50_latency <= threshold(p50_latency_ms)
   - assert p95_latency <= threshold(p95_latency_ms)
   - assert p99_latency <= threshold(p99_latency_ms)
+  # NOTE: TST-002's prose states this profile's error-rate criterion as "≤ 0.1%", but
+  # that figure has no NFR citation anywhere in the corpus. threshold(error_rate_pct)
+  # here resolves to NFR-004's actual documented figure (< 0.01%) instead — see the
+  # divergence note on error_rate_pct in _nfr-thresholds.yml.
   - assert error_rate <= threshold(error_rate_pct) across the full 60-minute hold
 
 evidence_artifact: run report with P50/P95/P99 and error-rate time series for the full hold

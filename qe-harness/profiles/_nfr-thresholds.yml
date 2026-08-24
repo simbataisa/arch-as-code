@@ -49,6 +49,15 @@ thresholds:
     unit: tps
     applies_to: [stress, spike]
 
+  # NOTE — divergence from TST-002's stated `load` pass criterion (≤ 0.1%):
+  # TST-002 (performance-test-standard.md) states the load profile's error-rate pass
+  # criterion as "≤ 0.1%" twice, but that figure appears nowhere in the NFR corpus —
+  # it has no citation. Inventing an NFR-* citation to justify TST-002's uncited 0.1%
+  # would itself violate the no-fabricated-citations rule this file exists to satisfy.
+  # This projection instead uses NFR-004's actual documented figure (< 0.01%, a 10x
+  # tighter bound), since it is the only real, citable error-rate target in the corpus.
+  # The TST-002/NFR-004 inconsistency is a pre-existing Wave 15 corpus gap, tracked
+  # separately as a wave-level follow-up — not resolved by changing either document here.
   - name: error_rate_pct
     threshold_ref: NFR-004#napas-payment-processing--throughput-targets
     value: 0.01
