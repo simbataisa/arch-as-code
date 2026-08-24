@@ -1,0 +1,78 @@
+# Machine-readable projection of NFR numeric targets.
+#
+# The gate (scripts/validate-harness-coverage.py, check 6) proves each threshold_ref
+# resolves to a real NFR-* catalog row and a heading anchor that exists in that row's
+# document. It does NOT prove the value below matches that document's prose — see
+# qe-harness/README.md ("What the Threshold Gate Does Not Prove"). A human owns value
+# accuracy. Update this file whenever the cited NFR row changes.
+#
+# Profile files (baseline.yml, load.yml, ...) never hardcode a number for one of these
+# concepts — they reference the threshold by `name` in their `threshold_names` list.
+# Profile *shape* parameters (durations, ramp times, step counts, drift tolerances) are
+# not projected here: TST-002 (performance-test-standard.md) states plainly that those
+# numbers are profile parameters owned by that document, not service SLOs owned by the
+# NFR spine, so they stay literal in the profile files.
+version: 1
+thresholds:
+  # --- Latency (NFR-002 Latency Budget Model) ---
+  # Source table: "End-to-end budgets per tier (customer-facing)", T0 sync API row
+  # (payment auth / card auth / ledger post) — the strictest customer-facing tier.
+  - name: p50_latency_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 50
+    unit: ms
+    applies_to: [load]
+
+  - name: p95_latency_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 200
+    unit: ms
+    applies_to: [baseline, load, mixed]
+
+  - name: p99_latency_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 500
+    unit: ms
+    applies_to: [load]
+
+  # --- Throughput (NFR-004 Throughput Model) ---
+  # Source table: "NAPAS Payment Processing — Throughput Targets".
+  - name: sustained_rps
+    threshold_ref: NFR-004#napas-payment-processing--throughput-targets
+    value: 500
+    unit: tps
+    applies_to: [soak, scalability]
+
+  - name: peak_rps
+    threshold_ref: NFR-004#napas-payment-processing--throughput-targets
+    value: 1500
+    unit: tps
+    applies_to: [stress, spike]
+
+  - name: error_rate_pct
+    threshold_ref: NFR-004#napas-payment-processing--throughput-targets
+    value: 0.01
+    unit: pct
+    applies_to: [load]
+
+  # --- Recovery (NFR-001 Service Tiering + RTO/RPO Matrix) ---
+  # Source table: "Authoritative RTO/RPO matrix", T0 row.
+  - name: rto_minutes
+    threshold_ref: NFR-001#authoritative-rtorpo-matrix
+    value: 5
+    unit: min
+    applies_to: [failover-under-load]
+
+  - name: rpo_minutes
+    threshold_ref: NFR-001#authoritative-rtorpo-matrix
+    value: 0
+    unit: min
+    applies_to: [failover-under-load]
+
+  # --- Error budget (NFR-005 Error Budget Policy) ---
+  # Source table: "1. SLO Definitions by Tier", T0 row, 30-day error budget column.
+  - name: error_budget_30d_minutes
+    threshold_ref: NFR-005#1-slo-definitions-by-tier
+    value: 4.32
+    unit: min
+    applies_to: [failover-under-load]

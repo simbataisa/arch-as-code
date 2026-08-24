@@ -1,0 +1,27 @@
+# Shape for TST-002's `mixed` profile: realistic contention.
+# Purpose: proves the service behaves under the realistic contention of several journeys
+# competing for the same resources at once, not just one journey in isolation. Pass/fail
+# is evaluated per-journey, never on the blended aggregate alone
+# (performance-test-standard.md, "mixed").
+profile: mixed
+workload_model: open          # closed | open — see TST-003
+required_for_tiers: [T0, T1]
+recommended_for_tiers: [T2]
+
+load_shape:
+  blend_ref: null             # named journey blend owned by TST-034 (blended-journey-workload.md);
+                               # populated when the blend is declared for the SUT under test
+  hold_seconds: 14400         # hold blended load 4h
+
+threshold_names: [p95_latency_ms]
+
+pass_criteria:
+  - "for every journey j in the blend: assert p95_latency[j] <= threshold(p95_latency_ms) for j's own tier"
+  - the blended aggregate P95 is reported for context but is never itself the pass/fail gate
+
+evidence_artifact: per-journey P95 breakdown table, one row per journey in the blend, each
+  compared to its own tier budget
+
+smoke_mode_overrides:
+  hold_seconds: 20
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not
