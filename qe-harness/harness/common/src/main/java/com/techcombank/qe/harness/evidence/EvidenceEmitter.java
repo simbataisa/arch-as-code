@@ -1,10 +1,12 @@
 package com.techcombank.qe.harness.evidence;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.DefaultIndenter;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 
 public class EvidenceEmitter {
@@ -14,6 +16,19 @@ public class EvidenceEmitter {
     public EvidenceEmitter(Path outputDir) {
         this.outputDir = outputDir;
         this.mapper = new ObjectMapper();
+
+        // Register JSR310 module for LocalDate serialization
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // Configure DefaultPrettyPrinter with proper indentation
+        // DefaultPrettyPrinter uses ": " (colon + space) by default for field separators
+        DefaultPrettyPrinter printer = new DefaultPrettyPrinter();
+        DefaultIndenter indenter = new DefaultIndenter("  ", "\n");
+        printer.indentObjectsWith(indenter);
+        printer.indentArraysWith(indenter);
+
+        this.mapper.setDefaultPrettyPrinter(printer);
     }
 
     public Path emit(RunFragment fragment) throws Exception {
@@ -22,101 +37,121 @@ public class EvidenceEmitter {
         String filename = timestamp + "-" + fragment.archetype() + ".json";
         Path outputPath = outputDir.resolve(filename);
 
-        // Compute repo-relative path from current working directory
-        Path repoRoot = Paths.get(System.getProperty("user.dir"));
-        String reportPath = repoRoot.relativize(outputPath).toString();
+        // Compute repo-relative path by walking up directory tree to find "qe-harness"
+        String reportPath = computeRepoRelativePath(outputPath);
 
-        // Build JSON with proper escaping using Jackson utilities and manual formatting
-        String json = buildJSON(fragment, reportPath);
+        // Create wrapper that includes report_path for serialization
+        EvidenceWrapper wrapper = new EvidenceWrapper(fragment, reportPath);
 
-        // Write to file
-        Files.createDirectories(outputDir);
-        Files.writeString(outputPath, json);
+        // Write JSON using ObjectMapper with proper pretty printing
+        Files.createDirectories(outputPath.getParent());
+        mapper.writerWithDefaultPrettyPrinter()
+              .writeValue(outputPath.toFile(), wrapper);
 
         return outputPath;
     }
 
-    private String buildJSON(RunFragment frag, String reportPath) throws JsonProcessingException {
-        StringBuilder json = new StringBuilder();
-        json.append("{\n");
-        append(json, "  ", "archetype", escapeJson(frag.archetype()), true);
-        append(json, "  ", "module", escapeJson(frag.module()), true);
-        append(json, "  ", "service_name", escapeJson(frag.serviceName()), true);
-        append(json, "  ", "tier", escapeJson(frag.tier()), true);
-        append(json, "  ", "oracle", escapeJson(frag.oracle()), true);
-        append(json, "  ", "result", escapeJson(frag.result().wire()), true);
+    /**
+     * Walk up from the output path looking for a parent directory named "qe-harness".
+     * If found, return the path relative to qe-harness's parent (the repo root).
+     * If not found (e.g., @TempDir outside repo), return bare filename.
+     * All paths are normalized to absolute before comparison to avoid Path.relativize() errors.
+     */
+    private String computeRepoRelativePath(Path outputPath) {
+        Path absolute = outputPath.toAbsolutePath().normalize();
+        Path current = absolute.getParent();
 
-        if (!frag.invariants().isEmpty()) {
-            json.append(",\n  \"invariants\": [\n");
-            for (int i = 0; i < frag.invariants().size(); i++) {
-                RunFragment.Entry entry = frag.invariants().get(i);
-                json.append("    {\n");
-                append(json, "      ", "id", escapeJson(entry.id()), true);
-                append(json, "      ", "description", escapeJson(entry.description()), true);
-                append(json, "      ", "result", escapeJson(entry.result().wire()), false);
-                json.append("\n    }");
-                if (i < frag.invariants().size() - 1) {
-                    json.append(",");
+        while (current != null) {
+            Path fileName = current.getFileName();
+            if (fileName != null && fileName.toString().equals("qe-harness")) {
+                // Found qe-harness; repo root is its parent
+                Path repoRoot = current.getParent();
+                if (repoRoot != null) {
+                    try {
+                        return repoRoot.relativize(absolute).toString();
+                    } catch (IllegalArgumentException e) {
+                        // Fallback if relativize fails (shouldn't happen with absolute paths)
+                        return absolute.getFileName().toString();
+                    }
                 }
-                json.append("\n");
             }
-            json.append("  ]");
+            current = current.getParent();
         }
 
-        if (!frag.thresholds().isEmpty()) {
-            json.append(",\n  \"thresholds\": [\n");
-            for (int i = 0; i < frag.thresholds().size(); i++) {
-                RunFragment.Threshold threshold = frag.thresholds().get(i);
-                json.append("    {\n");
-                append(json, "      ", "name", escapeJson(threshold.name()), true);
-                append(json, "      ", "threshold_ref", escapeJson(threshold.thresholdRef()), true);
-                append(json, "      ", "result", escapeJson(threshold.result().wire()), threshold.reason() == null);
-                if (threshold.reason() != null) {
-                    append(json, "      ", "reason", escapeJson(threshold.reason()), false);
-                }
-                json.append("\n    }");
-                if (i < frag.thresholds().size() - 1) {
-                    json.append(",");
-                }
-                json.append("\n");
-            }
-            json.append("  ]");
-        }
-
-        json.append(",\n  \"evidence\": {\n");
-        append(json, "    ", "executed_on", escapeJson(frag.executedOn().toString()), true);
-        append(json, "    ", "environment", escapeJson(frag.environment()), true);
-        if (frag.sutDefect() != null) {
-            append(json, "    ", "sut_defect", escapeJson(frag.sutDefect()), true);
-        } else {
-            json.append("    \"sut_defect\": null,\n");
-        }
-        append(json, "    ", "report_path", escapeJson(reportPath), false);
-        json.append("\n  }\n");
-        json.append("}\n");
-
-        return json.toString();
+        // No "qe-harness" ancestor found; use bare filename (e.g., @TempDir test case)
+        Path fileName = absolute.getFileName();
+        return fileName != null ? fileName.toString() : absolute.toString();
     }
 
-    private void append(StringBuilder sb, String indent, String key, String value, boolean comma) {
-        sb.append(indent).append("\"").append(key).append("\": ");
-        if (value == null) {
-            sb.append("null");
-        } else {
-            sb.append("\"").append(value).append("\"");
-        }
-        if (comma) {
-            sb.append(",");
-        }
-        sb.append("\n");
-    }
+    /**
+     * Wrapper DTO for serialization. Includes RunFragment data plus computed report_path.
+     * Jackson will serialize this using field names and @JsonValue annotations from RunFragment.
+     */
+    static class EvidenceWrapper {
+        public final String archetype;
+        public final String module;
+        public final String service_name;
+        public final String tier;
+        public final String oracle;
+        public final String result;
+        public final java.util.List<EvidenceWrapper.InvariantData> invariants;
+        public final java.util.List<EvidenceWrapper.ThresholdData> thresholds;
+        public final EvidenceWrapper.EvidenceData evidence;
 
-    private String escapeJson(String value) throws JsonProcessingException {
-        if (value == null) {
-            return null;
+        EvidenceWrapper(RunFragment frag, String reportPath) {
+            this.archetype = frag.archetype();
+            this.module = frag.module();
+            this.service_name = frag.serviceName();
+            this.tier = frag.tier();
+            this.oracle = frag.oracle();
+            this.result = frag.result().wire();
+            this.invariants = frag.invariants().isEmpty() ? null : frag.invariants().stream()
+                .map(InvariantData::new)
+                .toList();
+            this.thresholds = frag.thresholds().isEmpty() ? null : frag.thresholds().stream()
+                .map(ThresholdData::new)
+                .toList();
+            this.evidence = new EvidenceData(frag, reportPath);
         }
-        // Use Jackson's escaping - writeValueAsString wraps in quotes, so strip them
-        String quoted = mapper.writeValueAsString(value);
-        return quoted.substring(1, quoted.length() - 1);
+
+        static class InvariantData {
+            public final String id;
+            public final String description;
+            public final String result;
+
+            InvariantData(RunFragment.Entry entry) {
+                this.id = entry.id();
+                this.description = entry.description();
+                this.result = entry.result().wire();
+            }
+        }
+
+        static class ThresholdData {
+            public final String name;
+            public final String threshold_ref;
+            public final String result;
+            public final String reason;
+
+            ThresholdData(RunFragment.Threshold threshold) {
+                this.name = threshold.name();
+                this.threshold_ref = threshold.thresholdRef();
+                this.result = threshold.result().wire();
+                this.reason = threshold.reason();
+            }
+        }
+
+        static class EvidenceData {
+            public final String executed_on;
+            public final String environment;
+            public final String sut_defect;
+            public final String report_path;
+
+            EvidenceData(RunFragment frag, String reportPath) {
+                this.executed_on = frag.executedOn().toString();
+                this.environment = frag.environment();
+                this.sut_defect = frag.sutDefect();
+                this.report_path = reportPath;
+            }
+        }
     }
 }

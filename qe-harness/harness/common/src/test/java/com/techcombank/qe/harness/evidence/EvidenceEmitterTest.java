@@ -1,5 +1,7 @@
 package com.techcombank.qe.harness.evidence;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.*;
@@ -20,8 +22,24 @@ class EvidenceEmitterTest {
 
         assertTrue(Files.exists(out));
         String json = Files.readString(out);
-        assertTrue(json.contains("\"archetype\": \"TST-021\""));
-        assertTrue(json.contains("\"result\": \"passed\""));
+
+        // Parse JSON and verify fields (validates structure, handles Jackson pretty-printer formatting)
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = mapper.readTree(json);
+
+        // Verify essential fields exist and have correct values
+        assertEquals("TST-021", node.get("archetype").asText());
+        assertEquals("jmeter", node.get("module").asText());
+        assertEquals("reference-sut", node.get("service_name").asText());
+        assertEquals("passed", node.get("result").asText());
+
+        // Verify invariants array exists and contains the expected entry
+        JsonNode invariants = node.get("invariants");
+        assertNotNull(invariants);
+        assertTrue(invariants.isArray());
+        assertEquals(1, invariants.size());
+        assertEquals("I1", invariants.get(0).get("id").asText());
+        assertEquals("passed", invariants.get(0).get("result").asText());
     }
 
     @Test

@@ -1,23 +1,29 @@
 package com.techcombank.qe.harness.evidence;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.time.LocalDate;
 import java.util.*;
 
 public record RunFragment(
-    String archetype, String module, String serviceName, String tier, String oracle,
+    String archetype, String module,
+    @JsonProperty("service_name") String serviceName, String tier, String oracle,
     List<Entry> invariants, List<Threshold> thresholds,
-    String environment, String sutDefect, LocalDate executedOn
+    String environment,
+    @JsonProperty("sut_defect") String sutDefect,
+    @JsonProperty("executed_on") LocalDate executedOn
 ) {
     public enum Result {
         PASSED("passed"), FAILED("failed"),
         NOT_EVALUATED("not-evaluated"), NOT_IMPLEMENTED("not-implemented");
         private final String wire;
         Result(String w) { this.wire = w; }
+        @JsonValue
         public String wire() { return wire; }
     }
 
     public record Entry(String id, String description, Result result) {}
-    public record Threshold(String name, String thresholdRef, Result result, String reason) {}
+    public record Threshold(String name, @JsonProperty("threshold_ref") String thresholdRef, Result result, String reason) {}
 
     /** FAILED if any invariant or threshold failed; else NOT_EVALUATED if nothing was
      *  evaluated at all; else PASSED. Never silently PASSED on an empty run. */
