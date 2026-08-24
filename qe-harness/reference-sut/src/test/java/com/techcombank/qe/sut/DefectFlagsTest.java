@@ -39,6 +39,24 @@ class DefectFlagsTest {
     }
 
     @Test
+    void switchesBetweenFlagsWithAndWithoutInterveningClear() {
+        DefectFlags.activate("ledger-unbalanced");
+        assertTrue(DefectFlags.isActive("ledger-unbalanced"));
+
+        DefectFlags.clear();
+        DefectFlags.activate("schema-drift");
+        assertTrue(DefectFlags.isActive("schema-drift"));
+        assertFalse(DefectFlags.isActive("ledger-unbalanced"));
+
+        // Direct switch, no intervening clear() — the sequence the harness
+        // (Tasks 16-23) depends on when moving from one defect-pair run to
+        // the next without a container restart.
+        DefectFlags.activate("ratelimit-leaky");
+        assertTrue(DefectFlags.isActive("ratelimit-leaky"));
+        assertFalse(DefectFlags.isActive("schema-drift"));
+    }
+
+    @Test
     void knownFlagsContainsAllSevenArchetypeDefects() {
         assertEquals(7, DefectFlags.KNOWN_FLAGS.size());
         assertTrue(DefectFlags.KNOWN_FLAGS.containsAll(java.util.Set.of(
