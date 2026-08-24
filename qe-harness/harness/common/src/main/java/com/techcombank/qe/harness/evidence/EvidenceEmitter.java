@@ -1,14 +1,19 @@
 package com.techcombank.qe.harness.evidence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 
 public class EvidenceEmitter {
     private final Path outputDir;
+    private final ObjectMapper mapper;
 
     public EvidenceEmitter(Path outputDir) {
         this.outputDir = outputDir;
+        this.mapper = new ObjectMapper();
     }
 
     public Path emit(RunFragment fragment) throws Exception {
@@ -17,26 +22,40 @@ public class EvidenceEmitter {
         String filename = timestamp + "-" + fragment.archetype() + ".json";
         Path outputPath = outputDir.resolve(filename);
 
-        // Build JSON string with proper formatting
+        // Compute repo-relative path from current working directory
+        Path repoRoot = Paths.get(System.getProperty("user.dir"));
+        String reportPath = repoRoot.relativize(outputPath).toString();
+
+        // Build JSON with proper escaping using Jackson utilities and manual formatting
+        String json = buildJSON(fragment, reportPath);
+
+        // Write to file
+        Files.createDirectories(outputDir);
+        Files.writeString(outputPath, json);
+
+        return outputPath;
+    }
+
+    private String buildJSON(RunFragment frag, String reportPath) throws JsonProcessingException {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
-        json.append("  \"archetype\": \"").append(fragment.archetype()).append("\",\n");
-        json.append("  \"module\": \"").append(fragment.module()).append("\",\n");
-        json.append("  \"service_name\": \"").append(fragment.serviceName()).append("\",\n");
-        json.append("  \"tier\": \"").append(fragment.tier()).append("\",\n");
-        json.append("  \"oracle\": \"").append(fragment.oracle()).append("\",\n");
-        json.append("  \"result\": \"").append(fragment.result().wire()).append("\"");
+        append(json, "  ", "archetype", escapeJson(frag.archetype()), true);
+        append(json, "  ", "module", escapeJson(frag.module()), true);
+        append(json, "  ", "service_name", escapeJson(frag.serviceName()), true);
+        append(json, "  ", "tier", escapeJson(frag.tier()), true);
+        append(json, "  ", "oracle", escapeJson(frag.oracle()), true);
+        append(json, "  ", "result", escapeJson(frag.result().wire()), true);
 
-        if (!fragment.invariants().isEmpty()) {
+        if (!frag.invariants().isEmpty()) {
             json.append(",\n  \"invariants\": [\n");
-            for (int i = 0; i < fragment.invariants().size(); i++) {
-                RunFragment.Entry entry = fragment.invariants().get(i);
+            for (int i = 0; i < frag.invariants().size(); i++) {
+                RunFragment.Entry entry = frag.invariants().get(i);
                 json.append("    {\n");
-                json.append("      \"id\": \"").append(entry.id()).append("\",\n");
-                json.append("      \"description\": \"").append(entry.description()).append("\",\n");
-                json.append("      \"result\": \"").append(entry.result().wire()).append("\"\n");
-                json.append("    }");
-                if (i < fragment.invariants().size() - 1) {
+                append(json, "      ", "id", escapeJson(entry.id()), true);
+                append(json, "      ", "description", escapeJson(entry.description()), true);
+                append(json, "      ", "result", escapeJson(entry.result().wire()), false);
+                json.append("\n    }");
+                if (i < frag.invariants().size() - 1) {
                     json.append(",");
                 }
                 json.append("\n");
@@ -44,19 +63,19 @@ public class EvidenceEmitter {
             json.append("  ]");
         }
 
-        if (!fragment.thresholds().isEmpty()) {
+        if (!frag.thresholds().isEmpty()) {
             json.append(",\n  \"thresholds\": [\n");
-            for (int i = 0; i < fragment.thresholds().size(); i++) {
-                RunFragment.Threshold threshold = fragment.thresholds().get(i);
+            for (int i = 0; i < frag.thresholds().size(); i++) {
+                RunFragment.Threshold threshold = frag.thresholds().get(i);
                 json.append("    {\n");
-                json.append("      \"name\": \"").append(threshold.name()).append("\",\n");
-                json.append("      \"threshold_ref\": \"").append(threshold.thresholdRef()).append("\",\n");
-                json.append("      \"result\": \"").append(threshold.result().wire()).append("\"");
+                append(json, "      ", "name", escapeJson(threshold.name()), true);
+                append(json, "      ", "threshold_ref", escapeJson(threshold.thresholdRef()), true);
+                append(json, "      ", "result", escapeJson(threshold.result().wire()), threshold.reason() == null);
                 if (threshold.reason() != null) {
-                    json.append(",\n      \"reason\": \"").append(threshold.reason()).append("\"");
+                    append(json, "      ", "reason", escapeJson(threshold.reason()), false);
                 }
                 json.append("\n    }");
-                if (i < fragment.thresholds().size() - 1) {
+                if (i < frag.thresholds().size() - 1) {
                     json.append(",");
                 }
                 json.append("\n");
@@ -65,21 +84,39 @@ public class EvidenceEmitter {
         }
 
         json.append(",\n  \"evidence\": {\n");
-        json.append("    \"executed_on\": \"").append(fragment.executedOn().toString()).append("\",\n");
-        json.append("    \"environment\": \"").append(fragment.environment()).append("\",\n");
-        if (fragment.sutDefect() != null) {
-            json.append("    \"sut_defect\": \"").append(fragment.sutDefect()).append("\",\n");
+        append(json, "    ", "executed_on", escapeJson(frag.executedOn().toString()), true);
+        append(json, "    ", "environment", escapeJson(frag.environment()), true);
+        if (frag.sutDefect() != null) {
+            append(json, "    ", "sut_defect", escapeJson(frag.sutDefect()), true);
         } else {
             json.append("    \"sut_defect\": null,\n");
         }
-        json.append("    \"report_path\": \"").append(outputPath.getFileName().toString()).append("\"\n");
-        json.append("  }\n");
+        append(json, "    ", "report_path", escapeJson(reportPath), false);
+        json.append("\n  }\n");
         json.append("}\n");
 
-        // Write to file
-        Files.createDirectories(outputDir);
-        Files.writeString(outputPath, json.toString());
+        return json.toString();
+    }
 
-        return outputPath;
+    private void append(StringBuilder sb, String indent, String key, String value, boolean comma) {
+        sb.append(indent).append("\"").append(key).append("\": ");
+        if (value == null) {
+            sb.append("null");
+        } else {
+            sb.append("\"").append(value).append("\"");
+        }
+        if (comma) {
+            sb.append(",");
+        }
+        sb.append("\n");
+    }
+
+    private String escapeJson(String value) throws JsonProcessingException {
+        if (value == null) {
+            return null;
+        }
+        // Use Jackson's escaping - writeValueAsString wraps in quotes, so strip them
+        String quoted = mapper.writeValueAsString(value);
+        return quoted.substring(1, quoted.length() - 1);
     }
 }
