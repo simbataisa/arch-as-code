@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Standalone Spring Boot project, deliberately NOT a module of
+    qe-harness/harness/pom.xml (qe-harness-parent). The reference SUT is
+    independent of the harness modules that drive HTTP requests against it
+    (Tasks 16-23 run as separate tool processes, e.g. JMeter/Karate/Locust/k6,
+    against an already-running `docker compose up` container — see Task 14).
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <!-- Pinned per qe-harness/README.md "Pinned Versions" table. Do not float
+         this without updating that table — a controller ruling downgraded the
+         initially-resolved 4.1.1 to 3.5.16 for ecosystem compatibility with
+         Resilience4j/Testcontainers/Spring Security needed by later tasks. -->
+    <version>3.5.16</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.techcombank.qe</groupId>
+  <artifactId>reference-sut</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>qe-harness-reference-sut</name>
+  <description>
+    Reference SUT for the QE Harness (Wave 16): a deliberately
+    defect-toggleable Spring Boot service exercising the 24 testing
+    archetypes (TST-020..TST-043) catalogued in the Wave 15 testing corpus.
+  </description>
+
+  <properties>
+    <java.version>21</java.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
