@@ -1,0 +1,35 @@
+# Java / Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node (k6 scripts, tooling)
+node_modules/
+npm-debug.log*
+
+# Python (Locust)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Local env / secrets
+.env
+.env.local
+
+# Ad-hoc log output from local `make` runs
+*.log
+
+# NOTE: qe-harness/traceability/runs/ is intentionally NOT ignored — evidence
+# fragments written there are committed artifacts consumed by the traceability
+# gate (Task 3) and the coverage merge (later tasks).

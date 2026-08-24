@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.techcombank.qe</groupId>
+  <artifactId>qe-harness-parent</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <!--
+    Maven hard-fails aggregator validation when a listed <module> has no pom.xml yet
+    (confirmed via `mvn -q validate` during Task 1). Each module directory exists
+    (Task 1, Step 1) but its pom.xml is created by a later task. Uncomment the
+    corresponding <module> entry in the SAME commit that adds that module's pom.xml:
+      - common:         Task 2  (Evidence Schema and JVM Emitter)
+      - jmeter:         Task 16 (Module — TST-021 Ledger Invariant)
+      - gatling-karate: Task 20 (Module — TST-030 Contract Compatibility)
+  -->
+  <modules>
+    <!-- <module>common</module> -->
+    <!-- <module>jmeter</module> -->
+    <!-- <module>gatling-karate</module> -->
+  </modules>
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+</project>
