@@ -127,7 +127,17 @@ def best_fit_tools() -> dict[str, set[str]]:
         tool = row.get("primary_tool")
         if not tool:
             continue
+        catalog_id = row.get("catalog_id")
         for archetype_id in row.get("archetypes") or []:
+            if archetype_id == catalog_id:
+                # Explicit guard, not just reliance on today's corpus convention
+                # (self-rows currently declare archetypes: []): a row can never
+                # be evidence of its own best fit — its primary_tool is a
+                # governs-row placeholder, not a real signal. If a future
+                # corpus edit ever put an archetype's own ID in its own
+                # archetypes list, this must still be excluded rather than
+                # silently entering the best-fit set.
+                continue
             mapping.setdefault(archetype_id, set()).add(tool)
     return mapping
 
