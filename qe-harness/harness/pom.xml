@@ -17,7 +17,7 @@
       - gatling-karate: Task 20 (Module — TST-030 Contract Compatibility)
   -->
   <modules>
-    <!-- <module>common</module> -->
+    <module>common</module>
     <!-- <module>jmeter</module> -->
     <!-- <module>gatling-karate</module> -->
   </modules>
