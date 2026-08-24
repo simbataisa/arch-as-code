@@ -1,5 +1,6 @@
 package com.techcombank.qe.harness.evidence;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +17,9 @@ public class EvidenceEmitter {
     public EvidenceEmitter(Path outputDir) {
         this.outputDir = outputDir;
         this.mapper = new ObjectMapper();
+
+        // Omit null fields from JSON output (invariants, thresholds, reason, sut_defect)
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         // Register JSR310 module for LocalDate serialization
         mapper.registerModule(new JavaTimeModule());

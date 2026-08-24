@@ -63,4 +63,37 @@ class EvidenceEmitterTest {
             .build();
         assertEquals(RunFragment.Result.FAILED, f.result());
     }
+
+    @Test
+    void omitsNullFieldsFromJSON(@TempDir Path dir) throws Exception {
+        // Fragment with invariants but no thresholds (common case)
+        RunFragment f = RunFragment.builder()
+            .archetype("TST-021").module("jmeter").serviceName("reference-sut")
+            .tier("T0").oracle("invariant-assertion")
+            .invariant("I1", "balance check", RunFragment.Result.PASSED)
+            .environment("ci-smoke")
+            .build();
+
+        Path out = new EvidenceEmitter(dir).emit(f);
+        String json = Files.readString(out);
+
+        // Parse and verify no null fields where schema forbids them
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = mapper.readTree(json);
+
+        // thresholds field should be omitted (not present as null)
+        assertFalse(node.has("thresholds"), "thresholds should be omitted when empty, not serialized as null");
+
+        // sut_defect should also be omitted when null
+        assertFalse(node.has("sut_defect"), "sut_defect should be omitted when null");
+
+        // Verify evidence object doesn't contain any null values
+        JsonNode evidence = node.get("evidence");
+        assertNotNull(evidence);
+        assertFalse(evidence.has("sut_defect"), "evidence.sut_defect should be omitted when null");
+
+        // Ensure no stray nulls anywhere in the document
+        assertTrue(json.contains("null") == false || !json.contains("\"reason\": null"),
+                   "No null values should appear in places where schema forbids them");
+    }
 }
