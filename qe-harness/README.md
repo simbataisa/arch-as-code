@@ -54,7 +54,7 @@ this table.
 | Tool | Version | Lockfile |
 | --- | --- | --- |
 | Java (compiler release) | 21 (`maven.compiler.release`, pinned regardless of installed JDK) | `qe-harness/harness/pom.xml` |
-| Spring Boot | 4.1.1 (`org.springframework.boot:spring-boot-starter-parent`, latest GA) | `qe-harness/reference-sut/pom.xml` (Task 5) |
+| Spring Boot | 3.5.16 (`org.springframework.boot:spring-boot-starter-parent`, latest 3.x GA — pinned to the 3.x line over newer 4.x for its long, unambiguous compatibility record with Resilience4j, Testcontainers, springdoc-openapi, Flyway, and Spring Security resource-server, all needed by later tasks) | `qe-harness/reference-sut/pom.xml` (Task 5) |
 | Apache JMeter | 5.6.3 engine (`org.apache.jmeter:ApacheJMeter`) via `jmeter-maven-plugin` 3.8.0 (`com.lazerycode.jmeter:jmeter-maven-plugin`) | `qe-harness/harness/jmeter/pom.xml` (Task 16) |
 | Gatling | 3.15.1 engine (`io.gatling.highcharts:gatling-charts-highcharts`) via `gatling-maven-plugin` 4.21.10 (`io.gatling:gatling-maven-plugin`) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
 | Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
