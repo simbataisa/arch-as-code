@@ -104,6 +104,6 @@ class SyntheticDataSeederTest {
         assertThrows(DataIntegrityViolationException.class, () ->
             jdbc.update(
                 "INSERT INTO account (account_ref, party_name) VALUES (?, ?)",
-                "4111111111111111", "Malformed Test Account"));
+                "NOT-A-VALID-ACCOUNT-REF", "Malformed Test Account"));
     }
 }
