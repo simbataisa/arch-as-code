@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.techcombank.qe</groupId>
+    <artifactId>qe-harness-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>qe-harness-jmeter</artifactId>
+  <packaging>jar</packaging>
+
+  <!--
+    This module owns every JMeter-driven archetype module (TST-021 here;
+    TST-031/TST-035/TST-040 in Tasks 17-19, see traceability/modules.yml).
+    It has no JMeter test plan execution wired into the normal Maven
+    lifecycle: jmeter-maven-plugin's `configure`/`jmeter` goals are invoked
+    directly (see qe-harness/bin/run-jmeter.sh) rather than bound to an
+    `<executions>` phase, specifically so `mvn -pl jmeter test` (used by
+    this module's own JUnit fixture, ModuleRunnerTest et al.) never
+    triggers a real JMeter run itself; only `run-module.sh`, via
+    ModuleRunner's subprocess call, does that. Binding `jmeter:jmeter` to
+    the `test` phase would make every `mvn test` invocation ALSO fire a
+    real HTTP load run against whatever SUT happens to be reachable,
+    duplicating (and racing) the JUnit-test-triggered run.
+  -->
+  <properties>
+    <!-- Overridable via -D on the direct `configure`/`jmeter` goal
+         invocation in qe-harness/bin/run-jmeter.sh. Defaults here support
+         an ad-hoc `mvn com.lazerycode.jmeter:jmeter-maven-plugin:3.8.0:configure ...`
+         against a `make up PROFILES=core` stack with no overrides at all. -->
+    <qe.jmeter.testFilesDirectory>${project.basedir}</qe.jmeter.testFilesDirectory>
+    <qe.jmeter.testFilesIncluded>*/plan.jmx</qe.jmeter.testFilesIncluded>
+    <qe.jmeter.resultsDirectory>${project.build.directory}/jmeter/results</qe.jmeter.resultsDirectory>
+    <qe.jmeter.reportDirectory>${project.build.directory}/jmeter/report</qe.jmeter.reportDirectory>
+    <qe.jmeter.logsDirectory>${project.build.directory}/jmeter/logs</qe.jmeter.logsDirectory>
+    <!--
+      JMeter 5.6.2 (the engine version jmeter-maven-plugin 3.8.0 actually
+      resolves) bundles Groovy 3.0.17, whose ASM-based compiler cannot read
+      class files newer than roughly Java 17/18; running the forked
+      JMeter JVM itself on a JDK as new as 25 makes every JSR223 element
+      fail immediately with "Uncaught Exception BUG! ... Unsupported class
+      file major version 69" (confirmed empirically: identical plan.jmx,
+      only the JVM launching JMeter changed, reproduces/fixes this
+      deterministically). run-jmeter.sh resolves an available JDK 21 or 17
+      via `/usr/libexec/java_home` and passes it here; this default (plain
+      `java`, i.e. whatever's on PATH) only applies to an ad-hoc manual
+      `configure`/`jmeter` invocation that bypasses that script.
+    -->
+    <qe.jmeter.javaRuntime>java</qe.jmeter.javaRuntime>
+  </properties>
+
+  <dependencies>
+    <!-- JUnit 5: ModuleRunnerTest/Tst021ModuleTest. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.9.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Evidence contract (RunFragment) and EvidenceEmitter (Task 2), the
+         oracle library (Task 15): both the JSR223 assertion script (via
+         testPlanLibraries below, resolved from this same local reactor jar)
+         AND ModuleRunner (via a normal test-scope dependency) need these
+         classes. -->
+    <dependency>
+      <groupId>com.techcombank.qe</groupId>
+      <artifactId>qe-harness-common</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Jackson: ModuleRunner parses the evidence JSON emitted by
+         EvidenceEmitter back into a RunFragment. Same versions as
+         qe-harness-common's own pom, kept consistent across the reactor. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.15.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M9</version>
+      </plugin>
+
+      <!-- JMeter engine 5.6.3 via jmeter-maven-plugin 3.8.0 (see
+           qe-harness/README.md's Pinned Versions table). No <executions>:
+           see the module-level comment above for why. -->
+      <plugin>
+        <groupId>com.lazerycode.jmeter</groupId>
+        <artifactId>jmeter-maven-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <testFilesDirectory>${qe.jmeter.testFilesDirectory}</testFilesDirectory>
+          <testFilesIncluded>
+            <value>${qe.jmeter.testFilesIncluded}</value>
+          </testFilesIncluded>
+          <resultsDirectory>${qe.jmeter.resultsDirectory}</resultsDirectory>
+          <reportDirectory>${qe.jmeter.reportDirectory}</reportDirectory>
+          <logsDirectory>${qe.jmeter.logsDirectory}</logsDirectory>
+          <suppressJMeterOutput>false</suppressJMeterOutput>
+          <!-- See qe.jmeter.javaRuntime's own comment above (properties
+               block): the forked JMeter JVM must run on JDK <= ~21 for its
+               bundled Groovy 3.0.17 to handle JSR223 elements at all. -->
+          <jMeterProcessJVMSettings>
+            <javaRuntime>${qe.jmeter.javaRuntime}</javaRuntime>
+          </jMeterProcessJVMSettings>
+          <!--
+            testPlanLibraries: resolved via Aether from the LOCAL repo, so
+            `mvn install -pl common` (or `-am install`) must have run at
+            least once before the first `configure`; see run-jmeter.sh,
+            which does this unconditionally (fast/no-op once cached).
+            The JSR223 assertion script needs all three on JMeter's own
+            classpath: qe-harness-common (RunFragment/EvidenceEmitter/
+            InvariantAssertion), Jackson (EvidenceEmitter's own JSON
+            writer), and the PostgreSQL JDBC driver (I2/I3's direct
+            java.sql.DriverManager query against ledger_entry; see
+            assert-trial-balance.groovy).
+          -->
+          <testPlanLibraries>
+            <artifact>com.techcombank.qe:qe-harness-common:${project.version}</artifact>
+            <artifact>com.fasterxml.jackson.core:jackson-databind:2.15.2</artifact>
+            <artifact>com.fasterxml.jackson.core:jackson-annotations:2.15.2</artifact>
+            <artifact>com.fasterxml.jackson.core:jackson-core:2.15.2</artifact>
+            <artifact>com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2</artifact>
+            <artifact>org.postgresql:postgresql:42.7.13</artifact>
+          </testPlanLibraries>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

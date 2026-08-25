@@ -48,6 +48,7 @@ verify:
 # Run one module against the running SUT: `make run ARCH=TST-021`
 # (bin/run-module.sh lands in Task 16, alongside the first module).
 run:
+	./bin/run-module.sh $(ARCH)
 
 # Run all seven implemented modules against the clean SUT
 # (bin/run-all.sh or equivalent lands alongside the last archetype module).

@@ -26,6 +26,13 @@ services:
   postgres:
     image: postgres:16-alpine
     profiles: ["core"]
+    ports:
+      # Exposed to the host (not just the compose network) because Task 16's
+      # JMeter module runs as a host Maven/JMeter process, outside this
+      # compose network, and its I2/I3 checks need a direct JDBC connection
+      # to verify ledger_entry rows the HTTP API doesn't expose (GET
+      # /ledger/trial-balance only returns the aggregate net and count).
+      - "5432:5432"
     environment:
       POSTGRES_DB: sut
       POSTGRES_USER: sut
