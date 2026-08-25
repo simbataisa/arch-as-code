@@ -32,6 +32,22 @@
       <artifactId>jackson-datatype-jsr310</artifactId>
       <version>2.15.2</version>
     </dependency>
+
+    <!-- YAML parsing for ThresholdResolver: reads profiles/_nfr-thresholds.yml. -->
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>2.4</version>
+    </dependency>
+
+    <!-- JSON Schema validation for the contract-schema oracle (ContractSchema).
+         Same library/version reference-sut already uses for TST-030's compatibility
+         tests, kept consistent across the reactor. -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>1.5.9</version>
+    </dependency>
   </dependencies>
 
   <build>
