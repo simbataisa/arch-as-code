@@ -57,4 +57,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             response.setHeader(RETRY_AFTER_HEADER, String.valueOf(bucket.secondsUntilNextToken()));
         }
     }
+
+    /** Resets the shared bucket to full capacity. Test-support only --
+     *  {@link RateLimitResetController} is the sole caller; see that class's
+     *  own javadoc for why the harness needs this. */
+    public void resetForTest() {
+        bucket.reset();
+    }
 }

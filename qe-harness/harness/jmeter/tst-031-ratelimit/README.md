@@ -38,22 +38,28 @@ measured, never whether correctness is checked.** `Tst031ModuleTest`'s
 pin exactly this split; `reportsFailureAgainstTheLeakyDefect` pins that a real correctness
 violation still fails the run even with smoke mode active, so smoke mode can never be used to
 launder a genuine defect into a green result.
+`smokeModeStillAssertsCorrectnessInvariants` asserts `allMatch(PASSED)` across I1-I3, not
+merely `anyMatch` -- with three invariants, `anyMatch` would be satisfied by I2/I3 alone even
+if I1 genuinely regressed, letting a real I1 failure pass this exact test while still
+corrupting the emitted fragment.
 
 ## What this module drives
 
 `plan.jmx` runs three phases against the reference SUT's rate-limit capability
 (`GET /rate-limited/ping`, guarded by `RateLimitFilter`/`TokenBucket`, Task 8):
 
-1. **setUp Thread Group** (`Compute Ramp Shape`, 1 thread, 1 loop) reads
-   `HarnessConfig.smokeMode()` (Task 15) once and writes the resulting
-   `step_hold_seconds`, plus a run-start timestamp and zeroed tally counters, into `props`
-   (JMeter's cross-thread shared store). Every later reference to the ramp shape --
-   the main Thread Group's own `duration`, and each of the Throughput Shaping Timer's three
-   step durations -- reads this same `props` value via `${__groovy(props.get(...),)}`
-   rather than re-deriving it, so the scheduler's cutoff and the Timer's own schedule can
-   never drift apart. JMeter guarantees this setUp Thread Group finishes before the main
-   Thread Group starts, and `${__groovy(...)}` is evaluated lazily on first access (not at
-   file-load time), so this ordering is safe.
+1. **setUp Thread Group** (`Reset SUT and Compute Ramp Shape`, 1 thread, 1 loop) first calls
+   `POST /_test/reset/ratelimit` (`RateLimitResetController`, added by this module -- see
+   "Resetting the rate limiter between runs" below) to bring the shared `TokenBucket` to a
+   known, full-capacity state, then reads `HarnessConfig.smokeMode()` (Task 15) once and
+   writes the resulting `step_hold_seconds`, plus a run-start timestamp and zeroed tally
+   counters, into `props` (JMeter's cross-thread shared store). Every later reference to the
+   ramp shape -- the main Thread Group's own `duration`, and each of the Throughput Shaping
+   Timer's three step durations -- reads this same `props` value via
+   `${__groovy(props.get(...),)}` rather than re-deriving it, so the scheduler's cutoff and
+   the Timer's own schedule can never drift apart. JMeter guarantees this setUp Thread Group
+   finishes before the main Thread Group starts, and `${__groovy(...)}` is evaluated lazily
+   on first access (not at file-load time), so this ordering is safe.
 2. **Main Thread Group** (`Rate Limit Load`, 25 threads, duration-scheduled) fires
    `GET /rate-limited/ping` continuously. A **Throughput Shaping Timer**
    (`kg.apc.jmeter.timers.VariableThroughputTimer` -- the plugin the archetype's own §5
@@ -114,6 +120,27 @@ itself (a missing `Retry-After` or a `5xx` is a real defect at any point in the 
 not). The `ratelimit-leaky` defect's violation (admitted rate roughly double the limit,
 sustained for the entire above-limit step, not just its first couple of seconds) is far
 outside this tolerance either way.
+
+### Resetting the rate limiter between runs
+
+The warm-up-window design above implicitly assumes each run starts from a *known* bucket
+state -- specifically, that whatever slack the bucket carries into the above-limit step is
+bounded by one capacity's worth, not an unbounded amount accumulated across several prior
+runs' worth of idle time. Unlike TST-021's ledger capability, which this module's own setUp
+Thread Group pattern is modelled on, `TokenBucket` has no persistence layer a JMeter script
+can reset directly (no `TRUNCATE` equivalent) -- and unlike `DefectFlags`, its state
+(`tokens`, `lastRefillNanos`) isn't a flag a test can just re-toggle; it accrues continuously
+from whatever a *previous* run, or a previous idle period, left it at.
+
+This was not just a theoretical gap: running the three given tests back-to-back against an
+already-exercised, long-lived SUT container (rather than a freshly-started one) reproduced a
+false I1 failure on an otherwise-clean run, intermittently. `RateLimitResetController`
+(`POST /_test/reset/ratelimit` → `RateLimitFilter.resetForTest()` → `TokenBucket.reset()`,
+all Task 17 follow-up additions to `reference-sut`) closes this gap: the setUp Thread Group
+calls it first, before anything else, so every run -- whether the very first against a fresh
+container or the fiftieth against a long-lived one -- starts from the same full-capacity
+state the warm-up-window math assumes. `on_sample_error=stopthread` on that Thread Group means
+a failed reset stops the run loudly rather than silently invalidating I1's measurement.
 
 ## Running it
 

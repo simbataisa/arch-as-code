@@ -22,6 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * module exists to prove -- smoke mode must degrade *what* is measured
  * (every performance threshold), never *whether* correctness is checked
  * (I1-I3, evaluated identically either way).
+ *
+ * <p>{@link #smokeModeStillAssertsCorrectnessInvariants()} asserts
+ * {@code allMatch}, not the brief's originally-given {@code anyMatch}: with
+ * three invariants (I1-I3), {@code anyMatch(PASSED)} is satisfied by I2/I3
+ * alone even if I1 genuinely failed, so a real I1 regression could pass this
+ * exact test while still corrupting the emitted fragment -- silently, since
+ * nothing else in this class re-checks I1 on a clean run. {@code allMatch}
+ * closes that gap without weakening the test's own stated purpose (proving
+ * smoke mode does not skip correctness); it strengthens it.
  */
 class Tst031ModuleTest {
 
@@ -40,9 +49,11 @@ class Tst031ModuleTest {
     @Test
     void smokeModeStillAssertsCorrectnessInvariants() throws Exception {
         ModuleResult r = runner.run("TST-031", Map.of("HARNESS_SMOKE_MODE", "true"));
+        assertFalse(r.fragment().invariants().isEmpty(), "must still declare its invariants");
         assertTrue(r.fragment().invariants().stream()
-            .anyMatch(i -> i.result() == RunFragment.Result.PASSED),
-            "smoke mode must not skip correctness");
+            .allMatch(i -> i.result() == RunFragment.Result.PASSED),
+            "smoke mode must not skip correctness -- every invariant must genuinely pass "
+                + "on a clean SUT, not merely at least one of them");
     }
 
     @Test

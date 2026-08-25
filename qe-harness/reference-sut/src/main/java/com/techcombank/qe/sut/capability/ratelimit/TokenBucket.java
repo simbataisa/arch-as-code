@@ -66,6 +66,22 @@ public final class TokenBucket {
         return false;
     }
 
+    /** Resets the bucket to full capacity, as if freshly constructed --
+     *  test-support only. Used by {@code RateLimitResetController} (Task 17
+     *  follow-up) so the TST-031 harness module can bring the shared,
+     *  process-wide bucket to a known state before each run, the same way
+     *  TST-021's plan.jmx {@code TRUNCATE}s the ledger tables in its own
+     *  setUp Thread Group -- without this, a run's own admitted/rejected
+     *  counts depend on whatever state a *previous* run (or a previous idle
+     *  period) happened to leave the bucket in, which back-to-back runs
+     *  against a long-lived container otherwise make unreliable. Synchronized
+     *  for the same reason {@link #tryAcquire()} is: this must never
+     *  interleave with a concurrent refill-then-check-then-decrement. */
+    public synchronized void reset() {
+        tokens = capacity;
+        lastRefillNanos = nowNanos();
+    }
+
     /** Whole seconds until enough refill accumulates for one more token,
      *  rounded up -- used by {@code RateLimitFilter} to set the
      *  {@code Retry-After} header on a rejected request. Returns 0 if a

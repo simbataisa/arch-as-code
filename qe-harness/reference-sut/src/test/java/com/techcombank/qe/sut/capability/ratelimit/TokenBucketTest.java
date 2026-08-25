@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -81,6 +82,19 @@ class TokenBucketTest {
             int sc = mvc.perform(get("/rate-limited/ping")).andReturn().getResponse().getStatus();
             assertTrue(sc == 200 || sc == 429, "unexpected status under overload: " + sc);
         }
+    }
+
+    @Test
+    void resetRestoresFullCapacityRegardlessOfPriorState() {
+        TokenBucket bucket = new TokenBucket(10, Duration.ofSeconds(1), clock);
+        for (int i = 0; i < 10; i++) bucket.tryAcquire();
+        assertFalse(bucket.tryAcquire(), "bucket must be exhausted before reset for this test to prove anything");
+
+        bucket.reset();
+
+        int admitted = 0;
+        for (int i = 0; i < 100; i++) if (bucket.tryAcquire()) admitted++;
+        assertEquals(10, admitted, "reset must restore exactly the configured capacity, not more or less");
     }
 
     @Test

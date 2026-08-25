@@ -27,7 +27,7 @@
            Thread Group starts, so the `${__groovy(props.get(...),)}`
            references below ; lazily evaluated on first use, not at file
            load ; always see the value written here, never a stale default. -->
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Compute Ramp Shape" enabled="true">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset SUT and Compute Ramp Shape" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -40,6 +40,42 @@
         <stringProp name="ThreadGroup.delay"></stringProp>
       </SetupThreadGroup>
       <hashTree>
+
+        <!-- Resets the reference SUT's shared, process-wide TokenBucket to
+             full capacity before every run ; the same "reset before load"
+             role TST-021's plan.jmx fills with a direct TRUNCATE in its own
+             setUp Thread Group, except the token bucket has no persistence
+             layer to reset through directly, so this calls back into the
+             running SUT process over HTTP (RateLimitResetController, added
+             as this task's follow-up fix). Without this, back-to-back runs
+             against a long-lived container (exactly Task 23's defect-pair
+             runner and Task 27's CI) leave the bucket's state ; and
+             therefore how much burst is available during the warm-up
+             window below ; dependent on whatever a previous run left
+             behind, which was confirmed empirically to produce a false I1
+             failure on an otherwise-clean run. Placed first in this Thread
+             Group (on_sample_error=stopthread), so a failed reset stops the
+             run loudly instead of silently invalidating I1's measurement. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /_test/reset/ratelimit" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/_test/reset/ratelimit</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
 
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Record Run Start and Ramp Shape" enabled="true">
           <stringProp name="cacheKey">true</stringProp>
