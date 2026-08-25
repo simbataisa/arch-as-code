@@ -49,11 +49,28 @@ public class TokenExpiryTestController {
      *  with an access token whose {@code exp} is already 3 seconds in the past, or
      *  400 for an unrecognised role. {@code secondsPastExpiry} may be 0 (a token
      *  that expired the instant it was minted) -- the clock-skew sweep starts its
-     *  measurement there, per {@code assert-authz.groovy}. */
+     *  measurement there, per {@code assert-authz.groovy}.
+     *
+     *  <p>{@code secondsPastExpiry} must be {@code >= 0} -- 400 otherwise. A negative
+     *  value would mint an {@code exp} in the FUTURE, i.e. a fully valid, non-expired
+     *  token for any role, which contradicts this endpoint's entire reason to exist
+     *  ("mint an already-expired token"). That a real client can already obtain a
+     *  fully valid token for any role via the legitimate, unauthenticated
+     *  {@code POST /auth/token} (Task 9's {@code SecurityConfig} permits everything
+     *  except {@code /protected/**} by this SUT's own deliberate design) does not
+     *  excuse this endpoint from enforcing its own documented contract -- this
+     *  validation is about {@code TokenExpiryTestController} doing only what its own
+     *  Javadoc and README claim it does, not about this reference SUT's separate,
+     *  already-accepted "issuance itself is unauthenticated" property. */
     @PostMapping("/expired")
     public ResponseEntity<?> mintExpired(@RequestBody ExpiredTokenRequest request) {
         if (!JwtService.isKnownRole(request.role())) {
             return ResponseEntity.badRequest().body(Map.of("error", "unknown role: " + request.role()));
+        }
+        if (request.secondsPastExpiry() < 0) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "secondsPastExpiry must be >= 0 (a negative offset would mint a "
+                    + "non-expired token): " + request.secondsPastExpiry()));
         }
         String role = request.role().toLowerCase(Locale.ROOT);
         String subject = "skew-probe-" + role;

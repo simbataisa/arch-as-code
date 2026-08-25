@@ -61,6 +61,19 @@ class TokenExpiryTestControllerTest {
             .andExpect(content().string(containsString("not-a-real-role")));
     }
 
+    /** A negative offset would mint an {@code exp} in the FUTURE -- a fully valid,
+     *  non-expired token for any role -- which contradicts this endpoint's own
+     *  documented contract ("mint an already-expired token"). Must be rejected with
+     *  400, never silently accepted as a valid token. */
+    @Test
+    void negativeSecondsPastExpiryReturns400NotAValidToken() throws Exception {
+        mockMvc.perform(post("/_test/token/expired")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"admin\",\"secondsPastExpiry\":-3600}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().string(containsString("secondsPastExpiry")));
+    }
+
     private String mintExpired(String role, long secondsPastExpiry) throws Exception {
         String body = mockMvc.perform(post("/_test/token/expired")
                 .contentType(MediaType.APPLICATION_JSON)
