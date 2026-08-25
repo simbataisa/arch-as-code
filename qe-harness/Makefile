@@ -13,9 +13,33 @@ up:
 	$(COMPOSE) $(foreach p,$(PROFILES),--profile $(p)) up -d --wait
 
 # Tear down what `make up` started, including volumes (so a stale Postgres
-# volume never leaks into the next run).
+# volume never leaks into the next run). Every service in docker-compose.yml
+# is profile-gated (none is profile-less) -- Compose's `down` resolves which
+# services are "in scope" the same way `up` does, from `--profile`/
+# COMPOSE_PROFILES, not from "whatever is currently running". A bare
+# `docker compose down -v` therefore enables zero profiles, matches zero
+# services, and exits 0 having silently done nothing: confirmed
+# deterministically reproducible (Task 14), not an environment flake -- see
+# qe-harness/README.md's "`docker compose down -v` matches nothing without
+# --profile" section. ALL_PROFILES below enumerates every profile this file
+# declares so `down` always matches everything `up` could have started,
+# regardless of which PROFILES value was passed to `up`. The label-filtered
+# cleanup after it is a last-resort safety net for any other reason `down`
+# might still leave something behind; it is a no-op when `down` already
+# worked, since the filters then match nothing.
+ALL_PROFILES := core resilience observability messaging
+
 down:
-	$(COMPOSE) down -v
+	$(COMPOSE) $(foreach p,$(ALL_PROFILES),--profile $(p)) down -v || true
+	@leftover="$$(docker ps -aq --filter label=com.docker.compose.project=qe-harness)"; \
+	if [ -n "$$leftover" ]; then \
+		echo "docker compose down still left containers behind -- forcing cleanup" >&2; \
+		docker rm -f $$leftover; \
+	fi
+	@leftover_vol="$$(docker volume ls -q --filter label=com.docker.compose.project=qe-harness)"; \
+	if [ -n "$$leftover_vol" ]; then docker volume rm $$leftover_vol; fi
+	@leftover_net="$$(docker network ls -q --filter label=com.docker.compose.project=qe-harness)"; \
+	if [ -n "$$leftover_net" ]; then docker network rm $$leftover_net; fi
 
 # Run the gates — no containers required (traceability gate: Task 3;
 # NFR threshold projection: Task 4).

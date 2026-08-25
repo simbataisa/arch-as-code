@@ -90,6 +90,34 @@ sets `-Djava.net.preferIPv4Stack=true`, plus the test itself sets `Flyway`'s `co
 absorb a real observed race on this kind of engine — see the comments in `pom.xml` and
 `SyntheticDataSeederTest.java` for the failure mode each one fixes.
 
+### `docker compose down -v` matches nothing without `--profile`
+
+Found during Task 14's compose verification and confirmed deterministically reproducible (not an
+environment flake): every service in `qe-harness/docker-compose.yml` is profile-gated -- none is
+profile-less. Compose resolves which services `down` applies to the same way it resolves `up`'s
+scope: from `--profile`/`COMPOSE_PROFILES`, not from "whatever containers are currently running".
+A bare `docker compose down -v` therefore enables zero profiles, matches zero services, and exits
+`0` having removed nothing -- indistinguishable from success by exit code alone. Confirmed by
+direct A/B: with `qe-harness-postgres-1`/`qe-harness-reference-sut-1` running, a bare `down -v`
+left both up (three times in a row); `docker compose --profile core --profile resilience
+--profile observability --profile messaging down -v` removed both containers plus the volume and
+network on the first try, every time.
+
+`make down` (Task 14) always passes every profile this file declares
+(`ALL_PROFILES` in the Makefile) to `down`, so it matches everything `up` could have started
+regardless of which `PROFILES` value `up` was originally given. As a last-resort safety net for
+any other reason `down` might still leave something behind, it also force-removes anything still
+carrying the `com.docker.compose.project=qe-harness` label afterward:
+
+    docker rm -f $(docker ps -aq --filter label=com.docker.compose.project=qe-harness)
+    docker volume rm $(docker volume ls -q --filter label=com.docker.compose.project=qe-harness)
+    docker network rm $(docker network ls -q --filter label=com.docker.compose.project=qe-harness)
+
+This matters beyond `make down` itself: Task 23's `run-defects.sh` needs a clean SUT between the
+baseline and defect-injection runs, and Task 27's CI job needs a clean runner between pipeline
+stages -- either calling `docker compose down -v` directly without `--profile` would silently
+inherit this same no-op.
+
 ## TST-040 Clock-Skew Tolerance
 
 `app.authz.clock-skew-seconds` (`qe-harness/reference-sut/src/main/resources/application.properties`)
