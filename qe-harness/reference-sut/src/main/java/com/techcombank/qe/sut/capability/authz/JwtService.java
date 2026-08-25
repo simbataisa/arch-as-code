@@ -74,13 +74,18 @@ public class JwtService {
         return mint(subject, role, TOKEN_TYPE_REFRESH, Instant.now().plus(refreshTokenTtl));
     }
 
-    /** Test-only hook for {@code TokenLifecycleTest}'s clock-skew sweep: mints an
-     *  access token whose {@code exp} is already {@code secondsPastExpiry} seconds
-     *  in the past, so the sweep can measure the real accepted offset rather than
-     *  asserting a configured number. Not reachable over HTTP -- there is no
-     *  {@code exp} override on {@code POST /auth/token}, deliberately, since a real
-     *  client must never be able to ask this SUT to mint a token with an arbitrary
-     *  expiry. */
+    /** Test-only hook for {@code TokenLifecycleTest}'s (in-process) and Task 19's
+     *  {@code assert-authz.groovy} (out-of-process, via {@link
+     *  TokenExpiryTestController}) clock-skew sweeps: mints an access token whose
+     *  {@code exp} is already {@code secondsPastExpiry} seconds in the past, so
+     *  each sweep can measure the real accepted offset rather than asserting a
+     *  configured number. Not reachable through the real client-facing {@code
+     *  POST /auth/token} -- deliberately, since a real client must never be able
+     *  to ask this SUT to mint a token with an arbitrary expiry; the one HTTP door
+     *  onto this method is {@code TokenExpiryTestController}'s {@code
+     *  POST /_test/token/expired}, the same {@code _test}-prefixed,
+     *  test-control-only convention {@code DefectController} and {@code
+     *  RateLimitResetController} use. */
     public String mintExpiredAccessToken(String subject, String role, long secondsPastExpiry) {
         return mint(subject, role, TOKEN_TYPE_ACCESS, Instant.now().minusSeconds(secondsPastExpiry));
     }

@@ -131,6 +131,13 @@ performance/tolerance thresholds are asserted against declared configuration, no
 literals. This one is not a performance threshold (it does not gate on latency or throughput), so
 unlike the `NFR-*`-cited thresholds elsewhere in this harness it carries no `NFR-*` citation.
 
+Task 19's `harness/jmeter/tst-040-authz` module runs the equivalent measurement out-of-process,
+over real HTTP, via a small test-control door (`TokenExpiryTestController`,
+`POST /_test/token/expired`) added to `reference-sut` for exactly this purpose — see that
+module's own README for why an HTTP door was needed at all (`JwtService#mintExpiredAccessToken`
+has no HTTP surface of its own, deliberately) and for the small, latency-driven margin below `5`s
+that measurement typically reports.
+
 ## TST-035 Circuit Breaker Configuration
 
 `resilience4j.circuitbreaker.instances.downstream.*`
