@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-040 AuthZ Matrix and Token Lifecycle" enabled="true">
+      <stringProp name="TestPlan.comments">Task 19 (Wave 16 QE Harness). See README.md for the invariants (I1-I2) this plan asserts and for the three-outcome (allow/deny/error) oracle assert-authz.groovy implements.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- setUp Thread Group: mints one access token per known role (reader,
+           writer, admin) via the SUT's own POST /auth/token, storing each in
+           props (JMeter's cross-thread shared store), before the main Thread
+           Group's first CSV-driven cell runs. Minting once here rather than
+           per-cell means the 12-cell sweep below spends its calls entirely on
+           the authorization decision itself, and it is what lets the
+           "resolve-bearer-header" PreProcessor in the main Thread Group stay a
+           plain props lookup with no HTTP call of its own. Also zeroes this
+           run's own cell tally (tst040_cell_keys) ; same reason TST-031/
+           TST-035's own setUp Thread Groups zero their tallies: a second run
+           in the same SUT process (this module's own JUnit fixture running
+           clean-then-defect) must never mix its cell results with a previous
+           run's leftovers. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Mint Role Tokens and Zero Tallies" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Mint Tokens For reader/writer/admin" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+JsonSlurper jsonSlurper = new JsonSlurper()
+
+for (String role : ["reader", "writer", "admin"]) {
+    HttpRequest request = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/auth/token"))
+        .timeout(Duration.ofSeconds(5))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString('{"role":"' + role + '"}'))
+        .build()
+    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    if (response.statusCode() != 200) {
+        throw new IllegalStateException(
+            "POST /auth/token role=" + role + " -> " + response.statusCode() + " " + response.body())
+    }
+    String accessToken = jsonSlurper.parseText(response.body()).accessToken as String
+    props.put("tst040_token_" + role, accessToken)
+}
+
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never mixes its cell tallies on top of a previous run's leftovers -- same
+// idiom TST-031/TST-035's own setUp Thread Groups use for their own props.
+props.put("tst040_cell_keys", "")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("minted tokens for reader/writer/admin", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: one thread, twelve loops ; exactly one per row
+           of authz-matrix.csv (role,endpoint,expected_verdict), read in file
+           order via the CSV Data Set Config below (recycle=false,
+           stopThread=true: a mismatch between this loop count and the file's
+           real row count must stop the run loudly, never silently recycle
+           and re-score old rows). Concurrency has no role here ; I1/I2 are
+           correctness checks over a fixed, small matrix, not a load/
+           throughput invariant like TST-031's ; so a single thread is
+           deliberate, the same reasoning TST-035's own "Fault Load" Thread
+           Group documents for its own single thread. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Authz Matrix Sweep" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">12</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- authz-matrix.csv ships alongside plan.jmx in this same module
+             directory (see README.md for the full 12-row matrix); a plain
+             relative filename resolves against jmeter-maven-plugin's own
+             copied test-files directory, which mirrors this module's whole
+             directory tree, not just plan.jmx itself. stopThread=true means
+             running out of rows before 12 loops complete (a CSV edited out
+             of sync with the Main Thread Group's own loop count above) stops
+             the thread loudly rather than recycling and silently re-scoring
+             an earlier row a second time. -->
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="authz-matrix.csv" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="filename">authz-matrix.csv</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">false</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+          <boolProp name="stopThread">true</boolProp>
+          <stringProp name="variableNames">role,endpoint,expected_verdict</stringProp>
+          <boolProp name="ignoreFirstLine">true</boolProp>
+        </CSVDataSet>
+        <hashTree/>
+
+        <!-- Resolves this iteration's Authorization header value from the
+             CSV row's own "role" ; "anonymous" sends no bearer credential
+             at all (an empty header value never starts with "Bearer ", so
+             JwtAuthenticationFilter leaves the request unauthenticated,
+             exactly AbstractAuthzTest#call()'s own "anonymous sends no
+             token" semantics); any other role looks up the token "Mint
+             Tokens..." (setUp Thread Group) already minted for it. -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="resolve-bearer-header" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+String role = vars.get("role")
+String bearer
+if ("anonymous".equals(role)) {
+    bearer = ""
+} else {
+    String token = props.getProperty("tst040_token_" + role, "")
+    if (token.isEmpty()) {
+        throw new IllegalStateException(
+            "no minted token in props for role '" + role + "' -- setUp Thread Group must run first")
+    }
+    bearer = "Bearer " + token
+}
+vars.put("authz_bearer", bearer)
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET ${endpoint}" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">${endpoint}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Authorization: ${authz_bearer}" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">${authz_bearer}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+          <!-- Records this cell's RAW evidence into props ; status code,
+               the X-Authz-Decision response header (empty string if absent),
+               and the response body ; but performs NO classification here.
+               assert-authz.groovy (TearDown Thread Group) is the single
+               place the three-outcome oracle is implemented; duplicating it
+               here would risk the two copies drifting apart, exactly the
+               risk this split avoids. Cell keys (role|endpoint) are
+               appended to tst040_cell_keys so the TearDown script knows
+               which props entries to read back, in what order. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="record-cell-result" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+String role = vars.get("role")
+String endpoint = vars.get("endpoint")
+String expected = vars.get("expected_verdict")
+String cellKey = role + "|" + endpoint
+
+int status
+try {
+    status = prev.getResponseCode().toInteger()
+} catch (NumberFormatException ignored) {
+    // Non-numeric response code (e.g. "Non HTTP response code: ..." on a
+    // connect/read failure) -- assert-authz.groovy's classify() treats any
+    // status outside 2xx/401/403 as "error", so -1 is deliberate, not a bug.
+    status = -1
+}
+String headers = prev.getResponseHeaders()
+def decisionMatch = (headers =~ /(?im)^X-Authz-Decision:\s*(\S+)\s*$/)
+String decision = decisionMatch.find() ? decisionMatch.group(1) : ""
+String body = prev.getResponseDataAsString()
+
+props.put("tst040_cell_" + cellKey + "_endpoint", endpoint)
+props.put("tst040_cell_" + cellKey + "_expected", expected)
+props.put("tst040_cell_" + cellKey + "_status", String.valueOf(status))
+props.put("tst040_cell_" + cellKey + "_decision", decision)
+props.put("tst040_cell_" + cellKey + "_body", body == null ? "" : body)
+
+synchronized (props) {
+    String existing = props.getProperty("tst040_cell_keys", "")
+    props.put("tst040_cell_keys", existing.isEmpty() ? cellKey : existing + ";" + cellKey)
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every "Authz Matrix Sweep"
+           iteration has finished writing its own cell's raw evidence ;
+           same "assert after load has fully drained" placement TST-021/
+           TST-031/TST-035's own TearDown Thread Groups use.
+           assert-authz.groovy (Task 19 deliverable) reads every cell back
+           from props, performs the three-outcome classification (I1), runs
+           its own clock-skew offset sweep against
+           POST /_test/token/expired (I2), and calls EvidenceEmitter to
+           write one fragment to traceability/runs/. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Evaluate Authz Invariants" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-authz" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
