@@ -11,7 +11,7 @@ public final class CapabilityRegistry {
         .collect(Collectors.toUnmodifiableSet());
 
     /** Implemented in Wave 16. Tasks 6-13 each add exactly one ID here. */
-    public static final Set<String> IMPLEMENTED = Set.of();
+    public static final Set<String> IMPLEMENTED = Set.of("TST-021");
 
     private CapabilityRegistry() {}
 
