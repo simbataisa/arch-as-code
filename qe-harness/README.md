@@ -62,6 +62,7 @@ this table.
 | JJWT | 0.13.0 (`io.jsonwebtoken:jjwt-api`/`-impl`/`-jackson`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by Spring Boot's `spring-boot-dependencies` BOM (unlike `spring-boot-starter-security`, which needs no explicit version), so all three artifacts pin this version explicitly, the same pattern already used for `org.postgresql:postgresql`. | `qe-harness/reference-sut/pom.xml` (Task 9) |
 | springdoc-openapi | 2.9.0 (`org.springdoc:springdoc-openapi-starter-webmvc-api`) — resolved from `maven-metadata.xml` on 2026-08-25 as the newest release on the 2.x line; the true latest, `3.1.0`, targets Spring Boot 4 and was not evaluated against this repo's pinned 3.5.16. Not managed by the `spring-boot-dependencies` BOM, so pinned explicitly, same pattern as JJWT. | `qe-harness/reference-sut/pom.xml` (Task 10) |
 | json-schema-validator | 1.5.9 (`com.networknt:json-schema-validator`, test scope), NOT the true latest release (`3.0.7`, resolved from `maven-metadata.xml` on 2026-08-25) — `2.0.0` replaced the `JsonSchemaFactory`/`JsonSchema`/`ValidationMessage` API `SchemaCompatibilityTest` needs with an incompatible `Schema`/`Error`-based rewrite (confirmed directly: neither the `3.0.7` nor the `2.0.7` jar contains any of those four classes). `1.5.9` is the newest release still on the 1.x line, and the newest release that actually has the API this test code calls. | `qe-harness/reference-sut/pom.xml` (Task 10) |
+| resilience4j | 2.4.0 (`io.github.resilience4j:resilience4j-spring-boot3`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by the `spring-boot-dependencies` BOM, so pinned explicitly, same pattern as JJWT/springdoc. Pulls in `resilience4j-spring6` (the `@CircuitBreaker` annotation + Spring Boot config binding) transitively at the same version. `spring-boot-starter-aop` (needed for the AOP proxy the annotation is woven through) IS managed by the BOM (verified via `mvn -N help:effective-pom`: `3.5.16`), so it carries no explicit version. | `qe-harness/reference-sut/pom.xml` (Task 11) |
 
 ### Running the Testcontainers-backed tests on a non-Docker-Desktop engine
 
@@ -101,6 +102,32 @@ never the other way around, and never a hardcoded literal in the test — per th
 performance/tolerance thresholds are asserted against declared configuration, not duplicated as
 literals. This one is not a performance threshold (it does not gate on latency or throughput), so
 unlike the `NFR-*`-cited thresholds elsewhere in this harness it carries no `NFR-*` citation.
+
+## TST-035 Circuit Breaker Configuration
+
+`resilience4j.circuitbreaker.instances.downstream.*`
+(`qe-harness/reference-sut/src/main/resources/application.yml`) declares the breaker that guards
+`DownstreamClient.fetch` (Task 11): `slidingWindowType: COUNT_BASED`, `slidingWindowSize: 5`,
+`minimumNumberOfCalls: 5`, `failureRateThreshold: 50`, `waitDurationInOpenState: 2s`,
+`permittedNumberOfCallsInHalfOpenState: 2`, `automaticTransitionFromOpenToHalfOpenEnabled: true`.
+Same rule as the clock-skew tolerance above: these are resilience configuration, not performance
+thresholds, so they carry no `NFR-*` citation, and `BreakerBehaviourTest` never duplicates them as
+literals — it reads `minimumNumberOfCalls` straight off the live `CircuitBreakerRegistry` bean and
+asserts the *measured* number of calls-to-open against that. `waitDurationInOpenState` is
+deliberately short (2s, not a tuned production value) so the breaker-closes-after-fault-removed test
+observes a real state transition well within its 20-second budget rather than needing a
+test-specific override profile.
+
+On a real downstream failure, `DownstreamClient.fetch`'s Resilience4j `fallbackMethod` returns a
+declared `{"degraded": true, "source": "cache"}` response at a plain `200` — `GET /quotes/{id}`
+never surfaces a downstream failure as a `5xx`. The `breaker-disabled` defect flag is the one
+exception: with it active, the fallback itself rethrows instead of masking the failure, so the
+failure propagates as a genuine `500` — this is the capability's proof that it fails for the right
+reason. `qe-harness/downstream-stub/` is a small, static-responder Docker image for `docker compose`
+(Task 14) to run as a real, network-reachable downstream service; Toxiproxy (also wired in Task 14)
+is what actually black-holes/restores traffic to it in that setup — `BreakerBehaviourTest` itself
+needs neither, using a hand-rolled in-process JDK `HttpServer` stub instead (see that test's
+Javadoc).
 
 ## Related
 

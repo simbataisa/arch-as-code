@@ -55,6 +55,34 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
+    <!-- TST-035 circuit breaker (Task 11). resilience4j-spring-boot3 pulls in
+         resilience4j-spring6 (the @CircuitBreaker annotation + Spring Boot
+         autoconfiguration binding resilience4j.circuitbreaker.instances.* from
+         application.yml) and resilience4j-circuitbreaker transitively. Not
+         managed by spring-boot-dependencies' BOM, so (like jjwt-*/springdoc
+         above) an explicit version is required. 2.4.0 resolved from Maven
+         Central's maven-metadata.xml on 2026-08-25 as the current latest
+         release, compatible with Spring Boot 3.x (resilience4j-spring-boot3
+         has no Spring Boot version constraint of its own; verified its POM
+         only depends on resilience4j-spring6 and spring-boot-starter, both
+         version-ranges satisfied by the pinned 3.5.16). -->
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-spring-boot3</artifactId>
+      <version>2.4.0</version>
+    </dependency>
+
+    <!-- TST-035 circuit breaker (Task 11): resilience4j's @CircuitBreaker is
+         woven via a Spring AOP proxy (CircuitBreakerAspect); without this
+         starter, AopAutoConfiguration never activates and the annotation on
+         DownstreamClient.fetch is silently ignored. Version managed by
+         spring-boot-dependencies (verified via `mvn -N help:effective-pom`),
+         so no explicit <version>, same pattern as spring-boot-starter-web. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+
     <!-- JJWT: not managed by Spring Boot's spring-boot-dependencies BOM, so (like
          org.postgresql:postgresql below) an explicit version is required here.
          0.13.0 resolved from Maven Central's maven-metadata.xml on 2026-08-25 as
