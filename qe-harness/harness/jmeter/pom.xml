@@ -115,6 +115,23 @@
             <javaRuntime>${qe.jmeter.javaRuntime}</javaRuntime>
           </jMeterProcessJVMSettings>
           <!--
+            Explicit, non-transitive: kg.apc:jmeter-plugins-tst:2.6 (Task 17's
+            Throughput Shaping Timer, kg.apc.jmeter.timers.VariableThroughputTimer)
+            declares a transitive dependency on kg.apc:jmeter-plugins-cmn-jmeter:0.3,
+            which in turn depends on org.apache.jmeter:jorphan:2.13 and
+            org.apache.jmeter:ApacheJMeter_core:2.13, a JMeter engine version far
+            older than the 5.6.2 this module's whole reactor is pinned to (see
+            qe-harness README's Pinned Versions table). With
+            downloadLibraryDependencies left at its plugin default (true), those
+            2.13 jars would be copied into the same lib/ directory as the real
+            5.6.2 engine jars alongside them, an unnecessary classpath-collision
+            risk. Setting this false and listing every needed jar explicitly
+            (below) avoids that entirely: only jmeter-plugins-tst and
+            jmeter-plugins-cmn-jmeter themselves land in lib/, never their
+            outdated JMeter-core transitives.
+          -->
+          <downloadLibraryDependencies>false</downloadLibraryDependencies>
+          <!--
             testPlanLibraries: resolved via Aether from the LOCAL repo, so
             `mvn install -pl common` (or `-am install`) must have run at
             least once before the first `configure`; see run-jmeter.sh,
@@ -124,7 +141,14 @@
             InvariantAssertion), Jackson (EvidenceEmitter's own JSON
             writer), and the PostgreSQL JDBC driver (I2/I3's direct
             java.sql.DriverManager query against ledger_entry; see
-            assert-trial-balance.groovy).
+            assert-trial-balance.groovy). jmeter-plugins-tst/-cmn-jmeter (Task 17)
+            supply the Throughput Shaping Timer TST-031's plan.jmx uses; see the
+            downloadLibraryDependencies comment above for why they must be listed
+            explicitly rather than relying on transitive resolution. snakeyaml is
+            qe-harness-common's own ThresholdResolver (Task 4) dependency;
+            TST-021 never called that class so this was never needed until TST-031's
+            assert-ratelimit.groovy became the first assertion script to resolve an
+            NFR threshold citation (peak_rps) from a JSR223 element.
           -->
           <testPlanLibraries>
             <artifact>com.techcombank.qe:qe-harness-common:${project.version}</artifact>
@@ -133,6 +157,9 @@
             <artifact>com.fasterxml.jackson.core:jackson-core:2.15.2</artifact>
             <artifact>com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2</artifact>
             <artifact>org.postgresql:postgresql:42.7.13</artifact>
+            <artifact>kg.apc:jmeter-plugins-tst:2.6</artifact>
+            <artifact>kg.apc:jmeter-plugins-cmn-jmeter:0.3</artifact>
+            <artifact>org.yaml:snakeyaml:2.4</artifact>
           </testPlanLibraries>
         </configuration>
       </plugin>
