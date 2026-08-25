@@ -1,10 +1,13 @@
 package com.techcombank.qe.sut.capability.ratelimit;
 
 import com.techcombank.qe.sut.DefectFlags;
+import com.techcombank.qe.sut.capability.authz.JwtService;
+import com.techcombank.qe.sut.capability.authz.SecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Clock;
@@ -33,8 +36,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * a directly-constructed {@link TokenBucket} in this test never refills
  * mid-loop -- the assertions below are deterministic regardless of how fast
  * the test JVM executes the loop, rather than racing a real clock.
+ *
+ * <p>{@code @Import}s TST-040's {@link SecurityConfig} (Task 9): without it,
+ * this slice would fall back to Spring Boot's own zero-config security
+ * default (deny everything, generated password) now that
+ * spring-boot-starter-security is on the classpath -- {@link SecurityConfig}
+ * only locks down {@code /protected/**}, so importing it here restores this
+ * test's original, unauthenticated-access behaviour for
+ * {@code /rate-limited/**}.
  */
 @WebMvcTest(RateLimitedController.class)
+@Import({SecurityConfig.class, JwtService.class})
 class TokenBucketTest {
 
     private final Clock clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);

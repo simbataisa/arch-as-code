@@ -59,6 +59,7 @@ this table.
 | Gatling | 3.15.1 engine (`io.gatling.highcharts:gatling-charts-highcharts`) via `gatling-maven-plugin` 4.21.10 (`io.gatling:gatling-maven-plugin`) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
 | Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
 | Testcontainers | 1.21.4 (`org.testcontainers:junit-jupiter`, `org.testcontainers:postgresql`) — resolved from `maven-metadata.xml` on 2026-08-25. The true latest on Maven Central is `2.0.5`, but that major renamed its module artifacts (`org.testcontainers:testcontainers-postgresql`, `org.testcontainers:testcontainers-junit-jupiter`) and was not evaluated for compatibility with the pinned Spring Boot 3.5.16 line. 1.21.4 is the newest version on the old artifact coordinates and is also the exact version Spring Boot 3.5.16's own `spring-boot-dependencies` BOM manages (`testcontainers.version`), so no explicit `<version>` is set in the reference SUT's POM — it comes transitively from the parent, the same pattern already used for `spring-boot-starter-web`/`-test`. | `qe-harness/reference-sut/pom.xml` (Task 6) |
+| JJWT | 0.13.0 (`io.jsonwebtoken:jjwt-api`/`-impl`/`-jackson`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by Spring Boot's `spring-boot-dependencies` BOM (unlike `spring-boot-starter-security`, which needs no explicit version), so all three artifacts pin this version explicitly, the same pattern already used for `org.postgresql:postgresql`. | `qe-harness/reference-sut/pom.xml` (Task 9) |
 
 ### Running the Testcontainers-backed tests on a non-Docker-Desktop engine
 
@@ -85,6 +86,19 @@ reference SUT's own `pom.xml` does carry one related, engine-agnostic fix: the s
 sets `-Djava.net.preferIPv4Stack=true`, plus the test itself sets `Flyway`'s `connectRetries`, to
 absorb a real observed race on this kind of engine — see the comments in `pom.xml` and
 `SyntheticDataSeederTest.java` for the failure mode each one fixes.
+
+## TST-040 Clock-Skew Tolerance
+
+`app.authz.clock-skew-seconds` (`qe-harness/reference-sut/src/main/resources/application.properties`)
+is the *declared* tolerance the reference SUT's token validator (`JwtService`, Task 9) is actually
+configured with — it is wired straight into JJWT's own `JwtParserBuilder#clockSkewSeconds(...)`, so
+the running validator enforces exactly this number, never a different one. `TokenLifecycleTest`'s
+`expiredTokenIsNotAcceptedBeyondDeclaredSkew` measures the SUT's real maximum accepted `exp` offset
+by presenting progressively staler tokens and asserts that *measured* value against this property —
+never the other way around, and never a hardcoded literal in the test — per this corpus's rule that
+performance/tolerance thresholds are asserted against declared configuration, not duplicated as
+literals. This one is not a performance threshold (it does not gate on latency or throughput), so
+unlike the `NFR-*`-cited thresholds elsewhere in this harness it carries no `NFR-*` citation.
 
 ## Related
 

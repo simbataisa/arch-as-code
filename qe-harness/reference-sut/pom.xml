@@ -49,6 +49,34 @@
       <artifactId>spring-boot-starter-jdbc</artifactId>
     </dependency>
 
+    <!-- TST-040 AuthN/AuthZ (Task 9). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <!-- JJWT: not managed by Spring Boot's spring-boot-dependencies BOM, so (like
+         org.postgresql:postgresql below) an explicit version is required here.
+         0.13.0 resolved from Maven Central's maven-metadata.xml on 2026-08-25 as
+         the current latest release — see qe-harness/README.md "Pinned Versions". -->
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <version>0.13.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+      <version>0.13.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
+      <version>0.13.0</version>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
@@ -68,6 +96,14 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- TST-040 AuthN/AuthZ (Task 9): MockMvc + Spring Security integration
+         (SecurityMockMvcConfigurer) for the @WebMvcTest slices below. -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
 
