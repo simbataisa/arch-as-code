@@ -4,12 +4,18 @@ ROOT := $(shell cd .. && pwd)
 
 .PHONY: up down verify run run-all run-defects
 
-# Start the SUT and the infrastructure its modules need (docker-compose.yml
-# and profile wiring land in Task 14).
+# Start the SUT and the infrastructure its modules need, e.g.
+# `make up PROFILES=core` or `make up PROFILES="core resilience"`. `--wait`
+# blocks on each started service's own healthcheck; bin/wait-for-sut.sh is a
+# separate plain-HTTP readiness probe for callers (e.g. a harness module's
+# `make run`) that don't go through `docker compose up` themselves.
 up:
+	$(COMPOSE) $(foreach p,$(PROFILES),--profile $(p)) up -d --wait
 
-# Tear down what `make up` started (Task 14).
+# Tear down what `make up` started, including volumes (so a stale Postgres
+# volume never leaks into the next run).
 down:
+	$(COMPOSE) down -v
 
 # Run the gates — no containers required (traceability gate: Task 3;
 # NFR threshold projection: Task 4).
