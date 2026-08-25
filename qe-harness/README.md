@@ -58,6 +58,33 @@ this table.
 | Apache JMeter | 5.6.3 engine (`org.apache.jmeter:ApacheJMeter`) via `jmeter-maven-plugin` 3.8.0 (`com.lazerycode.jmeter:jmeter-maven-plugin`) | `qe-harness/harness/jmeter/pom.xml` (Task 16) |
 | Gatling | 3.15.1 engine (`io.gatling.highcharts:gatling-charts-highcharts`) via `gatling-maven-plugin` 4.21.10 (`io.gatling:gatling-maven-plugin`) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
 | Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
+| Testcontainers | 1.21.4 (`org.testcontainers:junit-jupiter`, `org.testcontainers:postgresql`) — resolved from `maven-metadata.xml` on 2026-08-25. The true latest on Maven Central is `2.0.5`, but that major renamed its module artifacts (`org.testcontainers:testcontainers-postgresql`, `org.testcontainers:testcontainers-junit-jupiter`) and was not evaluated for compatibility with the pinned Spring Boot 3.5.16 line. 1.21.4 is the newest version on the old artifact coordinates and is also the exact version Spring Boot 3.5.16's own `spring-boot-dependencies` BOM manages (`testcontainers.version`), so no explicit `<version>` is set in the reference SUT's POM — it comes transitively from the parent, the same pattern already used for `spring-boot-starter-web`/`-test`. | `qe-harness/reference-sut/pom.xml` (Task 6) |
+
+### Running the Testcontainers-backed tests on a non-Docker-Desktop engine
+
+`SyntheticDataSeederTest` (Task 6) needs a real Docker API endpoint. Testcontainers'
+auto-detection assumes Docker Desktop's default socket; on an engine registered as a different
+Docker context (e.g. Rancher Desktop), point it at that context's socket explicitly:
+
+    export DOCKER_HOST="$(docker context inspect <context-name> --format '{{.Endpoints.docker.Host}}')"
+    export TESTCONTAINERS_RYUK_DISABLED=true   # see below
+
+Without `DOCKER_HOST` set, Testcontainers fails immediately with "Could not find a valid Docker
+environment" even though `docker info` succeeds, because it only probes the default Docker
+Desktop socket path and context, not whatever `docker context show` currently reports.
+
+`TESTCONTAINERS_RYUK_DISABLED` is needed because Ryuk (Testcontainers' container reaper) bind-mounts
+the host's Docker socket into its own container to watch for JVM death; on an engine that runs
+containers inside a VM (Rancher Desktop's Lima/QEMU VM, colima, etc.) that host-path bind-mount
+doesn't resolve the same way it does for Docker Desktop, and Ryuk's own container fails to start.
+Disabling it means containers aren't auto-reaped if the JVM crashes mid-test — acceptable for a
+local run, worth reconsidering for a CI runner on the same kind of engine.
+
+Neither of these is set in this repo (both are host/engine-specific, not project config); the
+reference SUT's own `pom.xml` does carry one related, engine-agnostic fix: the surefire plugin
+sets `-Djava.net.preferIPv4Stack=true`, plus the test itself sets `Flyway`'s `connectRetries`, to
+absorb a real observed race on this kind of engine — see the comments in `pom.xml` and
+`SyntheticDataSeederTest.java` for the failure mode each one fixes.
 
 ## Related
 

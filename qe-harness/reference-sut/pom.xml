@@ -46,7 +46,51 @@
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Testcontainers: version is managed transitively via
+         spring-boot-dependencies (the grandparent of this POM's
+         spring-boot-starter-parent), which imports org.testcontainers:
+         testcontainers-bom at 1.21.4 for Spring Boot 3.5.16 — see
+         qe-harness/README.md "Pinned Versions" table for how that number
+         was resolved. Task 6 is the first task in this repo to need a real
+         Postgres for tests (CHECK constraints, transactions), so it
+         introduces these two test-scoped Testcontainers dependencies.
+         (spring-boot-testcontainers / @ServiceConnection is not used here —
+         the test wires its own DataSource and runs Flyway directly, rather
+         than booting a full Spring ApplicationContext.) -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -56,6 +100,23 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- java.net.preferIPv4Stack=true: without this, SyntheticDataSeederTest
+           (Task 6) is flaky when run alongside the rest of the suite on a
+           non-Docker-Desktop engine (observed on Rancher Desktop). Testcontainers
+           resolves the "localhost" it connects to for a container's mapped port,
+           and when the JVM tries "::1" first but the engine's port-forwarder only
+           listens on 127.0.0.1, the connection is refused rather than retried.
+           Forcing IPv4-first resolution is harmless on Docker Desktop and fixes
+           the flake everywhere else. See qe-harness/README.md's Testcontainers
+           row for the DOCKER_HOST / Ryuk notes this does NOT cover. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>-Djava.net.preferIPv4Stack=true</argLine>
+        </configuration>
       </plugin>
     </plugins>
   </build>
