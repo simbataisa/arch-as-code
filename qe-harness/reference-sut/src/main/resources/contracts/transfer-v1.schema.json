@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qe-harness.techcombank.com/contracts/transfer-v1.schema.json",
+  "title": "TransferV1Response",
+  "description": "TST-030 (Task 10): the frozen, published response contract for POST /v1/transfers. additionalProperties is false so a v2-only field leaking backward, or any other unpublished field, fails validation just as loudly as a missing one.",
+  "type": "object",
+  "properties": {
+    "transferRef": {
+      "type": "string",
+      "description": "UUID of the completed double-entry transfer (TransferService, TST-021)."
+    },
+    "status": {
+      "type": "string",
+      "description": "Settlement status of the transfer."
+    }
+  },
+  "required": ["transferRef", "status"],
+  "additionalProperties": false
+}

@@ -93,9 +93,50 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- TST-030 versioned API (Task 10): publishes GET /openapi.json (see
+         OpenApiConfig) by introspecting the running Spring MVC controllers.
+         Anticipated by qe-harness/README.md's "Pinned Versions" table as a
+         Spring Boot 3.5.16-compatible dependency needed by a later task; not
+         managed by spring-boot-dependencies' BOM, so (like jjwt-* and
+         org.postgresql:postgresql above) an explicit version is required.
+         2.9.0 resolved from Maven Central's maven-metadata.xml on
+         2026-08-25 as the newest release on the 2.x line — the true latest,
+         3.1.0, targets Spring Boot 4 and was not evaluated against this
+         repo's pinned 3.5.16. webmvc-api (not -ui): only the JSON document
+         is needed here, not a browsable Swagger UI. -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+      <version>2.9.0</version>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- TST-030 versioned API (Task 10): SchemaCompatibilityTest validates
+         /v1/transfers and /v2/transfers responses against their published
+         JSON Schema fixtures (src/main/resources/contracts/) with this
+         library's JsonSchemaFactory/JsonSchema/ValidationMessage API. Not
+         managed by spring-boot-dependencies' BOM, so (like the springdoc
+         dependency above) an explicit version is required.
+
+         1.5.9, NOT the true latest release (3.0.7, resolved from
+         maven-metadata.xml on 2026-08-25) — 2.0.0 replaced the
+         JsonSchemaFactory/JsonSchema/ValidationMessage API this task's
+         given test code calls with an incompatible Schema/Error-based
+         rewrite (verified directly: `unzip -l` on both the 3.0.7 and 2.0.7
+         jars shows neither contains a ValidationMessage, SpecVersion,
+         JsonSchema, or JsonSchemaFactory class at all). 1.5.9 is the newest
+         release still on the 1.x line and the newest release that actually
+         provides the API this SUT's test code needs. Test-scoped: no
+         main-code path uses it. -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>1.5.9</version>
       <scope>test</scope>
     </dependency>
 
