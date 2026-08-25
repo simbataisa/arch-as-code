@@ -92,7 +92,7 @@
         <version>3.0.0-M9</version>
       </plugin>
 
-      <!-- JMeter engine 5.6.3 via jmeter-maven-plugin 3.8.0 (see
+      <!-- JMeter engine 5.6.2 via jmeter-maven-plugin 3.8.0 (see
            qe-harness/README.md's Pinned Versions table). No <executions>:
            see the module-level comment above for why. -->
       <plugin>

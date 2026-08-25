@@ -37,11 +37,21 @@ if [ ! -f "$PLAN_FILE" ]; then
     echo "run-jmeter.sh: no plan.jmx under $MODULE_DIR" >&2
     exit 1
 fi
-ASSERT_SCRIPT="$MODULE_DIR/assert-trial-balance.groovy"
-if [ ! -f "$ASSERT_SCRIPT" ]; then
-    echo "run-jmeter.sh: no assert-trial-balance.groovy under $MODULE_DIR" >&2
+# Every JMeter archetype module names its assertion script differently
+# (this module's is assert-trial-balance.groovy; TST-031/TST-035/TST-040 --
+# Tasks 17-19 -- will each ship their own assert-*.groovy under this same
+# shared script). Glob rather than hardcode a filename here, or this
+# dispatcher breaks the moment a second module exists.
+ASSERT_SCRIPTS=("$MODULE_DIR"/assert-*.groovy)
+if [ ! -f "${ASSERT_SCRIPTS[0]}" ]; then
+    echo "run-jmeter.sh: no assert-*.groovy under $MODULE_DIR" >&2
     exit 1
 fi
+if [ "${#ASSERT_SCRIPTS[@]}" -gt 1 ]; then
+    echo "run-jmeter.sh: expected exactly one assert-*.groovy under $MODULE_DIR, found ${#ASSERT_SCRIPTS[@]}: ${ASSERT_SCRIPTS[*]}" >&2
+    exit 1
+fi
+ASSERT_SCRIPT="${ASSERT_SCRIPTS[0]}"
 
 mkdir -p "$RUNS_DIR"
 
