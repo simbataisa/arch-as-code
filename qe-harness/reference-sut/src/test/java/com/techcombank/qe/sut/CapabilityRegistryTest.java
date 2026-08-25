@@ -1,6 +1,7 @@
 package com.techcombank.qe.sut;
 
 import org.junit.jupiter.api.Test;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CapabilityRegistryTest {
@@ -28,5 +29,19 @@ class CapabilityRegistryTest {
     @Test
     void statusOfDeclaredButUnimplementedIsDeclared() {
         assertEquals("declared", CapabilityRegistry.statusOf("TST-022"));
+    }
+
+    @Test
+    void waveSixteenImplementsExactlySevenCapabilities() {
+        assertEquals(7, CapabilityRegistry.IMPLEMENTED.size());
+        assertEquals(Set.of("TST-021","TST-030","TST-031","TST-035","TST-039","TST-040","TST-043"),
+                     CapabilityRegistry.IMPLEMENTED);
+    }
+
+    @Test
+    void seventeenArchetypesRemainDeclared() {
+        long declared = CapabilityRegistry.ALL.stream()
+            .filter(a -> "declared".equals(CapabilityRegistry.statusOf(a))).count();
+        assertEquals(17, declared);
     }
 }

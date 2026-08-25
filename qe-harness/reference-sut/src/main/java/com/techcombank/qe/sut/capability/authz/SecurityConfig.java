@@ -38,6 +38,14 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .httpBasic(basic -> basic.disable())
             .formLogin(form -> form.disable())
+            // Spring Security's own default header writer stamps every response
+            // with "Cache-Control: no-cache, no-store, max-age=0, must-revalidate",
+            // which would otherwise survive even when TST-043's CachePolicyFilter
+            // is disabled by the cache-headers-absent defect (CachePolicyFilter
+            // overwrites this default when active, but a disabled filter has
+            // nothing to overwrite it with). TST-043 owns Cache-Control on
+            // /catalogue outright, so the blanket security default is disabled here.
+            .headers(headers -> headers.cacheControl(cache -> cache.disable()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/protected/read").hasAnyRole("READER", "WRITER", "ADMIN")
                 .requestMatchers("/protected/write").hasAnyRole("WRITER", "ADMIN")

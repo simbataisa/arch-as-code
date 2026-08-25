@@ -10,9 +10,11 @@ public final class CapabilityRegistry {
         .mapToObj(n -> "TST-0" + n)
         .collect(Collectors.toUnmodifiableSet());
 
-    /** Implemented in Wave 16. Tasks 6-13 each add exactly one ID here. */
+    /** Implemented in Wave 16. Tasks 6-13 each add exactly one ID here.
+     *  TST-043 (Task 13) is the seventh and final entry -- see
+     *  {@code CapabilityRegistryTest#waveSixteenImplementsExactlySevenCapabilities}. */
     public static final Set<String> IMPLEMENTED =
-        Set.of("TST-021", "TST-030", "TST-031", "TST-035", "TST-039", "TST-040");
+        Set.of("TST-021", "TST-030", "TST-031", "TST-035", "TST-039", "TST-040", "TST-043");
 
     private CapabilityRegistry() {}
 
