@@ -42,8 +42,10 @@ down:
 	if [ -n "$$leftover_net" ]; then docker network rm $$leftover_net; fi
 
 # Run the gates — no containers required (traceability gate: Task 3;
-# NFR threshold projection: Task 4).
+# coverage-table freshness gate: Task 24).
 verify:
+	python3 $(ROOT)/scripts/validate-harness-coverage.py
+	python3 $(ROOT)/scripts/render-harness-coverage.py --check
 
 # Run one module against the running SUT: `make run ARCH=TST-021`
 # (bin/run-module.sh lands in Task 16, alongside the first module).
