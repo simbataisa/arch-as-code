@@ -7,11 +7,16 @@ position-keeping invariant — share one archetype, because the test design that
 catches the other. A coverage matrix then maps every catalog row to the archetype(s) that
 verify it, so "is this pattern tested, and how" has one answer instead of one per squad.
 
-This is not a test harness. There is no Maven or Gradle project here, no `package.json`, no
-dependency management, and nothing runs in CI from this folder. Every code fragment —
-JMeter JMX snippets, Karate features, k6 scripts — is a worked example to copy into the QE
-team's own harness repository, not a runnable artefact maintained here. This repository
-stays documentation-only, matching every other category in `knowledge-base/`.
+This directory is not a test harness. There is no Maven or Gradle project here, no
+`package.json`, no dependency management, and nothing runs in CI from this folder — this
+repository stays documentation-only, matching every other category in `knowledge-base/`.
+That distinction is about this corpus, not about testing generally: a runnable counterpart
+now exists in this same repository, at [`qe-harness/`](../../qe-harness/) (catalog ID
+`TST-016`) — a reference SUT plus a four-toolchain harness (JMeter, Gatling+Karate, Locust,
+k6) implementing 7 of the 24 documented test archetypes as real, executable modules with
+real evidence. Every code fragment here — JMeter JMX snippets, Karate features, k6 scripts —
+remains a worked example to copy into a harness, `qe-harness/` or a squad's own, not a
+runnable artefact maintained in this folder.
 
 ## How to Use This Corpus
 
