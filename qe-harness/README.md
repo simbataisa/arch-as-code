@@ -56,15 +56,17 @@ this table.
 | Java (compiler release) | 21 (`maven.compiler.release`, pinned regardless of installed JDK) | `qe-harness/harness/pom.xml` |
 | Spring Boot | 3.5.16 (`org.springframework.boot:spring-boot-starter-parent`, latest 3.x GA — pinned to the 3.x line over newer 4.x for its long, unambiguous compatibility record with Resilience4j, Testcontainers, springdoc-openapi, Flyway, and Spring Security resource-server, all needed by later tasks) | `qe-harness/reference-sut/pom.xml` (Task 5) |
 | Apache JMeter | 5.6.2 engine (`org.apache.jmeter:ApacheJMeter`) via `jmeter-maven-plugin` 3.8.0's own default (`com.lazerycode.jmeter:jmeter-maven-plugin`) — confirmed against the actually-resolved artifacts in `~/.m2`, not the plugin's own docs, which reference 5.6.3 | `qe-harness/harness/jmeter/pom.xml` (Task 16) |
-| Gatling | 3.15.1 engine (`io.gatling.highcharts:gatling-charts-highcharts`) via `gatling-maven-plugin` 4.21.11 (`io.gatling:gatling-maven-plugin`) — re-checked on 2026-09-01: Maven Central's `<release>`/`<latest>` for `io.gatling:gatling-maven-plugin` is now `4.21.11` (`4.21.10` was current at Task 1's original resolution but a newer patch shipped since); the 3.15.1 engine version itself is still current. `karate-gatling:1.4.1` (below) transitively declares an older `3.9.5`, explicitly excluded and overridden to this pinned 3.15.1 in `gatling-karate/pom.xml` — the `karateFeature`/`KarateProtocol` integration surface this module calls is unchanged across that span, confirmed empirically by this module's own tests passing against 3.15.1. | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
-| Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) — re-checked on 2026-09-01: still Maven Central's `<release>`/`<latest>` for both artifacts. See "Running the gatling-karate module's tests" below for a real JDK-version constraint this pairing has on the forked test JVM. | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
+| Gatling | **3.9.5** engine (`io.gatling.highcharts:gatling-charts-highcharts`), NOT the true latest release (`3.15.1`, re-checked on 2026-09-01 as still Maven Central's `<release>`/`<latest>`) — `karate-gatling:1.4.1` (below) is genuinely BINARY-INCOMPATIBLE with 3.15.1 (confirmed empirically, not merely a dependency-mediation issue: `ProtocolComponentsRegistry.components`'s erased return type changed between the two engine releases, so karate-gatling 1.4.1's compiled bytecode throws `NoSuchMethodError` at the first real Gatling run against 3.15.1, even after fixing a separate, real netty-version-mediation issue along the way — see "Known Issues" below for the full story). 3.9.5 is karate-gatling 1.4.1's own originally-tested transitive default, and is the newest version confirmed by an actual successful load run (`OK=2 KO=0` against the reference SUT, including correctly detecting the `schema-drift` defect). Run via `gatling-maven-plugin` **4.21.11** (`io.gatling:gatling-maven-plugin`) — re-checked on 2026-09-01: Maven Central's `<release>`/`<latest>` (`4.21.10` was current at Task 1's original resolution but a newer patch shipped since); the plugin version is decoupled from the engine version in Gatling's own numbering and 4.21.11 drives the 3.9.5 engine successfully. | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
+| Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) — re-checked on 2026-09-01: still Maven Central's `<release>`/`<latest>` for both artifacts. See "Known Issues" below for a real JDK-version constraint this pairing has on the forked test JVM, and for karate-gatling 1.4.1's own binary-incompatibility ceiling on the Gatling engine version. | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
 | Testcontainers | 1.21.4 (`org.testcontainers:junit-jupiter`, `org.testcontainers:postgresql`) — resolved from `maven-metadata.xml` on 2026-08-25. The true latest on Maven Central is `2.0.5`, but that major renamed its module artifacts (`org.testcontainers:testcontainers-postgresql`, `org.testcontainers:testcontainers-junit-jupiter`) and was not evaluated for compatibility with the pinned Spring Boot 3.5.16 line. 1.21.4 is the newest version on the old artifact coordinates and is also the exact version Spring Boot 3.5.16's own `spring-boot-dependencies` BOM manages (`testcontainers.version`), so no explicit `<version>` is set in the reference SUT's POM — it comes transitively from the parent, the same pattern already used for `spring-boot-starter-web`/`-test`. | `qe-harness/reference-sut/pom.xml` (Task 6) |
 | JJWT | 0.13.0 (`io.jsonwebtoken:jjwt-api`/`-impl`/`-jackson`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by Spring Boot's `spring-boot-dependencies` BOM (unlike `spring-boot-starter-security`, which needs no explicit version), so all three artifacts pin this version explicitly, the same pattern already used for `org.postgresql:postgresql`. | `qe-harness/reference-sut/pom.xml` (Task 9) |
 | springdoc-openapi | 2.9.0 (`org.springdoc:springdoc-openapi-starter-webmvc-api`) — resolved from `maven-metadata.xml` on 2026-08-25 as the newest release on the 2.x line; the true latest, `3.1.0`, targets Spring Boot 4 and was not evaluated against this repo's pinned 3.5.16. Not managed by the `spring-boot-dependencies` BOM, so pinned explicitly, same pattern as JJWT. | `qe-harness/reference-sut/pom.xml` (Task 10) |
 | json-schema-validator | 1.5.9 (`com.networknt:json-schema-validator`, test scope), NOT the true latest release (`3.0.7`, resolved from `maven-metadata.xml` on 2026-08-25) — `2.0.0` replaced the `JsonSchemaFactory`/`JsonSchema`/`ValidationMessage` API `SchemaCompatibilityTest` needs with an incompatible `Schema`/`Error`-based rewrite (confirmed directly: neither the `3.0.7` nor the `2.0.7` jar contains any of those four classes). `1.5.9` is the newest release still on the 1.x line, and the newest release that actually has the API this test code calls. | `qe-harness/reference-sut/pom.xml` (Task 10) |
 | resilience4j | 2.4.0 (`io.github.resilience4j:resilience4j-spring-boot3`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by the `spring-boot-dependencies` BOM, so pinned explicitly, same pattern as JJWT/springdoc. Pulls in `resilience4j-spring6` (the `@CircuitBreaker` annotation + Spring Boot config binding) transitively at the same version. `spring-boot-starter-aop` (needed for the AOP proxy the annotation is woven through) IS managed by the BOM (verified via `mvn -N help:effective-pom`: `3.5.16`), so it carries no explicit version. | `qe-harness/reference-sut/pom.xml` (Task 11) |
 
-### Running the gatling-karate module's tests
+## Known Issues
+
+### gatling-karate (TST-030): Karate 1.4.1's `Suite#run` hangs forever on JDK 25
 
 `mvn -pl gatling-karate test` (Task 20, TST-030) hangs **indefinitely, with no error and no
 CPU use**, when the JDK actually forking the Surefire test JVM is as new as JDK 25 — confirmed
@@ -87,10 +89,58 @@ module's own escape-hatch property (see `qe.gatlingKarate.javaRuntime` in
 
     mvn -pl gatling-karate test "-Dqe.gatlingKarate.javaRuntime=$(/usr/libexec/java_home -v 21)/bin/java"
 
-Both `Tst030ContractRunner`'s two proof tests pass cleanly (`Tests run: 3, Failures: 0, Errors: 0`
-— the brief's two given tests plus one added clean-SUT baseline; see the module's own README)
-under JDK 21; neither the reference SUT nor the harness code itself is JDK-25-incompatible, only
-Karate 1.4.1's own `Suite#run` on the JVM actually running the test.
+Both `Tst030ContractRunner`'s three tests pass cleanly (`Tests run: 3, Failures: 0, Errors: 0`
+— the brief's two given proof tests plus one added clean-SUT baseline; see the module's own
+README) under JDK 21; neither the reference SUT nor the harness code itself is
+JDK-25-incompatible, only Karate 1.4.1's own `Suite#run` on the JVM actually running the test.
+`bin/run-gatling-karate.sh` resolves this automatically (same `/usr/libexec/java_home -v
+21`/`17` fallback `bin/run-jmeter.sh` uses for its own, unrelated JDK constraint), so
+`./bin/run-module.sh TST-030` needs no manual `JAVA_HOME` juggling.
+
+### gatling-karate (TST-030): karate-gatling 1.4.1 is binary-incompatible with Gatling 3.15.1
+
+Running the actual Gatling load run (`mvn -pl gatling-karate
+io.gatling:gatling-maven-plugin:4.21.11:test
+-Dgatling.simulationClass=...Tst030Simulation`) surfaced two *separate* problems, only the
+first of which a dependency-management fix can paper over:
+
+1. **A real netty-version-mediation conflict** (now fixed, kept fixed even though it stopped
+   being strictly necessary once the engine itself was downgraded — see below — because it is
+   good hygiene regardless): `karate-junit5`'s transitive `com.linecorp.armeria:armeria`
+   pulls `io.netty:netty-transport:4.1.96.Final`, which Maven's nearest-wins mediation
+   resolves ahead of Gatling's own `4.2.14.Final`, while several *other* netty-* artifacts
+   resolve to `4.2.14.Final` — a genuinely incompatible mixed-version classpath. At runtime
+   this produced `NoClassDefFoundError: io/netty/channel/IoOps` inside
+   `io.gatling.netty.util.Transports`'s static initializer (`IoOps` exists only in the 4.2.x
+   netty-transport jar). **This is the true root cause** — an earlier version of this
+   writeup incorrectly blamed suppressed `netty_tcnative` native-library warnings logged just
+   before that error (real, but non-fatal noise from an unrelated native-SSL fallback path,
+   not OS/arch-specific as first assumed).
+2. **A genuine binary incompatibility between karate-gatling 1.4.1 and Gatling 3.15.1**,
+   confirmed only after fixing (1): the run still crashed with `NoSuchMethodError:
+   'java.lang.Object io.gatling.core.protocol.ProtocolComponentsRegistry.components(...)'`
+   inside `com.intuit.karate.gatling.KarateFeatureActionBuilder.build`. Gatling's own
+   (internal, non-DSL) `ProtocolComponentsRegistry.components` method's erased return type
+   changed between whatever engine version karate-gatling 1.4.1 was built against
+   (~3.9.x-4.3.x, per its own reference POM, last published ~2023) and 3.15.1 — karate-gatling
+   1.4.1's compiled bytecode still calls the old erasure, and no newer karate-gatling release
+   exists on Maven Central to fix this from the other side.
+
+**Resolution:** `gatling-karate/pom.xml` pins the Gatling engine
+(`io.gatling.highcharts:gatling-charts-highcharts`) to **3.9.5** — karate-gatling 1.4.1's own
+originally-tested pairing — rather than the newer 3.15.1 (see the Pinned Versions table
+above). Confirmed by an actual successful load run: both scenarios execute against the real
+reference SUT (`POST /v1` and `/v2/transfers`, `OK=2 KO=0`), and with the `schema-drift`
+defect active beforehand, the v2 scenario correctly reports `KO` while v1 stays `OK` — the
+same defect proof the Karate side demonstrates, now demonstrated on the Gatling side too, with
+an `oracle: contract-schema` evidence fragment emitted either way. `gatling-maven-plugin`
+itself stays at the newer 4.21.11 (see the Pinned Versions table): the plugin and engine
+versions are decoupled in Gatling's own numbering, and 4.21.11 drives the 3.9.5 engine
+successfully.
+
+If a future task needs the newer 3.15.1 engine for gatling-karate specifically, check Maven
+Central for a `karate-gatling` release newer than 1.4.1 first — bumping the engine alone
+without one will reproduce this exact `NoSuchMethodError`.
 
 ### Running the Testcontainers-backed tests on a non-Docker-Desktop engine
 

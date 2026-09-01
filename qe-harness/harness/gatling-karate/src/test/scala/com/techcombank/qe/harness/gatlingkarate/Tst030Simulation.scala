@@ -28,14 +28,20 @@ import java.util.concurrent.atomic.AtomicInteger
  *     "-Dgatling.simulationClass=com.techcombank.qe.harness.gatlingkarate.Tst030Simulation"
  * }}}
  *
- * KNOWN ISSUE (see gatling-karate/pom.xml's own longer note beside the
- * gatling-maven-plugin declaration): on this task's dev environment
- * (macOS/aarch64, JDK 21) that command fails with a netty
- * NoClassDefFoundError before any scenario runs -- a forked-classpath /
- * native-library issue, not a bug in this class. This class's own
- * karateFeature(...) call and compilation are independently verified by
- * Tst030ContractRunner#sameFeatureDrivesTheGatlingSimulation and by
- * `mvn -pl gatling-karate test-compile` succeeding.
+ * Verified actually completing end-to-end (JDK 21): both scenarios run
+ * against the real reference SUT (POST /v1 and /v2/transfers, OK=2 KO=0),
+ * and with the `schema-drift` defect active beforehand (`POST
+ * /_test/defect/schema-drift`), the v2 scenario correctly reports KO while
+ * v1 stays OK -- the same defect proof
+ * Tst030ContractRunner#featureFailsAgainstTheSchemaDriftDefect demonstrates
+ * on the Karate side. Getting there required pinning the Gatling engine
+ * (gatling-charts-highcharts, this module's pom.xml) to 3.9.5 rather than
+ * the newer 3.15.1: karate-gatling 1.4.1 is genuinely BINARY-INCOMPATIBLE
+ * with 3.15.1 (a NoSuchMethodError in Gatling's own internal
+ * ProtocolComponentsRegistry.components, not fixable via a dependency
+ * exclusion or version override) -- see gatling-karate/pom.xml's own long
+ * comment beside the karate-gatling dependency, and
+ * qe-harness/README.md's "Known Issues" section, for the full writeup.
  */
 class Tst030Simulation extends Simulation {
 
