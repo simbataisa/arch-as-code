@@ -1,0 +1,18 @@
+[project]
+name = "qe-harness-locust"
+version = "1.0.0"
+description = "TST-039 Data Quality Reconciliation harness module (Locust) -- Wave 16 Task 21"
+requires-python = ">=3.11"
+
+# Pinned in requirements.txt, not here -- see qe-harness/README.md's "Pinned
+# Versions" table for how/when each version was resolved (mirrors the
+# `<version>` pins in harness/*/pom.xml for the JVM modules).
+
+[tool.pytest.ini_options]
+# Adds this directory (qe-harness/harness/locust) to sys.path so
+# `from emitter import emit_fragment` and `from tst_039_recon.recompute import
+# score_dimensions` both resolve regardless of the caller's own cwd -- same
+# reason harness/jmeter/pom.xml's Surefire config needs no equivalent (Maven
+# always resolves classpath entries from the reactor, not cwd).
+pythonpath = ["."]
+testpaths = ["tests"]
