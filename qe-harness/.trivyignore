@@ -1,0 +1,28 @@
+# DevSecOps sign-off on qe-harness/'s dependency-tree license surface
+# (see .bmad/handoff-log.md, 2026-09-02, devsecops-engineer row).
+# Trivy `license` findings allowlisted below by license ID, not by CVE:
+# each entry is scoped to the exact HIGH/restricted findings the reviewer
+# flagged on reference-sut/pom.xml's dependency tree. Loaded via
+# harness:scan's `--ignorefile qe-harness/.trivyignore` flag in
+# .gitlab-ci.yml (Trivy 0.74.0's `fs` command resolves the default
+# ".trivyignore" relative to the invocation's working directory, not the
+# scanned target directory -- confirmed empirically against this checkout;
+# the flag is required for a file living under qe-harness/ to be honored
+# when the job invokes `trivy fs ... qe-harness/` from the repo root).
+#
+# ch.qos.logback:logback-classic, ch.qos.logback:logback-core
+# LGPL-2.1-only is Spring Boot's own default logging backend -- every
+# Spring Boot application carries this dependency transitively via
+# spring-boot-starter. LGPL's dynamic-linking permission is the standard,
+# accepted basis for depending on an LGPL library from a differently
+# licensed (here proprietary-internal) codebase without inheriting its
+# copyleft obligations.
+LGPL-2.1-only
+
+# jakarta.annotation:jakarta.annotation-api
+# GPL-2.0-with-classpath-exception is specifically designed by its own
+# license text to permit linking without imposing GPL obligations on the
+# consumer -- the canonical, industry-standard reason every Jakarta/
+# GlassFish-licensed API is treated as safe to depend on from a
+# proprietary or differently-licensed codebase.
+GPL-2.0-with-classpath-exception

@@ -25,12 +25,12 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.15.2</version>
+      <version>2.21.4</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-jsr310</artifactId>
-      <version>2.15.2</version>
+      <version>2.21.4</version>
     </dependency>
 
     <!-- YAML parsing for ThresholdResolver: reads profiles/_nfr-thresholds.yml. -->

@@ -250,7 +250,13 @@ harness:scan:
   image: aquasec/trivy:0.74.0
   script:
     - echo "🔍 Scanning qe-harness dependency trees for CVEs and licence issues..."
-    - trivy fs --scanners vuln,license --severity CRITICAL,HIGH --exit-code 1 qe-harness/
+    # --ignorefile: Trivy 0.74.0's fs command resolves the default
+    # ".trivyignore" relative to this job's working directory (repo root),
+    # not the scanned qe-harness/ target -- confirmed empirically -- so it
+    # must be pointed at explicitly for qe-harness/.trivyignore's allowlisted
+    # license findings (devsecops-engineer sign-off, see handoff-log.md) to
+    # be honored.
+    - trivy fs --scanners vuln,license --severity CRITICAL,HIGH --exit-code 1 --ignorefile qe-harness/.trivyignore qe-harness/
     - echo "✅ No CRITICAL/HIGH vulnerabilities or licence issues found"
   allow_failure: false
 

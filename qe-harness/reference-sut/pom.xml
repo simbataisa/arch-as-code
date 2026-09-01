@@ -115,9 +115,16 @@
       <artifactId>flyway-database-postgresql</artifactId>
     </dependency>
 
+    <!-- Explicit version override: Boot 3.5.16's spring-boot-dependencies BOM
+         manages this to 42.7.11, vulnerable to CVE-2026-54291 (silent SCRAM
+         channel-binding downgrade, fixed in 42.7.12). Pinned to 42.7.13 (the
+         current release, per pgJDBC's own changelog) to match the same
+         coordinate's version already used by qe-harness-jmeter's
+         testPlanLibraries block. -->
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
+      <version>42.7.13</version>
       <scope>runtime</scope>
     </dependency>
 
