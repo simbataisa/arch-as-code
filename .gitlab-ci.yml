@@ -354,6 +354,7 @@ harness:run:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates nodejs npm python3 python3-pip python3-venv make
     - curl -fsSL https://get.docker.com | sh
     - curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" | tar -xz --strip-components 1 -C /usr/local/bin "k6-v${K6_VERSION}-linux-amd64/k6"
+    - python3 -m venv /tmp/qe-verify-venv && /tmp/qe-verify-venv/bin/pip install --quiet -r scripts/requirements.txt
   script:
     - echo "🚀 Running qe-harness smoke suite (run-all + run-defects)..."
     - cd qe-harness
@@ -361,6 +362,13 @@ harness:run:
     - make up PROFILES="core resilience"
     - make run-all
     - make run-defects
+    # final-review N2: harness:verify and harness:run are same-stage with no
+    # `needs:` (all four jobs run independently), so harness:verify's check 7
+    # never sees the fragments this job just wrote -- it only ever validates
+    # the 5 committed TST-043 fixtures. Re-run the schema-validation gate
+    # here, against this run's real, freshly-emitted evidence, so success
+    # criterion 12.5 is actually enforced in CI, not just demonstrable locally.
+    - /tmp/qe-verify-venv/bin/python3 ../scripts/validate-harness-coverage.py
     - echo "✅ qe-harness smoke suite complete"
   after_script:
     - cd qe-harness && make down || true

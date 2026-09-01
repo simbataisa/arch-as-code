@@ -54,6 +54,14 @@ Thumbs.db
 # per git's usual rule -- NOT re-prefixed with "qe-harness/".
 traceability/runs/*.json
 
+# run-jmeter.sh/run-locust.sh/run-gatling-karate.sh (final-review I2) each
+# write a `.fragment-sentinel.*` marker inside this directory to bound their
+# fragment lookup, removed via an EXIT trap -- but a hard kill (SIGKILL, a CI
+# job timeout escalating past SIGTERM) skips the trap and leaves it behind.
+# Harmless to every consumer (all of them filter by archetype suffix or glob
+# `*.json`), but still an untracked leftover this rule should catch too.
+traceability/runs/.fragment-sentinel.*
+
 # test_acceptance_criteria.yml is likewise fully regenerated (by
 # bin/merge-fragments.py, from the runs/ fragments above) -- generated
 # output, not a committed artifact. Not preserved by CI's `artifacts:`
