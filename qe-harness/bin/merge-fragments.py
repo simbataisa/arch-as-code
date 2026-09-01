@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
 """merge-fragments.py -- merges evidence fragments under traceability/runs/
-into the single `test_acceptance_criteria` block that TST-001 (the Test
+into a `test_acceptance_criteria` block, keyed by `service_name`.
+
+Scope note: this is a SCOPED SUBSET of the full contract TST-001 (the Test
 Strategy Standard, knowledge-base/testing/strategy/test-strategy-standard.md)
-defines, keyed by `service_name`.
+defines, not the whole thing -- Task 23's own brief narrows the requirement
+to exactly three things: `archetypes`, per-archetype `coverage`, and an
+explicit threshold-evaluation count. The real TST-001 contract additionally
+calls for `tier`, `catalog_refs`, `slo_source`, `functional.
+negative_paths_covered`, `performance.profiles_executed`/`sustained_rps`/
+`peak_rps`/`workload_model`, `resilience.fault_scenarios`, `contract.*`,
+`security.*`, `data_quality.*`, and `evidence.signed_off_by`, none of which
+this script populates (`tier` is the one exception -- see build_block()).
+Filling in the rest is out of this task's scope; do not read this docstring
+as a claim that the output below is a complete `test_acceptance_criteria`
+block.
 
 Selection rule: for each archetype, only the MOST RECENTLY WRITTEN fragment
 counts. `traceability/runs/` accumulates one file per invocation across the
@@ -12,7 +24,11 @@ archetype's CURRENT evidence is whichever fragment for it was written last,
 not the union of everything ever recorded for it. This mirrors the
 convention Tasks 16-19's `ModuleRunner` test fixture already uses for its
 own assertions: "the newest file under traceability/runs/ matching
-*-<archetype>.json".
+*-<archetype>.json". Ties (equal mtime -- coarse filesystem mtime
+resolution is a real risk on some Docker-Desktop bind-mount configurations,
+and Task 27's CI will run `make run-all` repeatedly) resolve to whichever
+fragment was iterated LAST, i.e. the one with the lexicographically later
+filename -- see latest_per_archetype()'s `>=` comparison.
 
 The highest-severity risk this script guards against (per the Task 23
 brief): a merge that silently drops a `not-evaluated` threshold would make a
@@ -71,11 +87,20 @@ def load_fragments(runs_dir: pathlib.Path) -> list[dict]:
 def latest_per_archetype(fragments: list[dict]) -> dict[str, dict]:
     """Collapse fragments to (at most) one per archetype: whichever has the
     latest mtime wins, so a stale fragment from an earlier defect-injection
-    or smoke-mode dev run never outranks the current run's evidence."""
+    or smoke-mode dev run never outranks the current run's evidence.
+
+    `fragments` is iterated in the order load_fragments() produced it --
+    `sorted(runs_dir.glob(...))`, i.e. chronological by filename. On an
+    EXACT mtime tie (coarse filesystem mtime resolution can genuinely
+    produce this -- confirmed by direct reproduction, not just theory), `>=`
+    rather than strict `>` makes the later-iterated (truly more recent,
+    per its own filename) fragment win instead of the earlier one. A
+    strict `>` here would let a stale fragment silently outrank the real
+    latest one whenever two runs happen to land on the same mtime."""
     latest: dict[str, dict] = {}
     for frag in fragments:
         arch = frag["archetype"]
-        if arch not in latest or frag["_mtime"] > latest[arch]["_mtime"]:
+        if arch not in latest or frag["_mtime"] >= latest[arch]["_mtime"]:
             latest[arch] = frag
     return latest
 
@@ -90,6 +115,18 @@ def group_by_service(fragments_by_archetype: dict[str, dict]) -> dict[str, list[
 def build_block(service_name: str, frags: list[dict], modules: dict) -> dict:
     frags = sorted(frags, key=lambda f: f["archetype"])
     archetypes = [f["archetype"] for f in frags]
+
+    # TST-001 also declares `tier` on the block itself (must equal the
+    # service's nfr_acceptance_criteria.tier). Every fragment already
+    # carries its own `tier` (evidence.schema.json requires it) but
+    # build_block() never surfaced it -- a real, if partial, step toward
+    # actual TST-001 fidelity. If a service's fragments ever disagree on
+    # tier, record the disagreement explicitly rather than picking one
+    # arbitrarily (not expected in this harness -- one service, one tier --
+    # but this script must never paper over the archetypes actually
+    # disagreeing if that assumption ever breaks).
+    tiers = sorted({f["tier"] for f in frags})
+    tier = tiers[0] if len(tiers) == 1 else tiers
 
     # coverage per archetype comes from modules.yml, NEVER from the
     # fragment's own `result` -- a module can report result: passed while
@@ -143,6 +180,7 @@ def build_block(service_name: str, frags: list[dict], modules: dict) -> dict:
 
     return {
         "service_name": service_name,
+        "tier": tier,
         "archetypes": archetypes,
         "coverage": coverage,
         "functional": {

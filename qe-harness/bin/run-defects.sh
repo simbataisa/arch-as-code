@@ -36,9 +36,17 @@ QE_HARNESS_ROOT="$(dirname "$SCRIPT_DIR")"                    # qe-harness
 cd "$QE_HARNESS_ROOT"
 
 clear_defect() {
-    # Best-effort: cleanup must never itself abort the script, and must
-    # never mask an already-recorded proof failure with a cleanup failure.
-    curl -fsS -X DELETE "$SUT_URL/_test/defect" -o /dev/null 2>/dev/null || true
+    # Best-effort: cleanup must never itself abort the script (still `|| true`
+    # at the end), and must never mask an already-recorded proof failure with
+    # a cleanup failure. But best-effort must not mean silent: if DELETE
+    # itself genuinely fails (SUT temporarily unreachable, a network blip),
+    # that is exactly the "defect leaks into the next module" scenario this
+    # whole mechanism exists to prevent -- make it observable instead of a
+    # quiet no-op.
+    if ! curl -fsS -X DELETE "$SUT_URL/_test/defect" -o /dev/null 2>/dev/null; then
+        echo "WARNING: clear_defect failed -- DELETE /_test/defect did not succeed; a defect may still be active on the SUT" >&2
+    fi
+    true
 }
 trap clear_defect EXIT
 
