@@ -1,5 +1,6 @@
 package com.techcombank.qe.sut.capability.authz;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,9 +31,18 @@ import java.util.Map;
  * door, scoped narrowly to exactly the one capability the sweep needs (mint
  * an otherwise-valid, already-expired token) rather than exposing the
  * signing key or a general-purpose token-minting override.
+ *
+ * <p>{@code @Profile("!prod")} -- see {@link com.techcombank.qe.sut.DefectController}'s
+ * Javadoc for why: unauthenticated by design, a no-op restriction in every
+ * environment this harness runs in today, and a real guard the moment a
+ * copy of this reference implementation deploys with {@code prod} active.
+ * This one is the sharpest instance of the risk this annotation exists to
+ * cut off: an unauthenticated endpoint that mints a signed, valid token for
+ * ANY role, including {@code admin}.
  */
 @RestController
 @RequestMapping("/_test/token")
+@Profile("!prod")
 public class TokenExpiryTestController {
 
     private final JwtService jwtService;

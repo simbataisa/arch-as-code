@@ -30,6 +30,32 @@ Thumbs.db
 # Ad-hoc log output from local `make` runs
 *.log
 
-# NOTE: qe-harness/traceability/runs/ is intentionally NOT ignored — evidence
-# fragments written there are committed artifacts consumed by the traceability
-# gate (Task 3) and the coverage merge (later tasks).
+# Evidence-fragment retention policy (final-review I2/M8, resolved as part of
+# the fragment-retention cleanup): traceability/runs/*.json is generated,
+# per-run output -- every real module run (via bin/run-*.sh or ModuleRunner)
+# writes a fresh <ISO-instant>-<archetype>.json fragment there, and letting
+# every run-ever fragment accumulate untracked (194+ and growing across this
+# wave's development) is what made I2's stale-fragment false-pass reachable
+# in the first place: a fragment lookup that resolves "newest file in the
+# directory" has a much larger blast radius when the directory never stops
+# growing. Gitignoring the directory removes that exposure at its root
+# rather than only patching the symptom (I2's fix bounds the lookup by
+# run-start time; this removes the accumulation that made the bound
+# necessary to begin with).
+#
+# git does NOT retroactively untrack a file just because it is later added to
+# .gitignore, so this does not touch the 5 fragments already committed here
+# (all TST-043, added as named fixtures/examples before this policy) -- they
+# stay committed and tracked exactly as they are. Going forward, no new
+# fragment should be added to git; they are ephemeral evidence output, not
+# committed artifacts.
+#
+# Paths below are relative to this .gitignore's own directory (qe-harness/),
+# per git's usual rule -- NOT re-prefixed with "qe-harness/".
+traceability/runs/*.json
+
+# test_acceptance_criteria.yml is likewise fully regenerated (by
+# bin/merge-fragments.py, from the runs/ fragments above) -- generated
+# output, not a committed artifact. Not preserved by CI's `artifacts:`
+# block either (final-review M8).
+traceability/test_acceptance_criteria.yml

@@ -12,6 +12,31 @@ have nothing to run. This directory is the runnable counterpart: a synthetic ref
 and seven harness modules, one per archetype family, each in the tool
 [TST-010](../knowledge-base/testing/tooling/tool-selection-matrix.md) names as its best fit.
 
+## Copying This Reference Implementation Into a Real Service
+
+This SUT exposes unauthenticated test-control endpoints: `POST /_test/defect/{flag}` and
+`DELETE /_test/defect` (`DefectController`), `POST /_test/token/expired` (`TokenExpiryTestController`
+— mints a signed token for **any** role, including `admin`), `POST /_test/reset/ratelimit`
+(`RateLimitResetController`), and `POST /auth/token` (`TokenController` — also mints a token for
+any role, with no credential check at all). `SecurityConfig` permits all of these by design —
+only `/protected/**` is access-controlled — because this SUT's entire purpose is to be
+deliberately test-controllable.
+
+Each of those four controllers is annotated `@Profile("!prod")`: they register in every Spring
+profile **except** one explicitly named `prod`. Today that is a no-op — no environment this
+harness runs in (locally or in `docker-compose.yml`) ever activates a `prod` profile — but it is
+the only mechanical guard these endpoints have. **If you copy `capability/authz/`,
+`DefectController`, or `RateLimitResetController` into a real service, you MUST do one of the
+following**, or you ship an unauthenticated admin-token minter next to a production-shaped Spring
+Security config:
+
+- Delete these controllers entirely, or
+- Ensure `prod` (or your real-environment's equivalent profile) is always active in that
+  deployment, so `@Profile("!prod")` actually excludes them.
+
+A code comment is not an enforcement mechanism; `@Profile("!prod")` is the enforcement mechanism,
+and it only works if a real deployment actually activates a profile it excludes.
+
 ## Quick Start
 
     make up          # start the SUT and the infrastructure its modules need

@@ -1,5 +1,6 @@
 package com.techcombank.qe.sut.capability.ratelimit;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,9 +32,15 @@ import org.springframework.web.bind.annotation.RestController;
  * otherwise-clean run, because the bucket's state (and therefore how much
  * burst was available to spend during the warm-up window) depended on
  * whatever the previous run left behind.
+ *
+ * <p>{@code @Profile("!prod")} -- see {@link com.techcombank.qe.sut.DefectController}'s
+ * Javadoc for why: unauthenticated by design, a no-op restriction in every
+ * environment this harness runs in today, and a real guard the moment a
+ * copy of this reference implementation deploys with {@code prod} active.
  */
 @RestController
 @RequestMapping("/_test/reset")
+@Profile("!prod")
 public class RateLimitResetController {
 
     private final RateLimitFilter rateLimitFilter;

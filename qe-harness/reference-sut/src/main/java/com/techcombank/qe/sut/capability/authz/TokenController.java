@@ -3,6 +3,7 @@ package com.techcombank.qe.sut.capability.authz;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jws;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,9 +19,25 @@ import java.util.Map;
  * {@link JwtAuthenticationFilter} against {@link ProtectedController}'s
  * endpoints -- this controller only manages the tokens those endpoints
  * consume.
+ *
+ * <p>{@code @Profile("!prod")}: {@link #issue} mints a signed, valid token
+ * for whatever role the caller names -- including {@code admin} -- with no
+ * credential check at all, which is the same unauthenticated-admin-minting
+ * risk {@link TokenExpiryTestController} carries. That is deliberate for a
+ * SUT whose entire purpose is to be exercised against every role on demand,
+ * but it is not a shape a real production auth service should have, so this
+ * whole controller (including {@code /auth/refresh} and {@code /auth/revoke},
+ * which only operate on tokens {@link #issue} already handed out) is
+ * registered in every profile except one explicitly named {@code prod} --
+ * a no-op today (no profile named {@code prod} is ever active anywhere this
+ * harness runs; see {@code docker-compose.yml}), and a real guard the moment
+ * a copy of this reference implementation deploys with {@code prod} active.
+ * See the "Copying this reference implementation" section of
+ * {@code qe-harness/README.md}.
  */
 @RestController
 @RequestMapping("/auth")
+@Profile("!prod")
 public class TokenController {
 
     private final JwtService jwtService;

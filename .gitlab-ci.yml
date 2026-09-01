@@ -204,9 +204,18 @@ validate:yaml:
 # ============================================================
 #
 # qe-harness/ is the repo's first third-party dependency tree (Maven, npm,
-# pip) and the first jobs needing real Docker. All four jobs share the
-# same MR-diff/schedule gate below, so a Markdown-only MR never pays for
-# any of them and no bare `**/*.md`/`*.md` pattern is ever matched here.
+# pip) and the first jobs needing real Docker. GitLab's `changes:` has no
+# negation operator, so the four jobs use TWO separate rule anchors rather
+# than one shared one:
+#   - .qe-harness-rules (broad qe-harness/**/*) gates harness:verify only.
+#     It is cheap (no containers) and it is fine for it to also catch
+#     doc/coverage-adjacent Markdown changes.
+#   - .qe-harness-code-rules (narrow, code/dependency/runtime-config paths
+#     only) gates harness:build, harness:scan, and harness:run. It excludes
+#     Markdown (and other non-functional files) so a Markdown-only MR never
+#     pays for the docker-in-docker / Maven+npm+pip toolchain cost those
+#     three jobs carry.
+# Both anchors still fire unconditionally on scheduled pipelines.
 
 .qe-harness-rules: &qe-harness-rules
   rules:
@@ -220,12 +229,61 @@ validate:yaml:
       when: always
     - when: never
 
+# Code, dependency-manifest, and runtime-config paths only -- deliberately
+# excludes qe-harness/**/*.md (the main README plus eight module READMEs)
+# and generated/evidence output (traceability/runs/*.json fragments,
+# traceability/test_acceptance_criteria.yml, traceability/harness-coverage.md)
+# so those never trigger build/scan/run. Includes the YAML/JSON files the
+# harness's own scripts read AT RUNTIME (profiles/**/*.yml incl.
+# _nfr-thresholds.yml, traceability/modules.yml, the SUT's application.yml,
+# its JSON contract schemas, toxiproxy's proxies.json, the downstream-stub's
+# quote.json fixture) since a change to any of those can change what these
+# three jobs would observe or need to re-verify, not just what they compile.
+.qe-harness-code-rules: &qe-harness-code-rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - qe-harness/**/*.java
+        - qe-harness/**/*.scala
+        - qe-harness/**/*.groovy
+        - qe-harness/**/*.py
+        - qe-harness/**/*.js
+        - qe-harness/**/*.sh
+        - qe-harness/**/*.jmx
+        - qe-harness/**/*.feature
+        - qe-harness/**/*.csv
+        - qe-harness/**/*.sql
+        - qe-harness/**/*.properties
+        - qe-harness/**/*.conf
+        - qe-harness/**/pom.xml
+        - qe-harness/**/package.json
+        - qe-harness/**/package-lock.json
+        - qe-harness/**/requirements.txt
+        - qe-harness/**/pyproject.toml
+        - qe-harness/**/Dockerfile
+        - qe-harness/docker-compose.yml
+        - qe-harness/Makefile
+        - qe-harness/.trivyignore
+        - qe-harness/profiles/**/*.yml
+        - qe-harness/traceability/modules.yml
+        - qe-harness/reference-sut/src/main/resources/application.yml
+        - qe-harness/reference-sut/src/main/resources/contracts/*.schema.json
+        - qe-harness/traceability/evidence.schema.json
+        - qe-harness/toxiproxy/proxies.json
+        - qe-harness/downstream-stub/quote.json
+        - scripts/validate-harness-coverage.py
+        - scripts/render-harness-coverage.py
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: never
+
 # Fail-fast compile/dependency-resolution across all three toolchains
 # (Maven, npm, pip) so a broken build never wastes time in the slower
 # scan/run jobs. No containers needed; runs alongside harness:verify.
 harness:build:
   stage: qe-harness
-  <<: *qe-harness-rules
+  <<: *qe-harness-code-rules
   image: maven:3.9-eclipse-temurin-21
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends nodejs npm python3-pip python3-venv
@@ -246,7 +304,7 @@ harness:build:
 # first third-party dependency tree.
 harness:scan:
   stage: qe-harness
-  <<: *qe-harness-rules
+  <<: *qe-harness-code-rules
   image: aquasec/trivy:0.74.0
   script:
     - echo "🔍 Scanning qe-harness dependency trees for CVEs and licence issues..."
@@ -284,7 +342,7 @@ harness:verify:
 # failure never leaks the SUT stack.
 harness:run:
   stage: qe-harness
-  <<: *qe-harness-rules
+  <<: *qe-harness-code-rules
   image: maven:3.9-eclipse-temurin-21
   services:
     - docker:24-dind
