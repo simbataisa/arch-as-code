@@ -130,6 +130,18 @@ export function handleSummary(data) {
     ],
   };
 
+  // run-defects.sh exports QE_SUT_DEFECT (the active defect flag) as a
+  // plain process environment variable right before invoking
+  // run-module.sh -- k6 forwards the process environment into __ENV by
+  // default, the same mechanism SUT_BASE_URL/QE_ARCHETYPE/QE_ENVIRONMENT
+  // above already rely on. write-fragment.js (real Node, real ajv) is
+  // where this actually gets validated and threaded into the fragment's
+  // evidence.sut_defect -- see that file's own comment. Only set when
+  // non-empty, so an ordinary clean run never carries this key at all (I4).
+  if (__ENV.QE_SUT_DEFECT) {
+    rawReport.sut_defect = __ENV.QE_SUT_DEFECT;
+  }
+
   const summaryText =
     `TST-043 client-experience budget\n` +
     `  I1 (cache headers):    ${checkResult(data, I1_NAME)}\n` +

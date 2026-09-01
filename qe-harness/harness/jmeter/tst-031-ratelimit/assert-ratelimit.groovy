@@ -70,6 +70,16 @@ for (int i = 0; i < numSteps; i++) {
     maxAdmittedRate = Math.max(maxAdmittedRate, admittedRate)
 }
 
+// run-defects.sh exports QE_SUT_DEFECT (the active defect flag) as a plain
+// process environment variable right before invoking run-module.sh -- same
+// mechanism every other env var this module reads already relies on.
+// Blank/absent means omitted -- an ordinary clean run must never carry this
+// field (I4).
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
 RunFragment.Entry i1 = InvariantAssertion.check(
     "I1", "Admitted rate never exceeds the configured rate limit",
     { maxAdmittedRate <= configuredLimitRps + measurementToleranceRps } as java.util.function.BooleanSupplier)
@@ -89,6 +99,7 @@ RunFragment.Builder builder = RunFragment.builder()
     .tier("T0")
     .oracle("invariant-assertion")
     .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
     .invariant(i1.id(), i1.description(), i1.result())
     .invariant(i2.id(), i2.description(), i2.result())
     .invariant(i3.id(), i3.description(), i3.result())

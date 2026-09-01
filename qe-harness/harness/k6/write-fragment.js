@@ -85,6 +85,10 @@ try {
     tier: raw.tier,
     oracle: raw.oracle,
     environment: raw.environment,
+    // script.js only sets this when run-defects.sh exported QE_SUT_DEFECT
+    // (see its own comment); emitFragment already omits sut_defect from the
+    // written fragment when it is null/undefined (I4).
+    sut_defect: raw.sut_defect,
     invariants: raw.invariants || [],
     thresholds,
     report_path: reportPath,

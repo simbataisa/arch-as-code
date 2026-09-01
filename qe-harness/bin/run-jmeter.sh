@@ -105,6 +105,21 @@ if [ "$JMETER_JAVA_RUNTIME" = "java" ]; then
          "falling back to 'java' on PATH, which may be too new for JMeter's bundled Groovy" >&2
 fi
 
+# Bound the fragment lookup below to files written no earlier than this
+# sentinel's own mtime, captured immediately before the run starts --
+# `traceability/runs/` accumulates every fragment any module has ever
+# written, so "the newest *-<ARCH>.json in the whole directory" (the
+# previous form of this lookup) silently resolves to a PRIOR run's fragment
+# whenever this run's own JMeter/Groovy invocation completes without
+# writing one of its own (e.g. a JSR223 assertion script throwing, which
+# does not fail the Maven build -- see this file's own header comment).
+# That reads as a false pass; a run that produced no fragment must fail
+# loudly instead. `find -newer` (not a timestamp string) because it works
+# identically under GNU and BSD find with no clock-format portability
+# concerns.
+SENTINEL="$(mktemp "$RUNS_DIR/.fragment-sentinel.XXXXXX")"
+trap 'rm -f "$SENTINEL"' EXIT
+
 mvn -q -f "$HARNESS_POM" -pl jmeter \
     com.lazerycode.jmeter:jmeter-maven-plugin:3.8.0:configure \
     com.lazerycode.jmeter:jmeter-maven-plugin:3.8.0:jmeter \
@@ -117,9 +132,12 @@ mvn -q -f "$HARNESS_POM" -pl jmeter \
 # truth for pass/fail -- not jmeter-maven-plugin's own exit code, which
 # reflects only "did the JMeter JVM run without crashing", not "did every
 # invariant hold". Re-read it to decide this script's own exit status.
-FRAGMENT_FILE="$(ls -t "$RUNS_DIR"/*-"$ARCH".json 2>/dev/null | head -n1 || true)"
+# Filenames are <ISO-instant>-<archetype>.json, so lexical and chronological
+# order agree -- `sort | tail -n1` over the newer-than-sentinel candidates
+# picks the one this run itself wrote.
+FRAGMENT_FILE="$(find "$RUNS_DIR" -maxdepth 1 -name "*-$ARCH.json" -newer "$SENTINEL" 2>/dev/null | sort | tail -n1)"
 if [ -z "$FRAGMENT_FILE" ]; then
-    echo "run-jmeter.sh: no evidence fragment written for $ARCH under $RUNS_DIR" >&2
+    echo "run-jmeter.sh: no evidence fragment written for $ARCH under $RUNS_DIR since this run started" >&2
     exit 1
 fi
 

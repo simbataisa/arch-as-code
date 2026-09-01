@@ -166,6 +166,15 @@ public final class ModuleRunner {
         try (Stream<Path> files = Files.list(runsDir)) {
             return files
                 .filter(p -> p.getFileName().toString().endsWith(suffix))
+                // traceability/runs/ accumulates every fragment ANY run has
+                // ever written; without this filter "newest of every file
+                // matching this archetype's suffix" silently resolves to a
+                // PRIOR run's fragment whenever run-module.sh's own
+                // subprocess completes without writing a new one -- the
+                // false-pass path this notBefore parameter exists to close.
+                // Excludes anything with an mtime strictly earlier than
+                // the instant captured just before this run started.
+                .filter(p -> !lastModifiedSafely(p).isBefore(notBefore))
                 .max(Comparator.comparing(ModuleRunner::lastModifiedSafely));
         }
     }

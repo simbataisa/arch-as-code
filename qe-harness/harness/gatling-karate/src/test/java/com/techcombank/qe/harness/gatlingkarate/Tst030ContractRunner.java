@@ -95,8 +95,17 @@ class Tst030ContractRunner {
         activateDefect("schema-drift");
         try {
             Results r = Runner.path(FEATURE).parallel(1);
+            // Emit BEFORE asserting: this is run-gatling-karate.sh's own
+            // defect-proof step (see that script's QE_SUT_DEFECT branch), and
+            // -- unlike every one of the other six modules' own defect-proof
+            // runs -- this method used to assert first, so a correctly-thrown
+            // AssertionFailedError aborted `mvn test` before emitFragment ever
+            // ran, leaving NO evidence at all for this module's own defect
+            // proof (M9). Reordering so emission always happens first, with
+            // the assertion re-thrown (or not) afterward, matches the pattern
+            // every other module already gets right.
+            emitFragment(r);
             assertTrue(r.getFailCount() > 0, "schema-drift must break the contract assertions");
-            emitFragment(r, "schema-drift");
         } finally {
             clearDefect();
         }
@@ -121,11 +130,33 @@ class Tst030ContractRunner {
     @Test
     void passesAgainstTheCleanSut() throws Exception {
         Results r = Runner.path(FEATURE).parallel(1);
+        // Emit before asserting -- see featureFailsAgainstTheSchemaDriftDefect's
+        // own comment (M9) for why: this JUnit test also doubles as
+        // run-gatling-karate.sh's normal-path step 1, and an assertion that
+        // throws must never suppress the fragment this run already computed.
+        emitFragment(r);
         assertTrue(r.getFailCount() == 0, "the clean SUT must satisfy both contract scenarios");
-        emitFragment(r, null);
     }
 
-    private static void emitFragment(Results results, String sutDefect) throws Exception {
+    /**
+     * Reads {@code QE_SUT_DEFECT} directly from the process environment --
+     * the same env-var convention every other toolchain's own module now
+     * uses (run-defects.sh exports it before invoking run-module.sh; Surefire
+     * forwards the parent process's environment to the forked JVM running
+     * this test by default) -- rather than accepting a literal from the
+     * caller, so this fragment's {@code evidence.sut_defect} always reflects
+     * whatever defect (if any) run-defects.sh actually activated, not a
+     * hardcoded string that could silently drift from it. Blank/absent means
+     * omitted, matching every other emitter's own "only set it when the env
+     * var is actually present/non-empty" rule -- a clean run against no
+     * defect must never carry this field.
+     */
+    private static void emitFragment(Results results) throws Exception {
+        String sutDefect = System.getenv("QE_SUT_DEFECT");
+        if (sutDefect != null && sutDefect.isBlank()) {
+            sutDefect = null;
+        }
+
         RunFragment.Builder builder = RunFragment.builder()
             .archetype("TST-030")
             .module("gatling-karate")
@@ -146,8 +177,13 @@ class Tst030ContractRunner {
         new EvidenceEmitter(outputDir).emit(fragment);
     }
 
+    // evidence.schema.json requires every invariant id to match ^I[0-9]+$ --
+    // "SCN-v1"/"SCN-v2" (this method's previous form) never actually
+    // satisfied that, undetected until validate-harness-coverage.py's new
+    // check 7 (I3) started validating real fragments against the real
+    // schema instead of relying on code review.
     private static String scenarioId(ScenarioResult sr) {
-        return "SCN-" + (sr.getScenario().getName().startsWith("v2") ? "v2" : "v1");
+        return sr.getScenario().getName().startsWith("v2") ? "I2" : "I1";
     }
 
     private static void activateDefect(String flag) throws IOException, InterruptedException {

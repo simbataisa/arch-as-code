@@ -83,9 +83,14 @@ class Tst030Simulation extends Simulation {
       .tier("T0")
       .oracle("contract-schema")
       .environment(Option(System.getenv("QE_ENVIRONMENT")).getOrElse("local-compose"))
-      .sutDefect(System.getenv("SUT_DEFECT"))
+      .sutDefect(System.getenv("QE_SUT_DEFECT"))
       .invariant(
-        "perf-contract",
+        // evidence.schema.json requires every invariant id to match ^I[0-9]+$ --
+        // "perf-contract" (this field's previous form) never actually satisfied
+        // that, the same defect Tst030ContractRunner.scenarioId() had (see its
+        // own comment) until validate-harness-coverage.py's check 7 (I3) started
+        // validating real fragments against the real schema.
+        "I1",
         "Gatling load run drives the shared transfer-contract.feature via karateFeature without a scenario failure",
         scenarioResult
       )

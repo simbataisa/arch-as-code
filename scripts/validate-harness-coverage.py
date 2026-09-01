@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate the QE harness against the Wave 15 testing corpus.
 
-Six checks:
+Seven checks:
   1. Every modules.yml archetype exists as an archetype document.
   2. Every module's tool equals that archetype's declared best fit in TST-010.
   3. Every module's path exists on disk.
@@ -9,6 +9,12 @@ Six checks:
   5. No PAN-shaped string (13-19 consecutive digits) anywhere under qe-harness/.
   6. Every threshold_ref in profiles/_nfr-thresholds.yml cites an existing
      NFR-* row and a heading anchor that resolves in that document.
+  7. Every fragment under traceability/runs/*.json validates against
+     evidence.schema.json. Design spec §5.4 names this gate as the stated
+     mitigation for cross-language drift between the three emitters
+     ("caught by a gate that validates all three outputs against the one
+     schema -- not by code review, which will not catch it reliably") --
+     this is that gate. Reports which fragment(s) fail and why.
 
 The testing corpus (knowledge-base/, governance/) is always read from this
 repository checkout, no matter what --root is given — the corpus does not
@@ -36,11 +42,13 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
 from typing import Any
 
+import jsonschema
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +65,8 @@ HARNESS_REL = Path("qe-harness")
 THRESHOLDS_REL = Path("qe-harness/profiles/_nfr-thresholds.yml")
 PAN_SKIP_REL = Path("qe-harness/traceability/runs")
 PAN_SKIP_DIR_NAMES = {"target", "node_modules", ".venv"}
+RUNS_REL = Path("qe-harness/traceability/runs")
+EVIDENCE_SCHEMA_REL = Path("qe-harness/traceability/evidence.schema.json")
 
 CATALOG_ID_RE = re.compile(r"^Catalog ID:\s*(?P<id>TST-\d{3})\b", re.MULTILINE)
 NFR_ID_RE = re.compile(r"^Catalog ID:\s*(?P<id>NFR-\d{3})\b", re.MULTILINE)
@@ -227,6 +237,46 @@ def document_heading_slugs(path: Path) -> set[str]:
     return slugs
 
 
+def check_evidence_fragments(harness_root: Path) -> list[str]:
+    """Check 7 -- every fragment under traceability/runs/*.json validates
+    against evidence.schema.json.
+
+    This is the gate design spec §5.4 names as the stated mitigation for
+    cross-language drift between the JVM/Python/JS emitters ("caught by a
+    gate that validates all three outputs against the one schema -- not by
+    code review, which will not catch it reliably"). Absence of either the
+    schema or the runs directory means nothing to check yet (both are
+    later-task deliverables), not malformed input -- same convention
+    load_modules/load_thresholds already follow.
+    """
+    issues: list[str] = []
+    schema_path = harness_root / EVIDENCE_SCHEMA_REL
+    runs_dir = harness_root / RUNS_REL
+    if not schema_path.exists() or not runs_dir.exists():
+        return issues
+
+    try:
+        schema = json.loads(schema_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        issues.append(
+            "check7 %s is not valid JSON: %s" % (schema_path.relative_to(harness_root).as_posix(), exc)
+        )
+        return issues
+
+    for path in sorted(runs_dir.glob("*.json")):
+        rel = path.relative_to(harness_root).as_posix()
+        try:
+            fragment = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            issues.append("check7 %s is not valid JSON: %s" % (rel, exc))
+            continue
+        try:
+            jsonschema.validate(fragment, schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            issues.append("check7 %s fails evidence.schema.json: %s" % (rel, exc.message))
+    return issues
+
+
 def validate(harness_root: Path) -> list[str]:
     issues: list[str] = []
 
@@ -325,6 +375,9 @@ def validate(harness_root: Path) -> list[str]:
                 "check6 threshold_ref '%s' anchor does not resolve in %s"
                 % (ref, doc.relative_to(ROOT).as_posix())
             )
+
+    # Check 7 -- every emitted evidence fragment validates against the schema.
+    issues.extend(check_evidence_fragments(harness_root))
 
     return issues
 

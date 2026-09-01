@@ -10,9 +10,12 @@ import java.util.function.BooleanSupplier;
  * boolean check -- "does this domain invariant still hold?" -- as a
  * {@link RunFragment.Entry} suitable for the evidence emitter.
  *
- * <p>A checked exception or unchecked exception thrown while evaluating the condition
- * is treated as a failed invariant, not swallowed -- a broken probe is not evidence
- * of a passing system.
+ * <p>An unchecked exception thrown while evaluating the condition is deliberately NOT
+ * treated as a failed invariant, and NOT swallowed: it is rethrown wrapped in an
+ * {@link IllegalStateException}, so it propagates as a harness/environment defect
+ * rather than a scoreable {@code failed} result -- a broken probe is not evidence of
+ * a broken system, and conflating the two would let an environment problem (a flaky
+ * connection, a missing dependency) masquerade as a genuine invariant violation.
  */
 public final class InvariantAssertion {
 

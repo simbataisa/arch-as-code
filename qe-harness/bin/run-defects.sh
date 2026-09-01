@@ -92,7 +92,13 @@ while [ "$i" -lt "$count" ]; do
         continue
     fi
 
-    if "$SCRIPT_DIR/run-module.sh" "$arch"; then
+    # Export QE_SUT_DEFECT so every module can tag its own emitted fragment's
+    # evidence.sut_defect with the flag actually active for this iteration --
+    # otherwise a defect-proof `failed` fragment is indistinguishable, in the
+    # evidence trail, from a genuine regression (I4). Scoped to this one
+    # command via the inline assignment, so it never leaks into a later
+    # iteration or this script's own environment.
+    if QE_SUT_DEFECT="$flag" "$SCRIPT_DIR/run-module.sh" "$arch"; then
         echo "DEFECT PROOF FAILED: $arch passed against SUT_DEFECT=$flag" >&2
         status=1
     else

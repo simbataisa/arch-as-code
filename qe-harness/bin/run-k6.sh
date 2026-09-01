@@ -100,7 +100,14 @@ export SUT_BASE_URL="${SUT_BASE_URL:-http://localhost:8080}"
 export QE_ARCHETYPE="$ARCH"
 export QE_ENVIRONMENT="${QE_ENVIRONMENT:-local-compose}"
 
-RAW_REPORT="$(mktemp -t k6-raw-report).json"
+# mktemp -t k6-raw-report only creates /tmp/k6-raw-report.XXXXXX; appending
+# ".json" by string concatenation (the previous form of this line) names a
+# DIFFERENT path that mktemp never actually created, so the real file leaked
+# on every run and the `trap` below removed nothing. GNU mktemp's --suffix
+# isn't available in macOS/BSD mktemp, so keep the template itself the only
+# thing mktemp needs to see -- k6's own handleSummary writes to whatever
+# path K6_RAW_REPORT_PATH names, with no extension requirement of its own.
+RAW_REPORT="$(mktemp -t k6-raw-report.XXXXXX)"
 trap 'rm -f "$RAW_REPORT"' EXIT
 export K6_RAW_REPORT_PATH="$RAW_REPORT"
 

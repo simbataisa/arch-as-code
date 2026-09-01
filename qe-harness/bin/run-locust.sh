@@ -108,6 +108,17 @@ export QE_ENVIRONMENT="${QE_ENVIRONMENT:-local-compose}"
 # fast. --host wires HttpUser.client's base URL (ReconUser's self.client
 # calls) to the exact same reference-sut $SUT_BASE_URL every other module
 # targets.
+# Bound the fragment lookup below to files written no earlier than this
+# sentinel's own mtime, captured immediately before locust starts --
+# `traceability/runs/` accumulates every fragment any module has ever
+# written, so "the newest *-<ARCH>.json in the whole directory" (the
+# previous form of this lookup) would silently resolve to a PRIOR run's
+# fragment if this run's own on_test_stop ever completed without writing
+# one of its own. A run that produced no fragment must fail loudly instead
+# of reporting someone else's old result as its own.
+SENTINEL="$(mktemp "$RUNS_DIR/.fragment-sentinel.XXXXXX")"
+trap 'rm -f "$SENTINEL"' EXIT
+
 "$VENV_DIR/bin/locust" -f "$LOCUSTFILE" \
     --headless \
     --users 5 \
@@ -120,10 +131,13 @@ export QE_ENVIRONMENT="${QE_ENVIRONMENT:-local-compose}"
 # not locust's own exit code, which reflects "did every HTTP request the
 # tool itself made succeed", not "did every reconciliation invariant hold"
 # (the same app-level-assertion-over-tool-report choice run-jmeter.sh/
-# run-gatling-karate.sh already make for their own tools).
-FRAGMENT_FILE="$(ls -t "$RUNS_DIR"/*-"$ARCH".json 2>/dev/null | head -n1 || true)"
+# run-gatling-karate.sh already make for their own tools). Filenames are
+# <ISO-instant>-<archetype>.json, so lexical and chronological order agree
+# -- `sort | tail -n1` over the newer-than-sentinel candidates picks the one
+# this run itself wrote.
+FRAGMENT_FILE="$(find "$RUNS_DIR" -maxdepth 1 -name "*-$ARCH.json" -newer "$SENTINEL" 2>/dev/null | sort | tail -n1)"
 if [ -z "$FRAGMENT_FILE" ]; then
-    echo "run-locust.sh: no evidence fragment written for $ARCH under $RUNS_DIR" >&2
+    echo "run-locust.sh: no evidence fragment written for $ARCH under $RUNS_DIR since this run started" >&2
     exit 1
 fi
 
