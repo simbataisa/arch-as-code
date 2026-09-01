@@ -69,8 +69,10 @@ assigned.
 > All seven families have landed — all twenty-four documents exist and are Approved. `TST-040`
 > and `TST-041` (Family F) were sequenced last because both required `@infosec-architect` review;
 > that review is now complete for both. Archetype IDs run contiguously from `TST-020` to
-> `TST-043`; `TST-016`–`TST-019` are unallocated headroom reserved for future strategy
-> documents, not missing archetypes.
+> `TST-043`. `TST-016` is now allocated to the QE harness reference implementation (registered
+> in the catalog, not an archetype document — it doesn't belong to any of the seven families);
+> `TST-017`–`TST-019` remain unallocated headroom reserved for future strategy documents, not
+> missing archetypes.
 
 ### Family A — Correctness & State (landed)
 

@@ -3351,6 +3351,22 @@ rows:
     primary_tool: jmeter
     owner: qe-lead
     notes: Generated coverage matrix — records the archetype mapping; not itself under test
+  - catalog_id: TST-016
+    title: QE Harness Reference Implementation
+    path: qe-harness/README.md
+    tiers: [T0, T1, T2, T3]
+    archetypes: []
+    disciplines:
+      functional: governs
+      performance: governs
+      resilience: governs
+      contract: governs
+      security: governs
+      data_quality: governs
+    perf_profiles: []
+    primary_tool: jmeter
+    owner: qe-lead
+    notes: Runnable harness itself — implements the modules the testing corpus prescribes; not itself under test
   - catalog_id: TST-020
     title: Idempotency Replay Safety
     path: knowledge-base/testing/archetypes/idempotency-replay.md

@@ -239,6 +239,7 @@ python3 scripts/render-testing-coverage.py
 | TST-013 | k6 Guide | T0, T1, T2, T3 | — | G | G | G | G | G | G | — | jmeter |
 | TST-014 | Locust Guide | T1, T2, T3 | — | G | G | G | G | G | G | — | jmeter |
 | TST-015 | Testing Coverage Matrix | — | — | G | G | G | G | G | G | — | jmeter |
+| TST-016 | QE Harness Reference Implementation | T0, T1, T2, T3 | — | G | G | G | G | G | G | — | jmeter |
 | TST-020 | Idempotency Replay Safety | T0, T1 | — | G | G | G | G | G | G | — | jmeter |
 | TST-021 | Ledger and Monetary Invariant | T0 | — | G | G | G | G | G | G | — | jmeter |
 | TST-022 | Deterministic Calculation Engine | T0, T1 | — | G | G | G | G | G | G | — | jmeter |
@@ -264,7 +265,7 @@ python3 scripts/render-testing-coverage.py
 | TST-042 | Telemetry and Observability Verification | T0, T1, T2 | — | G | G | G | G | G | G | — | jmeter |
 | TST-043 | Client Experience, Offline Sync and Performance Budget Testing | T1, T2 | — | G | G | G | G | G | G | — | jmeter |
 
-Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 231 rows.
+Legend: `R` required · `r` recommended · `—` not applicable · `G` governs. 232 rows.
 
 <!-- END GENERATED -->
 
