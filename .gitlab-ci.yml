@@ -22,6 +22,7 @@ variables:
 
 stages:
   - validate
+  - qe-harness
   - build
   - assign
   - publish
@@ -196,6 +197,113 @@ validate:yaml:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: always
     - when: never
+  allow_failure: false
+
+# ============================================================
+# STAGE 1b: QE-HARNESS (Wave 16)
+# ============================================================
+#
+# qe-harness/ is the repo's first third-party dependency tree (Maven, npm,
+# pip) and the first jobs needing real Docker. All four jobs share the
+# same MR-diff/schedule gate below, so a Markdown-only MR never pays for
+# any of them and no bare `**/*.md`/`*.md` pattern is ever matched here.
+
+.qe-harness-rules: &qe-harness-rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - qe-harness/**/*
+        - scripts/validate-harness-coverage.py
+        - scripts/render-harness-coverage.py
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: never
+
+# Fail-fast compile/dependency-resolution across all three toolchains
+# (Maven, npm, pip) so a broken build never wastes time in the slower
+# scan/run jobs. No containers needed; runs alongside harness:verify.
+harness:build:
+  stage: qe-harness
+  <<: *qe-harness-rules
+  image: maven:3.9-eclipse-temurin-21
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends nodejs npm python3-pip
+  script:
+    - echo "🏗️  Building qe-harness toolchains (Maven, npm, pip)..."
+    - (cd qe-harness/reference-sut && mvn -B -q package -DskipTests)
+    - (cd qe-harness/harness && mvn -B -q package -DskipTests)
+    - (cd qe-harness/harness/k6 && npm ci)
+    - (cd qe-harness/harness/locust && pip install -r requirements.txt)
+    - echo "✅ All qe-harness toolchains build cleanly"
+  allow_failure: false
+
+# CVE + licence scan across all three dependency trees in one pass. Trivy
+# reads Maven pom.xml, npm package.json/package-lock.json, and Python
+# requirements.txt/pyproject.toml directly from source, so this does NOT
+# depend on harness:build -- all four jobs run independently in parallel.
+# Blocking (allow_failure: false) because Wave 16 introduces the repo's
+# first third-party dependency tree.
+harness:scan:
+  stage: qe-harness
+  <<: *qe-harness-rules
+  image: aquasec/trivy:latest
+  script:
+    - echo "🔍 Scanning qe-harness dependency trees for CVEs and licence issues..."
+    - trivy fs --scanners vuln,license --severity CRITICAL,HIGH --exit-code 1 qe-harness/
+    - echo "✅ No CRITICAL/HIGH vulnerabilities or licence issues found"
+  allow_failure: false
+
+# Traceability + coverage-table freshness gates. No containers needed;
+# runs first alongside harness:build.
+harness:verify:
+  stage: qe-harness
+  <<: *qe-harness-rules
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet -r scripts/requirements.txt
+  script:
+    - echo "🔍 Verifying qe-harness traceability and coverage gates..."
+    - python3 scripts/validate-harness-coverage.py
+    - python3 scripts/render-harness-coverage.py --check
+    - echo "✅ qe-harness gates passed"
+  allow_failure: false
+
+# Smoke-runs every implemented module against the clean SUT, then again
+# against its own injected defect (HARNESS_SMOKE_MODE=true keeps both runs
+# CI-fast). Needs real Docker (docker-in-docker) plus the same Maven/npm/pip
+# toolchains harness:build exercises, since bin/run-*.sh dispatch to `mvn`,
+# `k6`+`node`, and a Python venv natively -- not inside their own
+# containers. Always tears down containers via after_script so a mid-run
+# failure never leaks the SUT stack.
+harness:run:
+  stage: qe-harness
+  <<: *qe-harness-rules
+  image: maven:3.9-eclipse-temurin-21
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    K6_VERSION: "2.2.0"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates nodejs npm python3 python3-pip python3-venv make
+    - curl -fsSL https://get.docker.com | sh
+    - curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" | tar -xz --strip-components 1 -C /usr/local/bin "k6-v${K6_VERSION}-linux-amd64/k6"
+  script:
+    - echo "🚀 Running qe-harness smoke suite (run-all + run-defects)..."
+    - cd qe-harness
+    - export HARNESS_SMOKE_MODE=true
+    - make up PROFILES="core resilience"
+    - make run-all
+    - make run-defects
+    - echo "✅ qe-harness smoke suite complete"
+  after_script:
+    - cd qe-harness && make down || true
+  artifacts:
+    when: always
+    paths:
+      - qe-harness/traceability/runs/
   allow_failure: false
 
 # ============================================================
