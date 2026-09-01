@@ -228,13 +228,13 @@ harness:build:
   <<: *qe-harness-rules
   image: maven:3.9-eclipse-temurin-21
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends nodejs npm python3-pip
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends nodejs npm python3-pip python3-venv
   script:
     - echo "🏗️  Building qe-harness toolchains (Maven, npm, pip)..."
     - (cd qe-harness/reference-sut && mvn -B -q package -DskipTests)
     - (cd qe-harness/harness && mvn -B -q package -DskipTests)
     - (cd qe-harness/harness/k6 && npm ci)
-    - (cd qe-harness/harness/locust && pip install -r requirements.txt)
+    - (cd qe-harness/harness/locust && python3 -m venv .venv && .venv/bin/pip install -q --upgrade pip && .venv/bin/pip install -q -r requirements.txt)
     - echo "✅ All qe-harness toolchains build cleanly"
   allow_failure: false
 
@@ -247,7 +247,7 @@ harness:build:
 harness:scan:
   stage: qe-harness
   <<: *qe-harness-rules
-  image: aquasec/trivy:latest
+  image: aquasec/trivy:0.74.0
   script:
     - echo "🔍 Scanning qe-harness dependency trees for CVEs and licence issues..."
     - trivy fs --scanners vuln,license --severity CRITICAL,HIGH --exit-code 1 qe-harness/
