@@ -50,10 +50,15 @@ verify:
 run:
 	./bin/run-module.sh $(ARCH)
 
-# Run all seven implemented modules against the clean SUT
-# (bin/run-all.sh or equivalent lands alongside the last archetype module).
+# Run all seven implemented modules (from traceability/modules.yml, not the
+# 17 declared-but-unimplemented archetypes) against the clean SUT, then
+# merge their evidence fragments into traceability/test_acceptance_criteria.yml
+# (Task 23).
 run-all:
+	./bin/run-all.sh
 
-# Run all seven modules against their injected defects; each MUST fail
-# (same driver as run-all, pointed at the defect-injection profile).
+# Run all seven modules against their own injected defect (via the SUT's
+# /_test/defect/{flag} control endpoint, not a shell env var -- see
+# bin/run-defects.sh); each MUST fail (Task 23).
 run-defects:
+	./bin/run-defects.sh
