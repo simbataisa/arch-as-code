@@ -19,7 +19,7 @@
   <modules>
     <module>common</module>
     <module>jmeter</module>
-    <!-- <module>gatling-karate</module> -->
+    <module>gatling-karate</module>
   </modules>
   <properties>
     <maven.compiler.release>21</maven.compiler.release>

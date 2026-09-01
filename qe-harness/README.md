@@ -56,13 +56,41 @@ this table.
 | Java (compiler release) | 21 (`maven.compiler.release`, pinned regardless of installed JDK) | `qe-harness/harness/pom.xml` |
 | Spring Boot | 3.5.16 (`org.springframework.boot:spring-boot-starter-parent`, latest 3.x GA — pinned to the 3.x line over newer 4.x for its long, unambiguous compatibility record with Resilience4j, Testcontainers, springdoc-openapi, Flyway, and Spring Security resource-server, all needed by later tasks) | `qe-harness/reference-sut/pom.xml` (Task 5) |
 | Apache JMeter | 5.6.2 engine (`org.apache.jmeter:ApacheJMeter`) via `jmeter-maven-plugin` 3.8.0's own default (`com.lazerycode.jmeter:jmeter-maven-plugin`) — confirmed against the actually-resolved artifacts in `~/.m2`, not the plugin's own docs, which reference 5.6.3 | `qe-harness/harness/jmeter/pom.xml` (Task 16) |
-| Gatling | 3.15.1 engine (`io.gatling.highcharts:gatling-charts-highcharts`) via `gatling-maven-plugin` 4.21.10 (`io.gatling:gatling-maven-plugin`) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
-| Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
+| Gatling | 3.15.1 engine (`io.gatling.highcharts:gatling-charts-highcharts`) via `gatling-maven-plugin` 4.21.11 (`io.gatling:gatling-maven-plugin`) — re-checked on 2026-09-01: Maven Central's `<release>`/`<latest>` for `io.gatling:gatling-maven-plugin` is now `4.21.11` (`4.21.10` was current at Task 1's original resolution but a newer patch shipped since); the 3.15.1 engine version itself is still current. `karate-gatling:1.4.1` (below) transitively declares an older `3.9.5`, explicitly excluded and overridden to this pinned 3.15.1 in `gatling-karate/pom.xml` — the `karateFeature`/`KarateProtocol` integration surface this module calls is unchanged across that span, confirmed empirically by this module's own tests passing against 3.15.1. | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
+| Karate | 1.4.1 (`com.intuit.karate:karate-junit5` and `com.intuit.karate:karate-gatling`, matched pair) — re-checked on 2026-09-01: still Maven Central's `<release>`/`<latest>` for both artifacts. See "Running the gatling-karate module's tests" below for a real JDK-version constraint this pairing has on the forked test JVM. | `qe-harness/harness/gatling-karate/pom.xml` (Task 20) |
 | Testcontainers | 1.21.4 (`org.testcontainers:junit-jupiter`, `org.testcontainers:postgresql`) — resolved from `maven-metadata.xml` on 2026-08-25. The true latest on Maven Central is `2.0.5`, but that major renamed its module artifacts (`org.testcontainers:testcontainers-postgresql`, `org.testcontainers:testcontainers-junit-jupiter`) and was not evaluated for compatibility with the pinned Spring Boot 3.5.16 line. 1.21.4 is the newest version on the old artifact coordinates and is also the exact version Spring Boot 3.5.16's own `spring-boot-dependencies` BOM manages (`testcontainers.version`), so no explicit `<version>` is set in the reference SUT's POM — it comes transitively from the parent, the same pattern already used for `spring-boot-starter-web`/`-test`. | `qe-harness/reference-sut/pom.xml` (Task 6) |
 | JJWT | 0.13.0 (`io.jsonwebtoken:jjwt-api`/`-impl`/`-jackson`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by Spring Boot's `spring-boot-dependencies` BOM (unlike `spring-boot-starter-security`, which needs no explicit version), so all three artifacts pin this version explicitly, the same pattern already used for `org.postgresql:postgresql`. | `qe-harness/reference-sut/pom.xml` (Task 9) |
 | springdoc-openapi | 2.9.0 (`org.springdoc:springdoc-openapi-starter-webmvc-api`) — resolved from `maven-metadata.xml` on 2026-08-25 as the newest release on the 2.x line; the true latest, `3.1.0`, targets Spring Boot 4 and was not evaluated against this repo's pinned 3.5.16. Not managed by the `spring-boot-dependencies` BOM, so pinned explicitly, same pattern as JJWT. | `qe-harness/reference-sut/pom.xml` (Task 10) |
 | json-schema-validator | 1.5.9 (`com.networknt:json-schema-validator`, test scope), NOT the true latest release (`3.0.7`, resolved from `maven-metadata.xml` on 2026-08-25) — `2.0.0` replaced the `JsonSchemaFactory`/`JsonSchema`/`ValidationMessage` API `SchemaCompatibilityTest` needs with an incompatible `Schema`/`Error`-based rewrite (confirmed directly: neither the `3.0.7` nor the `2.0.7` jar contains any of those four classes). `1.5.9` is the newest release still on the 1.x line, and the newest release that actually has the API this test code calls. | `qe-harness/reference-sut/pom.xml` (Task 10) |
 | resilience4j | 2.4.0 (`io.github.resilience4j:resilience4j-spring-boot3`) — resolved from `maven-metadata.xml` on 2026-08-25 as the current latest release. Not managed by the `spring-boot-dependencies` BOM, so pinned explicitly, same pattern as JJWT/springdoc. Pulls in `resilience4j-spring6` (the `@CircuitBreaker` annotation + Spring Boot config binding) transitively at the same version. `spring-boot-starter-aop` (needed for the AOP proxy the annotation is woven through) IS managed by the BOM (verified via `mvn -N help:effective-pom`: `3.5.16`), so it carries no explicit version. | `qe-harness/reference-sut/pom.xml` (Task 11) |
+
+### Running the gatling-karate module's tests
+
+`mvn -pl gatling-karate test` (Task 20, TST-030) hangs **indefinitely, with no error and no
+CPU use**, when the JDK actually forking the Surefire test JVM is as new as JDK 25 — confirmed
+empirically: identical test code, only the JDK invoking Maven changed, reproduces/fixes this
+deterministically. `jstack` on the hung process shows the main thread permanently parked in
+`CompletableFuture.join()` inside `com.intuit.karate.Suite#run` (called from
+`Runner.Builder#parallel`, which `Tst030ContractRunner` calls directly), with no Karate worker
+thread ever scheduled. This is the same shape of problem `run-jmeter.sh` already documents for
+JMeter's bundled Groovy vs. too-new a JDK — Karate 1.4.1 (2023) was never tested against a JDK
+this new — just surfacing as a silent hang here instead of a loud "Unsupported class file major
+version" error, which makes it easy to mistake for the test suite (or the SUT) being stuck.
+
+**JDK 21 is confirmed working.** Point Maven at it, either by launching Maven itself under JDK 21:
+
+    JAVA_HOME="$(/usr/libexec/java_home -v 21)" mvn -pl gatling-karate test
+
+or, if Maven itself must stay on a newer JDK, by overriding the forked test JVM only via the
+module's own escape-hatch property (see `qe.gatlingKarate.javaRuntime` in
+`gatling-karate/pom.xml`):
+
+    mvn -pl gatling-karate test "-Dqe.gatlingKarate.javaRuntime=$(/usr/libexec/java_home -v 21)/bin/java"
+
+Both `Tst030ContractRunner`'s two proof tests pass cleanly (`Tests run: 3, Failures: 0, Errors: 0`
+— the brief's two given tests plus one added clean-SUT baseline; see the module's own README)
+under JDK 21; neither the reference SUT nor the harness code itself is JDK-25-incompatible, only
+Karate 1.4.1's own `Suite#run` on the JVM actually running the test.
 
 ### Running the Testcontainers-backed tests on a non-Docker-Desktop engine
 
