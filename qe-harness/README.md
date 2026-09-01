@@ -69,6 +69,9 @@ this table.
 | requests | 2.34.2 (`requests`) — resolved via `pip index versions requests` on 2026-09-01, current latest release. | `qe-harness/harness/locust/requirements.txt` (Task 21) |
 | psycopg2-binary | 2.9.12 (`psycopg2-binary`) — resolved via `pip index versions psycopg2-binary` on 2026-09-01, current latest release. Used only for `tst_039_recon/recompute.py`'s direct-to-Postgres independent recomputation (the same database `qe-harness/docker-compose.yml`'s `postgres` service publishes to the host, for the same reason `LEDGER_JDBC_URL` already does for the jmeter modules). | `qe-harness/harness/locust/requirements.txt` (Task 21) |
 | pytest (Python) | 8.4.2 (`pytest`) — resolved via `pip index versions pytest` on 2026-09-01; the true latest, `9.1.1`, was not evaluated for compatibility with the rest of this pinned set, so the newest 8.x release was chosen instead (same "not the true latest, pinned for a compatibility reason" pattern this table already uses for Gatling/Testcontainers/springdoc/json-schema-validator above). | `qe-harness/harness/locust/requirements.txt` (Task 21) |
+| k6 | 2.2.0 (`k6`, Homebrew `k6` formula) — installed via `brew install k6` on 2026-09-01, current stable release; a Go binary, not an npm package, so it is not in `package.json`. | `qe-harness/bin/run-k6.sh` (Task 22) |
+| ajv | 8.20.0 (`ajv`) — resolved via `npm view ajv version` on 2026-09-01, current latest release; supports Draft 2020-12 via its dedicated `ajv/dist/2020` entry point (the plain default export only understands draft-07 — confirmed empirically, see `harness/k6/emitter.js`'s own comment), matching the draft `evidence.schema.json` (Task 2) itself declares. | `qe-harness/harness/k6/package.json` (Task 22) |
+| jest | 30.5.1 (`jest`) — resolved via `npm view jest version` on 2026-09-01, current latest release. | `qe-harness/harness/k6/package.json` (Task 22) |
 
 ## Known Issues
 
@@ -201,6 +204,32 @@ This matters beyond `make down` itself: Task 23's `run-defects.sh` needs a clean
 baseline and defect-injection runs, and Task 27's CI job needs a clean runner between pipeline
 stages -- either calling `docker compose down -v` directly without `--profile` would silently
 inherit this same no-op.
+
+### k6 (TST-043): `ajv` cannot run inside k6's own sandboxed JS engine
+
+Confirmed empirically (Task 22): a k6 script cannot `import`/`require` `ajv` (or, by the same
+mechanism, any other npm package whose own internal module graph relies on Node's full
+module-resolution algorithm — relative, extension-less `require`s, package.json `main`/`exports`
+resolution). k6 scripts run inside k6's own sandboxed JS engine (goja), which implements a much
+simpler loader; attempting `import Ajv from './node_modules/ajv/dist/ajv.js'` from a k6 script
+fails immediately with:
+
+    GoError: The moduleSpecifier "./core" couldn't be found on local disk.
+
+A trivial local CommonJS module (a single file, `module.exports = {...}`, no further requires of
+its own) imports into a k6 script without issue — this is specifically about a real npm package's
+own multi-file module graph, not about k6 rejecting `require`/`import` outright.
+
+This is why `harness/k6/tst-043-clientexp/script.js` never calls `emitFragment` (`harness/k6/
+emitter.js`) itself, unlike every other module's tool-native script, which calls its own
+in-process emitter directly. Emission is split into two processes instead — see that module's own
+README ("Why emission is a separate Node step") for the full write-up: k6 writes a raw report via
+`handleSummary`; a plain `node` invocation (`write-fragment.js`) then calls `emitFragment` for
+real, with real `ajv`, and writes the actual fragment. `k6`'s own `__ENV` (which transparently
+inherits the parent process's real OS environment variables, confirmed empirically, not only
+`-e`-flag values) is what lets `bin/run-k6.sh` hand a value resolved from `profiles/
+_nfr-thresholds.yml` — itself parsed by `python3`+`PyYAML`, also unavailable inside k6's sandbox —
+across that same process boundary, for I4's payload-budget check.
 
 ## TST-040 Clock-Skew Tolerance
 

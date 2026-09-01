@@ -85,3 +85,30 @@ thresholds:
     value: 4.32
     unit: min
     applies_to: [failover-under-load]
+
+  # --- Client payload budget (NFR-003 Capacity Planning Model) ---
+  # Source table: "Input Parameters", `avg_payload_bytes` row (2,048 bytes). Read the
+  # surrounding prose carefully before treating this as a ceiling (Task 22 did): NFR-003
+  # documents 2,048 as a MEAN request+response payload -- an input to Little's Law/Kafka
+  # sizing for one worked example (the NAPAS gateway at Tết peak), not a stated maximum for
+  # any client response. No NFR document in this corpus states a client-payload-size
+  # ceiling directly (checked: NFR-002 Latency, NFR-004 Throughput -- neither mentions
+  # payload size at all beyond NFR-004's own throughput-per-partition sizing, which is a
+  # Kafka input, not a client-facing bound either). Inventing a bespoke number here would
+  # violate the no-fabricated-thresholds rule this file exists to enforce.
+  # This entry instead derives a ceiling from NFR-003's own value, using NFR-003's own
+  # margin convention: the same document's "Worked Example" table applies a 1.5x
+  # "Headroom" multiplier to convert a normal/peak figure into a provisioned ceiling
+  # ("this absorbs unexpected spikes ... without breaching SLOs"). Applying that same 1.5x
+  # to avg_payload_bytes: 2,048 x 1.5 = 3,072 bytes. This is Task 22's own derived
+  # interpretation, not a number NFR-003 states as a payload budget outright -- per this
+  # file's own header comment, a human still owns confirming this derivation is the right
+  # one for TST-043's actual scope (GET /catalogue's response size).
+  # Not referenced by any profiles/*.yml `threshold_names` list: TST-043 (k6,
+  # qe-harness/harness/k6/tst-043-clientexp) is outside the JMeter/Gatling profile-shape
+  # system those files describe entirely; `bin/run-k6.sh` resolves this entry directly.
+  - name: payload_budget_bytes
+    threshold_ref: NFR-003#input-parameters
+    value: 3072
+    unit: bytes
+    applies_to: [client-experience]
