@@ -56,14 +56,35 @@ def load_catalog() -> list[dict[str, str]]:
     Strategy/Tooling indices, which also use TST-0NN ids) are ignored by
     scoping the scan to between "## Index — Archetypes" and the next
     level-2 heading.
-    """
-    catalog: list[dict[str, str]] = []
-    if not TESTING_README.exists():
-        return catalog
 
+    Fails loudly (ERROR to stderr, exit 2) instead of returning an empty or
+    blank-Family catalog, matching validate-harness-coverage.py's
+    convention of raising SystemExit(2) when it can't resolve a corpus
+    dependency it needs. A missing README, a reformatted/renamed index
+    heading, or a TST-0NN row appearing before any "### Family" heading has
+    matched are all corpus-integrity problems — silently emitting a
+    collapsed or mis-labelled table would be worse than refusing to render.
+    """
+    if not TESTING_README.exists():
+        sys.stderr.write(
+            "ERROR: archetype catalog source not found: %s\n" % TESTING_README
+        )
+        raise SystemExit(2)
+
+    text = TESTING_README.read_text()
+    lines = text.splitlines()
+
+    if not any(line.strip() == ARCHETYPE_INDEX_HEADING for line in lines):
+        sys.stderr.write(
+            "ERROR: %s has no %r heading — cannot locate the archetype index\n"
+            % (TESTING_README, ARCHETYPE_INDEX_HEADING)
+        )
+        raise SystemExit(2)
+
+    catalog: list[dict[str, str]] = []
     in_index = False
     family_label = ""
-    for line in TESTING_README.read_text().splitlines():
+    for lineno, line in enumerate(lines, 1):
         if line.startswith("## "):
             in_index = line.strip() == ARCHETYPE_INDEX_HEADING
             continue
@@ -77,6 +98,12 @@ def load_catalog() -> list[dict[str, str]]:
 
         row = ARCHETYPE_ROW_RE.match(line)
         if row:
+            if not family_label:
+                sys.stderr.write(
+                    "ERROR: %s:%d: archetype row %s appears before any "
+                    "'### Family' heading\n" % (TESTING_README, lineno, row.group("id"))
+                )
+                raise SystemExit(2)
             catalog.append(
                 {
                     "archetype": row.group("id"),
@@ -84,6 +111,13 @@ def load_catalog() -> list[dict[str, str]]:
                     "title": row.group("title"),
                 }
             )
+
+    if not catalog:
+        sys.stderr.write(
+            "ERROR: %s: no archetype rows found under %r\n"
+            % (TESTING_README, ARCHETYPE_INDEX_HEADING)
+        )
+        raise SystemExit(2)
 
     catalog.sort(key=lambda entry: entry["archetype"])
     return catalog
@@ -177,24 +211,22 @@ def main() -> int:
     content = render(catalog, modules)
 
     output_path = harness_root / OUTPUT_REL
+    bare_name = output_path.name
 
     if args.check:
         if not output_path.exists() or output_path.read_text() != content:
-            print(
-                "FAIL: %s is stale — run render-harness-coverage.py"
-                % output_path
-            )
+            print("FAIL: %s is stale — run render-harness-coverage.py" % bare_name)
             return 1
-        print("OK: %s matches modules.yml" % output_path)
+        print("OK: %s matches modules.yml" % bare_name)
         return 0
 
     if output_path.exists() and output_path.read_text() == content:
-        print("OK: %s already current" % output_path)
+        print("OK: %s already current" % bare_name)
         return 0
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(content)
-    print("Updated %s" % output_path)
+    print("Updated %s" % output_path.relative_to(harness_root))
     return 0
 
 
