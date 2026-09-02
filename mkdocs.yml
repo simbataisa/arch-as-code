@@ -65,7 +65,7 @@ nav:
 
   - Architecture Knowledge Base:
     - Principles: knowledge-base/principles/README.md
-    - Design Patterns: knowledge-base/patterns/
+    - Design Patterns: knowledge-base/patterns/README.md
     - Testing (QE):
       - Overview: knowledge-base/testing/README.md
       - Test Strategy Standard: knowledge-base/testing/strategy/test-strategy-standard.md
