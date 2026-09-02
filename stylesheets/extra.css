@@ -1,0 +1,86 @@
+/*
+ * Techcombank design system tokens, applied to the Material for MkDocs theme.
+ * Source: the tcb-ds skill's DESIGN.md / colors_and_type.css.
+ *
+ * SF Pro Display itself is not self-hosted here — Apple's font license does
+ * not cover redistributing it on a non-Apple site. `-apple-system` /
+ * `system-ui` render as San Francisco natively on Apple devices, which gets
+ * the same visual result without shipping the font files.
+ */
+
+:root,
+[data-md-color-scheme="light"] {
+  --tcb-bg: #ffffff;
+  --tcb-surface: #f5f6f8;
+  --tcb-fg: #212121;
+  --tcb-muted: #616161;
+  --tcb-border: #dedede;
+  --tcb-accent: #ed1c24;
+  --tcb-radius: 8px;
+
+  --md-primary-fg-color: var(--tcb-bg);
+  --md-primary-bg-color: var(--tcb-fg);
+  --md-primary-fg-color--light: var(--tcb-surface);
+  --md-primary-fg-color--dark: var(--tcb-fg);
+
+  --md-accent-fg-color: var(--tcb-accent);
+  --md-accent-fg-color--transparent: #ed1c241a;
+  --md-accent-bg-color: var(--tcb-accent);
+
+  --md-default-fg-color: var(--tcb-fg);
+  --md-default-bg-color: var(--tcb-bg);
+  --md-default-fg-color--light: var(--tcb-muted);
+
+  --md-typeset-a-color: var(--tcb-accent);
+  --md-code-bg-color: var(--tcb-surface);
+}
+
+/* Brand accent stays consistent in dark mode; base greys stay Material's own
+   defaults since the design system documents no dark surface. */
+[data-md-color-scheme="dark"] {
+  --tcb-accent: #ed1c24;
+  --md-accent-fg-color: var(--tcb-accent);
+  --md-accent-fg-color--transparent: #ed1c241a;
+  --md-accent-bg-color: var(--tcb-accent);
+  --md-typeset-a-color: var(--tcb-accent);
+}
+
+body,
+.md-typeset {
+  font-family: "SF Pro Display", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.md-typeset code,
+.md-typeset pre,
+.md-typeset kbd {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* 8px radius, 1px pale-grey rules -- per DESIGN.md's Layout section. */
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset table,
+.md-typeset img,
+.md-search__form,
+.md-button {
+  border-radius: var(--tcb-radius);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-width: 1px;
+}
+
+.md-typeset hr,
+.md-typeset table th,
+.md-typeset table td {
+  border-color: var(--tcb-border);
+}
+
+/* Signal active/selected states with the red accent as a marker, not a
+   broad fill -- per DESIGN.md's posture rules. */
+.md-button--primary {
+  background-color: var(--tcb-accent);
+  border-color: var(--tcb-accent);
+  color: var(--tcb-bg);
+}

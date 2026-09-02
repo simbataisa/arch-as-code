@@ -12,24 +12,25 @@ site_dir: ./public
 
 theme:
   name: material
-  custom_dir: overrides
   palette:
     - scheme: light
-      primary: indigo
-      accent: blue
+      primary: white
+      accent: red
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: dark
-      primary: indigo
-      accent: blue
+      primary: black
+      accent: red
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  font:
-    text: Roboto
-    code: Roboto Mono
-  logo: assets/logo.png
+  # Google Fonts disabled: the Techcombank design system specifies SF Pro
+  # Display, which is not self-hostable here (Apple's font license doesn't
+  # cover redistributing it on a non-Apple site) -- see stylesheets/extra.css
+  # for the fallback-stack approach instead.
+  font: false
+  logo: assets/techcombank-mobile-mark.webp
   favicon: assets/favicon.ico
   features:
     - navigation.instant
@@ -220,7 +221,16 @@ markdown_extensions:
 plugins:
   - search:
       lang: en
-  - mermaid2
+  - mermaid2:
+      arguments:
+        theme: base
+        themeVariables:
+          primaryColor: "#f5f6f8"
+          primaryTextColor: "#212121"
+          primaryBorderColor: "#ed1c24"
+          lineColor: "#616161"
+          secondaryColor: "#ffffff"
+          tertiaryColor: "#ffffff"
   - exclude:
       glob:
         - ".*"
@@ -261,9 +271,6 @@ extra:
 
 extra_css:
   - stylesheets/extra.css
-
-extra_javascript:
-  - javascripts/mermaid-config.js
 
 copyright: >
   Copyright &copy; 2024 - 2026 Techcombank.
