@@ -1,0 +1,150 @@
+# QE Harness compose stack (Task 14).
+#
+# Four profiles, gated by `--profile`:
+#   core          postgres + reference-sut -- the only two services the SUT
+#                 itself needs. The plan text this repo started from also
+#                 listed an `oauth2-issuer` third service here, written
+#                 before Task 9 existed; Task 9 built fully self-contained
+#                 JWT issuance directly inside the reference SUT (POST
+#                 /auth/token, /auth/refresh, /auth/revoke -- see
+#                 TokenController/JwtService), so there is no external
+#                 identity provider anywhere in the actual system and
+#                 nothing consumes a separate issuer container. Dropped.
+#   resilience    toxiproxy fronting downstream-stub, for TST-035's fault
+#                 injection (Task 11's circuit breaker capability).
+#   observability otel-collector + prometheus, declared for a later wave's
+#                 archetype; not started by default.
+#   messaging     a broker, declared for a later wave's archetype; not
+#                 started by default.
+#
+# Every service declares a healthcheck. reference-sut waits on postgres's
+# healthcheck (condition: service_healthy), not just container-start, so a
+# Postgres still running its own startup sequence can never be mistaken for
+# "ready to accept connections".
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["core"]
+    ports:
+      # Exposed to the host (not just the compose network) because Task 16's
+      # JMeter module runs as a host Maven/JMeter process, outside this
+      # compose network, and its I2/I3 checks need a direct JDBC connection
+      # to verify ledger_entry rows the HTTP API doesn't expose (GET
+      # /ledger/trial-balance only returns the aggregate net and count).
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: sut
+      POSTGRES_USER: sut
+      POSTGRES_PASSWORD: sut
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sut -d sut"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  reference-sut:
+    build:
+      context: ./reference-sut
+    profiles: ["core"]
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sut
+      SPRING_DATASOURCE_USERNAME: sut
+      SPRING_DATASOURCE_PASSWORD: sut
+      # Only reachable when the `resilience` profile is also up; harmless
+      # (lazily resolved, only on an actual /quotes/{id} call) when it isn't.
+      APP_DOWNSTREAM_BASE_URL: http://toxiproxy:8666
+      # Passed through unset by default so a defect run needs no compose
+      # edit: `SUT_DEFECT=ledger-unbalanced docker compose --profile core up`.
+      SUT_DEFECT: ${SUT_DEFECT:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/_capabilities"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    profiles: ["resilience"]
+    ports:
+      - "8474:8474" # control API
+      - "8666:8666" # proxied downstream listener (see toxiproxy/proxies.json)
+    volumes:
+      - ./toxiproxy/proxies.json:/config/proxies.json:ro
+    command: ["-host=0.0.0.0", "-config=/config/proxies.json"]
+    healthcheck:
+      # No shell/wget in this image (scratch-based) -- its own bundled CLI,
+      # which talks to the control API on localhost:8474 by default, is the
+      # only executable available for an exec-form check.
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  downstream-stub:
+    build:
+      context: ./downstream-stub
+    profiles: ["resilience"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/downstream/quotes/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    profiles: ["observability"]
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "13133:13133" # health_check extension, enabled by the image's default config
+    healthcheck:
+      # Distroless image: no shell, no wget/curl to hit :13133 with. `validate`
+      # re-parses the same config the running process was started with, which
+      # at least catches a corrupted image/mount; it is not a true liveness
+      # probe of the running server. Acceptable here because this service is
+      # declared for a later wave's archetype and is not started by default.
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["observability"]
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  broker:
+    image: rabbitmq:3.13-management-alpine
+    profiles: ["messaging"]
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres-data:

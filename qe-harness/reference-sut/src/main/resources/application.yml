@@ -1,0 +1,36 @@
+# TST-035 circuit breaker and degraded response (Task 11).
+#
+# These are resilience configuration, not performance thresholds -- no
+# NFR-* citation is required (see qe-harness/README.md, "TST-035 Circuit
+# Breaker Configuration"). BreakerBehaviourTest never duplicates these
+# numbers as literals: it reads them straight off the live
+# CircuitBreakerRegistry bean (same "measure the declared configuration"
+# rule TST-040's clock-skew test already follows), so this file is the one
+# place these numbers are declared.
+app:
+  downstream:
+    # Default for a bare `mvn spring-boot:run`; overridden in compose (Task
+    # 14) to point at Toxiproxy, which fronts qe-harness/downstream-stub.
+    base-url: http://localhost:9999
+    connect-timeout-ms: 1000
+    read-timeout-ms: 1000
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      downstream:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        # Deliberately small and equal: with 100% failures during a
+        # blackhole, the breaker opens the instant the 5th call is
+        # recorded -- no extra calls "wasted" waiting for a wider window
+        # to fill. A reference/demo default, not a tuned production value.
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        # Short on purpose: this is what makes
+        # BreakerBehaviourTest#breakerClosesAfterFaultRemoved fast and
+        # non-flaky without a separate test-only override profile.
+        waitDurationInOpenState: 2s
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true

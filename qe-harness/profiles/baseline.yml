@@ -1,0 +1,29 @@
+# Shape for TST-002's `baseline` profile: per-build sanity check.
+# Purpose: confirm a build has not regressed before it earns the right to run anything
+# heavier. Runs on every build as the cheapest possible performance signal, not as proof
+# of capacity (performance-test-standard.md, "baseline").
+#
+# Every numeric value below is either a TST-002-owned profile parameter (shape: how the
+# test is run) or a name resolved against qe-harness/profiles/_nfr-thresholds.yml (a
+# service SLO). No number here is a hardcoded NFR value.
+profile: baseline
+workload_model: closed        # closed | open — see TST-003
+required_for_tiers: [T0, T1, T2, T3]
+
+load_shape:
+  ramp_pct_of_sustained: 10   # ramp to 10% of declared sustained_rps
+  ramp_seconds: 60            # "~1 min" per TST-002
+  hold_seconds: 600           # 10 min hold at 10%
+
+threshold_names: [p95_latency_ms]
+
+pass_criteria:
+  - assert error_count == 0 for the full run
+  - assert p95_latency <= threshold(p95_latency_ms) for the service's declared tier
+
+evidence_artifact: per-build pass/fail summary (error count, observed P95) attached to the CI run
+
+smoke_mode_overrides:
+  hold_seconds: 20
+  ramp_seconds: 5
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not

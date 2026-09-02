@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qe-harness.techcombank.com/contracts/transfer-v2-breaking.schema.json",
+  "title": "TransferV2BreakingResponse",
+  "description": "Reference fixture only -- NOT loaded by SchemaCompatibilityTest, and never published as a real API version. This documents the shape TransferV2Controller actually emits once the schema-drift defect is active (DefectFlags.isActive(\"schema-drift\")): transferRef renamed to transfer_id, status and settledAt unchanged. SchemaCompatibilityTest#defectFlagRenamesAFieldAndBreaksTheContract deliberately validates that drifted response against the real, still-published transfer-v2.schema.json instead of against this file, precisely to prove the defect breaks the contract clients actually depend on. This file exists purely so a reader can see, side by side with transfer-v2.schema.json, exactly which single field the rename touches -- i.e. what a team would have had to publish as an intentional new version, rather than let leak into v2 as a defect.",
+  "type": "object",
+  "properties": {
+    "transfer_id": {
+      "type": "string",
+      "description": "The schema-drift defect's renamed form of v2's transferRef field. Same UUID value, different key."
+    },
+    "status": {
+      "type": "string",
+      "description": "Settlement status of the transfer. Unchanged by the defect."
+    },
+    "settledAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp the transfer settled. Unchanged by the defect."
+    }
+  },
+  "required": ["transfer_id", "status", "settledAt"],
+  "additionalProperties": false
+}

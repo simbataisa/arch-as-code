@@ -1,0 +1,26 @@
+# Shape for TST-002's `failover-under-load` profile: HA proof under traffic.
+# Purpose: proves the declared recovery targets and error-budget allowance hold when a
+# fault is injected under real traffic, not in a quiet maintenance window. This is the
+# only profile that combines a resilience fault injection with a live performance load
+# (performance-test-standard.md, "failover-under-load").
+profile: failover-under-load
+workload_model: open          # closed | open — see TST-003
+required_for_tiers: [T0, T1]
+recommended_for_tiers: [T2]
+
+load_shape:
+  hold_pct_of_sustained: 100
+  failure_modes: []           # populated from the service's nfr_acceptance_criteria block
+
+threshold_names: [rto_minutes, rpo_minutes, error_budget_30d_minutes]
+
+pass_criteria:
+  - assert observed_rto <= threshold(rto_minutes)
+  - assert observed_rpo <= threshold(rpo_minutes)
+  - assert error_burst <= agreed share of threshold(error_budget_30d_minutes)
+
+evidence_artifact: fault-injection timeline with RTO/RPO measurement and an
+  error-burst-vs-error-budget comparison for the injection window
+
+smoke_mode_overrides:
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not

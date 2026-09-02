@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-031 Rate Limit Breakpoint" enabled="true">
+      <stringProp name="TestPlan.comments">Task 17 (Wave 16 QE Harness). See README.md for the invariants (I1-I3) this plan asserts and for why the ramp shape is read from shared props rather than hardcoded per element.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- setUp Thread Group: computes the ramp shape ONCE, before the main
+           Thread Group's Throughput Shaping Timer or scheduler read it, and
+           stores it in `props` (JMeter's single cross-thread shared store ;
+           same idiom the rate-limit-breakpoint.md archetype's own canonical
+           harness uses for its step_<idx>_accepted/rejected tallies).
+           HarnessConfig.smokeMode() (Task 15) is the single source of truth
+           for whether this is a smoke run; every other element below reads
+           tst031_step_hold_seconds from props rather than re-deriving it, so
+           the ramp shape can never drift between the ThreadGroup's own
+           scheduler duration and the Timer's per-step durations. JMeter
+           guarantees this setUp Thread Group finishes before the main
+           Thread Group starts, so the `${__groovy(props.get(...),)}`
+           references below ; lazily evaluated on first use, not at file
+           load ; always see the value written here, never a stale default. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset SUT and Compute Ramp Shape" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <!-- Resets the reference SUT's shared, process-wide TokenBucket to
+             full capacity before every run ; the same "reset before load"
+             role TST-021's plan.jmx fills with a direct TRUNCATE in its own
+             setUp Thread Group, except the token bucket has no persistence
+             layer to reset through directly, so this calls back into the
+             running SUT process over HTTP (RateLimitResetController, added
+             as this task's follow-up fix). Without this, back-to-back runs
+             against a long-lived container (exactly Task 23's defect-pair
+             runner and Task 27's CI) leave the bucket's state ; and
+             therefore how much burst is available during the warm-up
+             window below ; dependent on whatever a previous run left
+             behind, which was confirmed empirically to produce a false I1
+             failure on an otherwise-clean run. Placed first in this Thread
+             Group (on_sample_error=stopthread), so a failed reset stops the
+             run loudly instead of silently invalidating I1's measurement. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /_test/reset/ratelimit" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/_test/reset/ratelimit</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Record Run Start and Ramp Shape" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import com.techcombank.qe.harness.config.HarnessConfig
+
+boolean smoke = HarnessConfig.smokeMode()
+// Base shape: profiles/stress.yml load_shape.step_hold_seconds (300).
+// Smoke shape: profiles/stress.yml smoke_mode_overrides.step_hold_seconds (20) --
+// correctness (I1-I3 below) is asserted identically either way; only the hold
+// duration per ramp step shortens. See README.md "Smoke mode" section.
+long stepHoldSeconds = smoke ? 20L : 300L
+
+props.put("tst031_run_start_ms", String.valueOf(System.currentTimeMillis()))
+props.put("tst031_step_hold_seconds", String.valueOf(stepHoldSeconds))
+props.put("tst031_smoke_mode", String.valueOf(smoke))
+// A fresh (or previously idle) TokenBucket starts full, and the at-limit
+// step (offered rate == refill rate) never drains that surplus -- admits
+// exactly replace what refills, so whatever slack the bucket holds entering
+// a step it still holds leaving it. That slack is spent, near-instantly, as
+// a one-off burst the moment the above-limit step begins (this is
+// TokenBucket's own designed burst absorption, not a defect -- see its
+// javadoc). Excluding this fixed warm-up window from I1's admitted-rate
+// measurement (both here and in assert-ratelimit.groovy) is what lets I1
+// check the SUSTAINED rate without either papering over a real leak with a
+// too-generous tolerance, or flagging the bucket's legitimate burst
+// allowance as a false violation.
+props.put("tst031_warmup_seconds", "2")
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never adds its tallies on top of a previous run's leftovers.
+props.put("tst031_total_5xx", "0")
+for (int i = 0; i < 3; i++) {
+    props.put("tst031_step_" + i + "_accepted", "0")
+    props.put("tst031_step_" + i + "_rejected_missing_retry_after", "0")
+}
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("smoke=" + smoke + " step_hold_seconds=" + stepHoldSeconds, "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: fixed pool of threads, well above the peak
+           target rate, so the Throughput Shaping Timer's own pacing ; not
+           thread starvation ; governs the offered rate at every step (see
+           README.md's "Why a plain ThreadGroup, not a Concurrency Thread
+           Group" note). Duration is the 3 ramp steps' total hold time plus
+           a grace buffer ; the Timer's own schedule normally stops threads
+           cleanly once exhausted, but this scheduler is a backstop. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Rate Limit Load" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">25</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__groovy((Long.parseLong(props.get("tst031_step_hold_seconds")) * 3) + 5,)}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Throughput Shaping Timer (kg.apc.jmeter.timers.VariableThroughputTimer,
+             the plugin the rate-limit-breakpoint.md archetype's own canonical
+             §5 harness names). Three equivalence classes from that archetype's
+             §3 ("below configured limit" / "exactly at it" / "above it"), each
+             held for tst031_step_hold_seconds ; long enough that the initial
+             burst a fresh, full token bucket can legitimately admit (see
+             TokenBucket's own javadoc on burst absorption) amortizes to a
+             negligible fraction of that step's average admitted rate, so I1
+             below is checking sustained enforcement, not penalising the
+             bucket's designed burst allowance. The reference SUT's configured
+             rate is 10/s (app.ratelimit.permits-per-second, reference-sut's
+             application.properties) ; see README.md for why below/at/above
+             are literally 5/10/20 rather than expressions off that property
+             (no HTTP surface exposes it to read back at plan-load time). -->
+        <kg.apc.jmeter.timers.VariableThroughputTimer guiclass="kg.apc.jmeter.timers.VariableThroughputTimerGui" testclass="kg.apc.jmeter.timers.VariableThroughputTimer" testname="Throughput Shaping Timer" enabled="true">
+          <collectionProp name="load_profile">
+            <collectionProp name="below-limit">
+              <stringProp name="from">5</stringProp>
+              <stringProp name="to">5</stringProp>
+              <stringProp name="duration">${__groovy(props.get("tst031_step_hold_seconds"),)}</stringProp>
+            </collectionProp>
+            <collectionProp name="at-limit">
+              <stringProp name="from">10</stringProp>
+              <stringProp name="to">10</stringProp>
+              <stringProp name="duration">${__groovy(props.get("tst031_step_hold_seconds"),)}</stringProp>
+            </collectionProp>
+            <collectionProp name="above-limit">
+              <stringProp name="from">20</stringProp>
+              <stringProp name="to">20</stringProp>
+              <stringProp name="duration">${__groovy(props.get("tst031_step_hold_seconds"),)}</stringProp>
+            </collectionProp>
+          </collectionProp>
+          <stringProp name="TestPlan.comments">Step 0 below-limit (5 rps), step 1 at-limit (10 rps), step 2 above-limit (20 rps) -- see plan-level comment above.</stringProp>
+        </kg.apc.jmeter.timers.VariableThroughputTimer>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /rate-limited/ping" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/rate-limited/ping</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- Tallies every response into props, keyed by which ramp step
+               (0/1/2, derived from elapsed wall time since setUp recorded
+               tst031_run_start_ms) it landed in ; the same
+               step_<idx>_accepted/rejected idiom rate-limit-breakpoint.md's
+               own canonical harness uses, and for the same reason: a JMeter
+               *variable* is scoped per-thread and would silently undercount
+               (each of the 25 threads would see only its own slice), while
+               `props` is process-wide and shared across every thread, so the
+               tallies below reflect the SUT's real aggregate admitted rate,
+               not one thread's private view of it. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-accept-reject" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+long runStartMs = Long.parseLong(props.getProperty("tst031_run_start_ms"))
+long stepHoldSeconds = Long.parseLong(props.getProperty("tst031_step_hold_seconds"))
+long warmupSeconds = Long.parseLong(props.getProperty("tst031_warmup_seconds"))
+int numSteps = 3
+
+long elapsedMs = Math.max(0L, prev.getTimeStamp() - runStartMs)
+// Plain "/" on two longs is Groovy's exact-division operator (returns a
+// BigDecimal, not a long) -- Math.floorDiv keeps this integer division so
+// Math.min below sees (long, long), not the "[long, BigDecimal]" ambiguous
+// overload Groovy's MetaClassImpl otherwise refuses to resolve.
+long elapsedSec = Math.floorDiv(elapsedMs, 1000L)
+long rawStepIdx = Math.floorDiv(elapsedSec, stepHoldSeconds)
+int stepIdx = (int) Math.min((long) (numSteps - 1), rawStepIdx)
+long secIntoStep = elapsedSec - (stepIdx * stepHoldSeconds)
+// Only "accepted" (I1's own rate measurement) excludes the warm-up window --
+// I2/I3 are correctness checks that must hold everywhere, warm-up included.
+boolean inWarmup = secIntoStep < warmupSeconds
+
+String code = prev.getResponseCode()
+
+synchronized (props) {
+    if ("200".equals(code)) {
+        if (!inWarmup) {
+            long accepted = Long.parseLong(props.getProperty("tst031_step_" + stepIdx + "_accepted", "0"))
+            props.put("tst031_step_" + stepIdx + "_accepted", String.valueOf(accepted + 1))
+        }
+    } else if ("429".equals(code)) {
+        String headers = prev.getResponseHeaders()
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("(?im)^Retry-After:\\s*(\\d+)\\s*\$")
+            .matcher(headers == null ? "" : headers)
+        boolean hasValidRetryAfter = m.find() && Long.parseLong(m.group(1)) > 0
+        if (!hasValidRetryAfter) {
+            long missing = Long.parseLong(props.getProperty("tst031_step_" + stepIdx + "_rejected_missing_retry_after", "0"))
+            props.put("tst031_step_" + stepIdx + "_rejected_missing_retry_after", String.valueOf(missing + 1))
+        }
+    } else if (code != null && code.startsWith("5")) {
+        long fiveXx = Long.parseLong(props.getProperty("tst031_total_5xx", "0"))
+        props.put("tst031_total_5xx", String.valueOf(fiveXx + 1))
+    }
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Rate Limit Load
+           thread has finished (same "assert after load has fully drained"
+           rationale as TST-021's plan.jmx ; mid-run tallies for the step
+           still in progress would be incomplete, understating its admitted
+           rate). assert-ratelimit.groovy (Task 17 deliverable) evaluates
+           I1-I3 against the props tallies above, decides threshold
+           evaluation from HarnessConfig.smokeMode(), and calls the JVM
+           EvidenceEmitter to write one fragment to traceability/runs/. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Evaluate Rate Limit Invariants" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-ratelimit" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

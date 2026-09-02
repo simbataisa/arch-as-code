@@ -1,0 +1,29 @@
+# Shape for TST-002's `stress` profile: locate the knee.
+# Purpose: finds the load level at which the service stops degrading gracefully and
+# starts failing outright — the "knee." This is diagnostic, not a pass/fail gate on a
+# fixed number (performance-test-standard.md, "stress").
+profile: stress
+workload_model: open          # MUST be open per TST-002 — a closed model throttles
+                               # offered load as latency rises, so the knee is never reached
+required_for_tiers: [T0, T1]
+recommended_for_tiers: [T2]
+
+load_shape:
+  start_pct_of_sustained: 100
+  step_pct: 10                # +10% step
+  step_hold_seconds: 300      # hold 5 min per step
+  repeat_until: knee_or_failure
+
+threshold_names: [peak_rps]
+
+pass_criteria:
+  - assert knee_throughput >= threshold(peak_rps)
+  - assert degradation_shape == "graceful"   # latency/error rate rise smoothly step over
+                                              # step, not as a single cliff-edge step
+
+evidence_artifact: knee-point report — throughput vs. latency and throughput vs. error rate,
+  with the observed knee step marked
+
+smoke_mode_overrides:
+  step_hold_seconds: 20
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not

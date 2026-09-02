@@ -1,0 +1,34 @@
+# Shape for TST-002's `load` profile: steady-state throughput proof.
+# Purpose: proves the service holds its declared steady-state throughput for a sustained
+# period, not just in a burst. This is the profile a DAB submission cites as the primary
+# throughput proof (performance-test-standard.md, "load").
+profile: load
+workload_model: open          # closed | open — see TST-003; open lets offered load exceed
+                               # what a closed model would throttle to
+required_for_tiers: [T0, T1, T2]
+recommended_for_tiers: [T3]
+
+load_shape:
+  ramp_pct_of_sustained: 100
+  ramp_seconds: 300           # "~5 min" per TST-002
+  hold_seconds: 3600          # 60 min hold at 100% of sustained
+
+threshold_names: [p50_latency_ms, p95_latency_ms, p99_latency_ms, error_rate_pct]
+
+pass_criteria:
+  - assert p50_latency <= threshold(p50_latency_ms)
+  - assert p95_latency <= threshold(p95_latency_ms)
+  - assert p99_latency <= threshold(p99_latency_ms)
+  # NOTE: TST-002's prose states this profile's error-rate criterion as "≤ 0.1%", but
+  # that figure has no NFR citation anywhere in the corpus. threshold(error_rate_pct)
+  # here resolves to NFR-004's actual documented figure (< 0.01%) instead — see the
+  # divergence note on error_rate_pct in _nfr-thresholds.yml.
+  - assert error_rate <= threshold(error_rate_pct) across the full 60-minute hold
+
+evidence_artifact: run report with P50/P95/P99 and error-rate time series for the full hold
+  window, attached to the DAB submission
+
+smoke_mode_overrides:
+  hold_seconds: 20
+  ramp_seconds: 5
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not

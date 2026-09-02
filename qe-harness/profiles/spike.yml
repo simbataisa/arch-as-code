@@ -1,0 +1,30 @@
+# Shape for TST-002's `spike` profile: burst absorption.
+# Purpose: proves the service absorbs a sudden burst and fully recovers, not just that it
+# stays up during the burst itself. The recovery, not the peak, is what this profile
+# grades (performance-test-standard.md, "spike").
+profile: spike
+workload_model: open          # closed | open — see TST-003
+required_for_tiers: [T0, T1]
+recommended_for_tiers: [T2]
+
+load_shape:
+  baseline_pct_of_sustained: 100
+  ramp_to_peak_seconds: 30    # sustained -> peak in 30s
+  hold_peak_seconds: 300      # hold peak 5 min
+  release_to: baseline
+  drain_assert_seconds: 60    # assert drain <= 60s from moment load is released
+
+threshold_names: [peak_rps]
+
+pass_criteria:
+  - assert time_to_baseline_p95 <= 60s measured from the moment load is released
+  - assert messages_lost == 0
+  - assert dlq_depth_after == dlq_depth_before
+  # peak level for the burst itself is bounded by threshold(peak_rps)
+
+evidence_artifact: burst-and-drain timeline showing accepted requests, queue depth, and
+  time-to-baseline recovery across the full release-and-drain window
+
+smoke_mode_overrides:
+  hold_peak_seconds: 20
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not

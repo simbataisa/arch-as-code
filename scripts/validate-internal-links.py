@@ -13,6 +13,21 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 SCAN_DIRS = ["knowledge-base", "governance"]
 LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)#]+?)(?:#[^)]*)?\)')
+HEADING_STRIP_RE = re.compile(r"[^\w\- ]", flags=re.UNICODE)
+
+
+def heading_slug(heading_text: str) -> str:
+    """Turn a Markdown heading's text into its GitHub-style anchor slug.
+
+    Shared with scripts/validate-harness-coverage.py, which resolves
+    `NFR-NNN#anchor` threshold citations against the headings of the NFR
+    document they cite. Lowercase, drop everything but word characters /
+    spaces / hyphens, then turn spaces into hyphens — the same rule GitHub
+    applies when it assigns an `id` to a rendered heading.
+    """
+    slug = heading_text.strip().lower()
+    slug = HEADING_STRIP_RE.sub("", slug)
+    return slug.replace(" ", "-")
 
 
 def scan_file(path: Path) -> list[tuple[int, str, Path]]:

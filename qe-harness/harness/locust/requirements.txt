@@ -1,0 +1,11 @@
+# Resolved from PyPI on 2026-09-01 (`pip index versions <pkg>` against a
+# fresh Python 3.13 venv -- see qe-harness/README.md's "Pinned Versions"
+# table for the exact command and rationale). Every version below is each
+# package's current latest release as of that date; do not float them
+# without updating that table, same rule the JVM modules' pom.xml pins
+# follow.
+locust==2.46.4
+jsonschema==4.26.0
+requests==2.34.2
+psycopg2-binary==2.9.12
+pytest==8.4.2

@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.techcombank.qe</groupId>
+    <artifactId>qe-harness-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>qe-harness-gatling-karate</artifactId>
+  <packaging>jar</packaging>
+
+  <!--
+    TST-030's module: the first non-JMeter harness toolchain (Task 20). Proves
+    TST-012's headline claim, that one .feature file drives both a Karate
+    functional run and a Gatling performance run, so unlike the jmeter
+    module there is no forked engine JVM/subprocess indirection: Karate
+    itself is a plain JUnit 5 library (Tst030ContractRunner runs
+    com.intuit.karate.Runner directly, in-process) and karate-gatling wires
+    the SAME classpath feature file into a Gatling Simulation
+    (Tst030Simulation.scala) via karateFeature(...). See tst-030-contract/
+    README.md for the full mechanism.
+  -->
+  <properties>
+    <!-- Overridable via -D for the Gatling simulation run
+         (com.techcombank.qe.harness.gatlingkarate.Tst030Simulation), matching
+         SUT_BASE_URL's own convention every other harness module uses (see
+         ModuleRunner.java): Gatling simulations read System.getProperty,
+         not the environment, when launched via gatling-maven-plugin's own
+         forked JVM. -->
+    <qe.gatling.sutBaseUrl>http://localhost:8080</qe.gatling.sutBaseUrl>
+
+    <!-- Karate 1.4.1's com.intuit.karate.Suite#run (invoked by
+         Runner.Builder#parallel, which Tst030ContractRunner calls directly)
+         hangs indefinitely, with zero CPU and no exception, when the
+         Surefire-forked test JVM itself runs on JDK 25 (confirmed
+         empirically: identical test code, only the forking JVM changed,
+         reproduces/fixes this deterministically; jstack showed the main
+         thread permanently parked in CompletableFuture.join() with no
+         Karate worker thread ever scheduled). This is the exact same shape
+         of problem run-jmeter.sh already documents for JMeter's own bundled
+         Groovy vs. too-new a JDK, just surfacing as a silent hang here
+         rather than a loud "Unsupported class file major version" error.
+         JDK 21 (confirmed working) is the newest verified-good JVM for this
+         module's forked tests. The primary fix is simply launching Maven
+         itself under JDK <= 21 (see qe-harness/README.md); the
+         gatling-karate-jvm profile below (activated only when
+         qe.gatlingKarate.javaRuntime is actually set via -D) is a secondary
+         escape hatch for when that is not possible; Surefire's own <jvm>
+         element rejects a bare command name like "java" (it must be an
+         actual resolvable path), so this property must never be given a
+         default value here; that is also why it is wired through a
+         conditionally-activated profile instead of a plain <jvm> in this
+         module's own main build/plugins block. -->
+  </properties>
+
+  <dependencies>
+    <!-- JUnit 5: Tst030ContractRunner's own two proof tests, and the
+         plain Karate JUnit runner test itself. Same version as the jmeter
+         module's pom, kept consistent across the reactor. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.9.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Karate's own JUnit 5 integration: com.intuit.karate.Runner,
+         com.intuit.karate.core.Results. See qe-harness/README.md's Pinned
+         Versions table for how this version was resolved. -->
+    <dependency>
+      <groupId>com.intuit.karate</groupId>
+      <artifactId>karate-junit5</artifactId>
+      <version>1.4.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- karate-gatling: the com.intuit.karate.gatling.javaapi.KarateDsl
+         (karateFeature(...)) Tst030Simulation.scala uses to drive the
+         SAME .feature file as the Karate run above. Its own published POM
+         (com.intuit.karate:karate-gatling:1.4.1) declares a transitive
+         io.gatling.highcharts:gatling-charts-highcharts:3.9.5, unmodified
+         below: karate-gatling 1.4.1 (last published ~2023, no newer release
+         exists on Maven Central as of this check) is NOT just
+         source/DSL-compatible with the newer 3.15.1 engine Task 1 originally
+         pinned in qe-harness/README.md; it is genuinely BINARY-INCOMPATIBLE
+         with it. Confirmed empirically two different ways against a real
+         `mvn -pl gatling-karate io.gatling:gatling-maven-plugin:4.21.11:test`
+         invocation: (1) with 3.15.1, after first fixing a real but separate
+         netty-version-mediation issue (karate-junit5's transitive
+         com.linecorp.armeria:armeria pulls io.netty:netty-transport
+         :4.1.96.Final, which nearest-wins over Gatling's own 4.2.14.Final,
+         fixed by importing io.netty:netty-bom:4.2.14.Final, no longer needed
+         once the engine itself was downgraded, see below), the run still
+         crashes with `NoSuchMethodError:
+         ProtocolComponentsRegistry.components(ProtocolKey)` inside
+         com.intuit.karate.gatling.KarateFeatureActionBuilder.build; that
+         internal Gatling method's erased return type changed between the
+         two engine releases, and karate-gatling 1.4.1's compiled bytecode
+         still calls the old erasure; (2) with 3.9.5 (karate-gatling's own
+         originally-tested pairing, kept below), the identical simulation
+         runs a real load test against the reference SUT end-to-end,
+         including correctly reporting KO on the v2 scenario with
+         schema-drift active while v1 stays OK; see
+         qe-harness/README.md's "Known Issues" section for the full
+         writeup, including why 3.15.1 (the version the rest of the reactor
+         would otherwise prefer) is knowingly NOT used here. -->
+    <dependency>
+      <groupId>com.intuit.karate</groupId>
+      <artifactId>karate-gatling</artifactId>
+      <version>1.4.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- The actual Gatling engine. Deliberately left at karate-gatling
+         1.4.1's own transitive default (3.9.5) rather than bumped to the
+         newer 3.15.1; see the exclusion-free karate-gatling dependency's
+         own comment just above for the empirical proof of why. -->
+    <dependency>
+      <groupId>io.gatling.highcharts</groupId>
+      <artifactId>gatling-charts-highcharts</artifactId>
+      <version>3.9.5</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Scala runtime: 2.13.18 rather than gatling-charts-highcharts 3.9.5's
+         own pinned 2.13.10 (or karate-gatling 1.4.1's own 2.13.9); Scala
+         2.13.x maintains binary compatibility across its whole line, and
+         2.13.18 is what this module's scala-maven-plugin zinc compiler
+         bridge is already built for in this environment; 2.13.10 hits an
+         unrelated zinc/scala-maven-plugin compiler-bridge bootstrap
+         failure ("bad constant pool index") the first time it needs to
+         compile ITS OWN bridge for that exact version, confirmed reproducible
+         and specific to 2.13.10 in this environment. -->
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.13.18</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Evidence contract (RunFragment) and EvidenceEmitter (Task 2): both
+         Tst030ContractRunner (Karate/JUnit) and Tst030Simulation (Gatling)
+         emit a fragment through this same JVM class. -->
+    <dependency>
+      <groupId>com.techcombank.qe</groupId>
+      <artifactId>qe-harness-common</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- PostgreSQL JDBC driver: Tst030ContractRunner seeds the two fixture
+         accounts (ACC-000001/ACC-000002) this feature's requests transfer
+         between, via a direct java.sql.DriverManager query, same pattern
+         (and same driver version) as the jmeter module's
+         assert-trial-balance.groovy, because neither /v1 nor /v2/transfers
+         exposes an account-creation endpoint of its own. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.13</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M9</version>
+        <configuration>
+          <!-- Tst030ContractRunner.java is this module's own required
+               deliverable filename (the brief's Files list), which does not
+               match Surefire's default *Test/*Tests/*TestCase inclusion
+               patterns; without this, `mvn test` silently runs zero
+               tests. -->
+          <includes>
+            <include>**/Tst030ContractRunner.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+
+      <!-- Registered (not lifecycle-bound, same "no execution" choice
+           harness/jmeter/pom.xml makes for jmeter-maven-plugin, and for the
+           identical reason: a plain `mvn test` must never also fire a real
+           Gatling load run against whatever SUT happens to be reachable)
+           so the load run CAN be invoked directly:
+
+             mvn -pl gatling-karate io.gatling:gatling-maven-plugin:4.21.11:test \
+                 "-Dgatling.simulationClass=com.techcombank.qe.harness.gatlingkarate.Tst030Simulation"
+
+           disableCompiler is true because scala-maven-plugin (below) already
+           compiles Tst030Simulation.scala into target/test-classes as part of
+           this module's normal test-compile phase, the same
+           disableCompiler=true choice karate-gatling 1.4.1's own reference
+           POM makes, for the same reason (avoid compiling the same sources
+           twice with two different Scala compiler invocations). (4.21.11
+           itself does not declare this parameter; it logs one harmless
+           WARNING and ignores it, but it is kept for forward
+           compatibility and because it is the documented, correct setting
+           for whichever gatling-maven-plugin version is actually resolved.)
+
+           Verified actually working end-to-end with the command above
+           (JDK 21, this module's pinned 3.9.5 engine; see the
+           gatling-charts-highcharts dependency's own long comment for why
+           3.9.5, not the newer 3.15.1, is pinned): both scenarios run
+           against the real reference SUT (POST /v1 and /v2/transfers,
+           OK=2 KO=0), and with `schema-drift` active the v2 scenario
+           correctly reports KO while v1 stays OK, the same defect-proof
+           TST-030's Karate side demonstrates, now demonstrated on the
+           Gatling side too. See qe-harness/README.md's "Known Issues"
+           section for the full incompatibility writeup that made pinning
+           to 3.9.5 necessary. -->
+      <plugin>
+        <groupId>io.gatling</groupId>
+        <artifactId>gatling-maven-plugin</artifactId>
+        <version>4.21.11</version>
+        <configuration>
+          <disableCompiler>true</disableCompiler>
+        </configuration>
+      </plugin>
+
+      <!-- Compiles src/test/scala (Tst030Simulation) using its own default
+           source-directory convention, alongside plain maven-compiler-plugin
+           compiling src/test/java (Tst030ContractRunner) via the default
+           lifecycle binding; same mixed-source pattern karate-gatling 1.4.1's
+           own build uses (see that artifact's published POM), just with both
+           source roots present here instead of only one. -->
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>4.8.1</version>
+        <executions>
+          <execution>
+            <id>scala-test-compile</id>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <args>
+            <arg>-release:21</arg>
+            <arg>-deprecation</arg>
+            <arg>-feature</arg>
+            <arg>-language:implicitConversions</arg>
+            <arg>-language:postfixOps</arg>
+          </args>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <!-- Escape hatch for qe.gatlingKarate.javaRuntime (see the JDK 25/Karate
+       Suite#run hang documented above): activates ONLY when that property
+       is actually passed via -D, e.g.
+       -Dqe.gatlingKarate.javaRuntime=/path/to/jdk21/bin/java. Left out of
+       the main build/plugins block above because Surefire's <jvm> element
+       rejects a bare "java" default (it must already be a real path), so
+       there is no safe always-on default to give it. -->
+  <profiles>
+    <profile>
+      <id>gatling-karate-jvm-override</id>
+      <activation>
+        <property>
+          <name>qe.gatlingKarate.javaRuntime</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <jvm>${qe.gatlingKarate.javaRuntime}</jvm>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

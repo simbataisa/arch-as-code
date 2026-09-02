@@ -1,0 +1,27 @@
+# Shape for TST-002's `scalability` profile: linearity and autoscaling.
+# Purpose: proves throughput scales close to linearly with load and that autoscaling
+# reacts within a bounded time, without thrashing. This is the profile that validates
+# capacity headroom assumptions rather than a fixed target
+# (performance-test-standard.md, "scalability").
+profile: scalability
+workload_model: open          # closed | open — see TST-003
+required_for_tiers: [T0, T1, T2]
+recommended_for_tiers: [T3]
+
+load_shape:
+  steps_pct_of_sustained: [25, 50, 75, 100, 125]
+  step_seconds: 900           # 15 min per step
+
+threshold_names: [sustained_rps]   # sustained_rps is the 100% reference point for the step ramp
+
+pass_criteria:
+  - assert throughput_per_step is linear within ±15% of the expected step value at each step  # TST-002 profile parameter
+  - assert hpa_settle_time < 3min after each step change   # TST-002 profile parameter
+  - assert no_scale_thrash — no rapid scale-up/scale-down oscillation within a step
+
+evidence_artifact: throughput-vs-instance-count chart with the HPA scale-event timeline
+  overlaid on the same axis
+
+smoke_mode_overrides:
+  step_seconds: 20
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not

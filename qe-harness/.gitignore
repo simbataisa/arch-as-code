@@ -1,0 +1,69 @@
+# Java / Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node (k6 scripts, tooling)
+node_modules/
+npm-debug.log*
+
+# Python (Locust)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Local env / secrets
+.env
+.env.local
+
+# Ad-hoc log output from local `make` runs
+*.log
+
+# Evidence-fragment retention policy (final-review I2/M8, resolved as part of
+# the fragment-retention cleanup): traceability/runs/*.json is generated,
+# per-run output -- every real module run (via bin/run-*.sh or ModuleRunner)
+# writes a fresh <ISO-instant>-<archetype>.json fragment there, and letting
+# every run-ever fragment accumulate untracked (194+ and growing across this
+# wave's development) is what made I2's stale-fragment false-pass reachable
+# in the first place: a fragment lookup that resolves "newest file in the
+# directory" has a much larger blast radius when the directory never stops
+# growing. Gitignoring the directory removes that exposure at its root
+# rather than only patching the symptom (I2's fix bounds the lookup by
+# run-start time; this removes the accumulation that made the bound
+# necessary to begin with).
+#
+# git does NOT retroactively untrack a file just because it is later added to
+# .gitignore, so this does not touch the 5 fragments already committed here
+# (all TST-043, added as named fixtures/examples before this policy) -- they
+# stay committed and tracked exactly as they are. Going forward, no new
+# fragment should be added to git; they are ephemeral evidence output, not
+# committed artifacts.
+#
+# Paths below are relative to this .gitignore's own directory (qe-harness/),
+# per git's usual rule -- NOT re-prefixed with "qe-harness/".
+traceability/runs/*.json
+
+# run-jmeter.sh/run-locust.sh/run-gatling-karate.sh (final-review I2) each
+# write a `.fragment-sentinel.*` marker inside this directory to bound their
+# fragment lookup, removed via an EXIT trap -- but a hard kill (SIGKILL, a CI
+# job timeout escalating past SIGTERM) skips the trap and leaves it behind.
+# Harmless to every consumer (all of them filter by archetype suffix or glob
+# `*.json`), but still an untracked leftover this rule should catch too.
+traceability/runs/.fragment-sentinel.*
+
+# test_acceptance_criteria.yml is likewise fully regenerated (by
+# bin/merge-fragments.py, from the runs/ fragments above) -- generated
+# output, not a committed artifact. Not preserved by CI's `artifacts:`
+# block either (final-review M8).
+traceability/test_acceptance_criteria.yml

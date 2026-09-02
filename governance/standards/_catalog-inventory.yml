@@ -4591,3 +4591,22 @@ rows:
   last_reviewed: '2026-08-12'
   notes: Wave 15F — security archetypes (InfoSec reviewed)
   target_wave: 4
+- id: TST-016
+  title: QE Harness Reference Implementation
+  category: testing
+  status: Approved
+  owner: qe-lead
+  path: qe-harness/README.md
+  tiers:
+  - T0
+  - T1
+  - T2
+  - T3
+  spine_or_radii: radii
+  compliance_refs:
+    ring0: []
+    ring1: []
+    ring2: []
+  last_reviewed: '2026-08-24'
+  notes: Wave 16 — runnable counterpart to the Wave 15 testing corpus; 7 of 24 archetypes
+  target_wave: 16

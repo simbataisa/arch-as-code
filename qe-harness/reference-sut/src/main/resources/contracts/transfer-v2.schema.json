@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qe-harness.techcombank.com/contracts/transfer-v2.schema.json",
+  "title": "TransferV2Response",
+  "description": "TST-030 (Task 10): the published response contract for POST /v2/transfers. Strictly additive over transfer-v1.schema.json (adds settledAt only; transferRef and status are unchanged). additionalProperties is false so the schema-drift defect's field rename (transferRef -> transfer_id, see TransferV2Controller) is caught as a missing required property, not silently tolerated as an extra one.",
+  "type": "object",
+  "properties": {
+    "transferRef": {
+      "type": "string",
+      "description": "UUID of the completed double-entry transfer (TransferService, TST-021)."
+    },
+    "status": {
+      "type": "string",
+      "description": "Settlement status of the transfer."
+    },
+    "settledAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp the transfer settled, captured immediately after TransferService#transfer commits."
+    }
+  },
+  "required": ["transferRef", "status", "settledAt"],
+  "additionalProperties": false
+}

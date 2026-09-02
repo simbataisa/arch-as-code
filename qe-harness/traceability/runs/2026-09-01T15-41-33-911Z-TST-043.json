@@ -1,0 +1,37 @@
+{
+  "archetype": "TST-043",
+  "module": "k6",
+  "service_name": "reference-sut",
+  "tier": "T0",
+  "oracle": "invariant-assertion",
+  "result": "passed",
+  "evidence": {
+    "executed_on": "2026-09-01",
+    "environment": "local-compose",
+    "report_path": "qe-harness/traceability/runs/2026-09-01T15-41-33-911Z-TST-043.json"
+  },
+  "invariants": [
+    {
+      "id": "I1",
+      "description": "Cache-Control and ETag present",
+      "result": "passed"
+    },
+    {
+      "id": "I2",
+      "description": "matching If-None-Match yields 304 with an empty body",
+      "result": "passed"
+    },
+    {
+      "id": "I3",
+      "description": "gzip applied when Accept-Encoding: gzip is sent",
+      "result": "passed"
+    }
+  ],
+  "thresholds": [
+    {
+      "name": "payload_budget_bytes",
+      "threshold_ref": "NFR-003#input-parameters",
+      "result": "passed"
+    }
+  ]
+}

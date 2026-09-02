@@ -1,0 +1,13 @@
+role,endpoint,expected_verdict
+reader,/protected/read,allow
+reader,/protected/write,deny
+reader,/protected/admin,deny
+writer,/protected/read,allow
+writer,/protected/write,allow
+writer,/protected/admin,deny
+admin,/protected/read,allow
+admin,/protected/write,allow
+admin,/protected/admin,allow
+anonymous,/protected/read,deny
+anonymous,/protected/write,deny
+anonymous,/protected/admin,deny

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QE harness run fragment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["archetype", "module", "service_name", "tier", "oracle", "result", "evidence"],
+  "properties": {
+    "archetype": {"type": "string", "pattern": "^TST-0[2-4][0-9]$"},
+    "module": {"enum": ["jmeter", "gatling-karate", "k6", "locust"]},
+    "service_name": {"type": "string", "minLength": 1},
+    "tier": {"enum": ["T0", "T1", "T2", "T3"]},
+    "oracle": {"enum": ["invariant-assertion", "golden-dataset", "confusion-matrix", "contract-schema"]},
+    "result": {"$ref": "#/$defs/result"},
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "result"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^I[0-9]+$"},
+          "description": {"type": "string", "minLength": 1},
+          "result": {"$ref": "#/$defs/result"}
+        }
+      }
+    },
+    "thresholds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "threshold_ref", "result"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "threshold_ref": {"type": "string", "pattern": "^NFR-[0-9]{3}#[a-z0-9-]+$"},
+          "result": {"$ref": "#/$defs/result"},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "allOf": [{
+          "if": {"properties": {"result": {"const": "not-evaluated"}}},
+          "then": {"required": ["reason"]}
+        }]
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executed_on", "environment", "report_path"],
+      "properties": {
+        "executed_on": {"type": "string", "format": "date"},
+        "environment": {"type": "string", "minLength": 1},
+        "sut_defect": {"type": ["string", "null"]},
+        "report_path": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "$defs": {
+    "result": {"enum": ["passed", "failed", "not-evaluated", "not-implemented"]}
+  }
+}

@@ -1,0 +1,31 @@
+# Shape for TST-002's `soak` profile: leak and drift.
+# Purpose: exposes slow leaks and drift that only appear over hours, not minutes: memory
+# growth, connection-pool exhaustion, cache growth without eviction, latency creep. Short
+# runs cannot see any of this (performance-test-standard.md, "soak").
+profile: soak
+workload_model: closed        # closed | open — see TST-003
+required_for_tiers: [T0, T1]
+recommended_for_tiers: [T2]
+
+load_shape:
+  hold_pct_of_sustained: 70
+  hold_seconds: 43200         # 12h for T0/T1; see tier_overrides below
+  tier_overrides:
+    T0:
+      hold_seconds: 86400     # T0: 24h per TST-002
+
+threshold_names: [sustained_rps]
+
+pass_criteria:
+  - assert rss_growth <= 5% over the full hold        # TST-002 profile parameter, not an NFR value
+  - assert p95_drift <= 10% comparing first hour to last hour  # TST-002 profile parameter
+  - assert connection_pool_count and assert thread_count are flat (no monotonic trend)
+  - assert dlq_depth is flat
+  - assert cache_size does not grow unbounded
+
+evidence_artifact: first-hour-vs-last-hour comparison report plus the full-duration
+  resource-utilisation time series (RSS, connections, threads, DLQ depth, cache size)
+
+smoke_mode_overrides:
+  hold_seconds: 20
+  thresholds: not-evaluated   # correctness invariants still assert; perf does not
