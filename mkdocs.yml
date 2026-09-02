@@ -12,14 +12,21 @@ site_dir: ./public
 
 theme:
   name: material
+  # Material's own bundled palette CSS hardcodes its dark-mode background/
+  # foreground rules to the literal scheme name "slate" -- confirmed by
+  # inspecting the generated stylesheet, no rule exists for any other custom
+  # name. "light"/"dark" (the names this repo used previously) never
+  # matched that rule, so toggling only ever recolored primary/accent
+  # (which *are* generated per arbitrary name) while the page background
+  # silently stayed light. "default"/"slate" are Material's real names.
   palette:
-    - scheme: light
+    - scheme: default
       primary: white
       accent: red
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    - scheme: dark
+    - scheme: slate
       primary: black
       accent: red
       toggle:

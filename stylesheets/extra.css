@@ -9,7 +9,7 @@
  */
 
 :root,
-[data-md-color-scheme="light"] {
+[data-md-color-scheme="default"] {
   --tcb-bg: #ffffff;
   --tcb-surface: #f5f6f8;
   --tcb-fg: #212121;
@@ -37,11 +37,25 @@
 
 /* Brand accent stays consistent in dark mode; base greys stay Material's own
    defaults since the design system documents no dark surface. */
-[data-md-color-scheme="dark"] {
+[data-md-color-scheme="slate"] {
   --tcb-accent: #ed1c24;
   --md-accent-fg-color: var(--tcb-accent);
   --md-accent-fg-color--transparent: #ed1c241a;
   --md-accent-bg-color: var(--tcb-accent);
+  --md-typeset-a-color: var(--tcb-accent);
+}
+
+/* Material's own bundled palette.css only overrides --md-typeset-a-color for
+   an explicit list of named primaries under [scheme=slate] (pink, purple,
+   indigo, teal, green, deep-orange, brown, grey, white -- confirmed by
+   inspecting the compiled stylesheet). "black" and "white" (this repo's
+   actual primaries) aren't both on that list, so the variable falls through
+   to a hue-based default that renders blue, not brand red. Matching
+   Material's own selector shape (two attribute selectors, same specificity)
+   with our exact scheme+primary combos wins deterministically on source
+   order, rather than fighting an undocumented fallback formula. */
+[data-md-color-scheme="default"][data-md-color-primary="white"],
+[data-md-color-scheme="slate"][data-md-color-primary="black"] {
   --md-typeset-a-color: var(--tcb-accent);
 }
 
