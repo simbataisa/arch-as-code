@@ -1,0 +1,997 @@
+<title>Invariant Index</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #EAEAEA;
+    --surface-3: #D4D5D5;
+    --ink: #292B2C;
+    --ink-muted: #545556;
+    --ink-faint: #7F8080;
+    --accent: #F8116A;
+    --accent-ink: #C61057;
+    --accent-soft: #FEE7F0;
+    --flag: #CC8500;
+    --flag-soft: #F5E7CC;
+    --alert: #DB2828;
+    --alert-soft: #F8D4D4;
+    --positive: #2D7A32;
+    --positive-soft: #D5E4D6;
+    --hairline: #D4D5D5;
+    --focus: #F8116A;
+    --shadow: 0 1px 2px rgba(41,43,44,0.07), 0 6px 20px rgba(41,43,44,0.06);
+    --sans: "Open Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --serif: var(--sans);
+    --mono: var(--sans);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1A1B1C;
+      --surface: #232527;
+      --surface-2: #2D3031;
+      --surface-3: #3A3D3E;
+      --ink: #EAEAEA;
+      --ink-muted: #A9AAAB;
+      --ink-faint: #7F8080;
+      --accent: #FB70A6;
+      --accent-ink: #FCA0C3;
+      --accent-soft: #3D1826;
+      --flag: #E0A030;
+      --flag-soft: #3A2C12;
+      --alert: #E8615C;
+      --alert-soft: #3D1E1C;
+      --positive: #5FBE66;
+      --positive-soft: #1B3220;
+      --hairline: #34373A;
+      --focus: #FB70A6;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 26px rgba(0,0,0,0.32);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1A1B1C; --surface: #232527; --surface-2: #2D3031; --surface-3: #3A3D3E;
+    --ink: #EAEAEA; --ink-muted: #A9AAAB; --ink-faint: #7F8080;
+    --accent: #FB70A6; --accent-ink: #FCA0C3; --accent-soft: #3D1826;
+    --flag: #E0A030; --flag-soft: #3A2C12; --alert: #E8615C; --alert-soft: #3D1E1C;
+    --positive: #5FBE66; --positive-soft: #1B3220;
+    --hairline: #34373A; --focus: #FB70A6;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 26px rgba(0,0,0,0.32);
+  }
+
+  * { box-sizing: border-box; }
+  html { scrollbar-gutter: stable; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; }
+
+  /* ---------- Header / controls ---------- */
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+  .kicker {
+    font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-wrap: balance;
+  }
+  header .dek { color: var(--ink-muted); max-width: 62ch; font-size: 1rem; text-wrap: pretty; }
+
+  .controls {
+    position: sticky; top: 0.75rem; z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+    box-shadow: var(--shadow);
+  }
+  .searchrow { display: flex; align-items: center; gap: 0.6rem; }
+  .searchrow svg { flex-shrink: 0; color: var(--ink-faint); }
+  #search {
+    flex: 1; border: none; background: transparent; color: var(--ink);
+    font-family: var(--serif); font-size: 1rem; padding: 0.2rem 0;
+  }
+  #search::placeholder { color: var(--ink-faint); }
+  #search:focus { outline: none; }
+  .clearbtn {
+    font-family: var(--mono); font-size: 0.72rem; color: var(--ink-muted);
+    background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px;
+    padding: 0.25rem 0.55rem; cursor: pointer; display: none;
+  }
+  .clearbtn:hover { color: var(--ink); }
+
+  .filtergroup { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .filtergroup .glabel {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-faint); margin-right: 0.15rem;
+  }
+  .togglechip {
+    font-family: var(--mono); font-size: 0.76rem;
+    padding: 0.28rem 0.65rem; border-radius: 999px;
+    border: 1px solid var(--hairline); background: var(--surface);
+    color: var(--ink-muted); cursor: pointer; line-height: 1.2;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .togglechip:hover { border-color: var(--ink-faint); }
+  .togglechip[aria-pressed="true"] {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink);
+  }
+
+  .countline {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+
+  /* ---------- Family sections ---------- */
+  .family { display: flex; flex-direction: column; gap: 0.6rem; }
+  .family[hidden] { display: none; }
+  .fam-head {
+    display: flex; align-items: baseline; gap: 0.6rem;
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-faint); padding-top: 0.5rem;
+    border-top: 1px solid var(--hairline);
+  }
+  .fam-head .fam-letter { color: var(--accent-ink); font-weight: 700; }
+  .fam-head .fam-count { margin-left: auto; }
+
+  /* ---------- Archetype entries ---------- */
+  details.entry {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px;
+    overflow: hidden;
+  }
+  details.entry[hidden] { display: none; }
+  details.entry summary {
+    list-style: none; cursor: pointer; padding: 0.85rem 1rem;
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+  }
+  details.entry summary::-webkit-details-marker { display: none; }
+  details.entry summary .caret {
+    font-family: var(--mono); color: var(--ink-faint); font-size: 0.8rem;
+    transition: transform 0.15s; flex-shrink: 0; width: 0.9em;
+  }
+  details.entry[open] summary .caret { transform: rotate(90deg); }
+  summary .tid {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--accent-ink);
+    background: var(--accent-soft); padding: 0.15rem 0.45rem; border-radius: 4px; flex-shrink: 0;
+  }
+  summary .ttitle { font-weight: 700; font-size: 0.98rem; flex: 1; min-width: 160px; }
+  summary .toolbadge {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.03em;
+    color: var(--ink-muted); background: var(--surface-2); border: 1px solid var(--hairline);
+    padding: 0.18rem 0.5rem; border-radius: 999px; white-space: nowrap;
+  }
+  summary .oraclebadge {
+    font-family: var(--mono); font-size: 0.68rem; color: var(--flag);
+    background: var(--flag-soft); padding: 0.18rem 0.5rem; border-radius: 999px; white-space: nowrap;
+  }
+
+  .entrybody { padding: 0 1.1rem 1.15rem 2.6rem; display: flex; flex-direction: column; gap: 1.1rem; }
+  .entrybody h4 {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 0.5rem;
+  }
+  ol.invariants { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+  ol.invariants li { display: flex; gap: 0.6rem; font-size: 0.92rem; }
+  ol.invariants li .itag {
+    font-family: var(--mono); font-size: 0.75rem; color: var(--accent-ink);
+    flex-shrink: 0; width: 2.1em;
+  }
+  ul.taxonomy { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; color: var(--ink-muted); }
+  ul.taxonomy li::marker { color: var(--alert); }
+
+  .profilerow { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .profilechip {
+    font-family: var(--mono); font-size: 0.7rem; color: var(--ink-muted);
+    background: var(--surface-2); padding: 0.15rem 0.5rem; border-radius: 4px;
+  }
+
+  .toolgrid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .toolcell {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-family: var(--mono); font-size: 0.78rem;
+    border: 1px solid var(--hairline); border-radius: 6px; padding: 0.3rem 0.6rem;
+    background: var(--surface-2);
+  }
+  .toolcell .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .toolcell.best { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+  .toolcell.best .dot { background: var(--accent); }
+  .toolcell.good .dot { background: var(--ink-muted); }
+  .toolcell.fair .dot { background: var(--hairline); border: 1px solid var(--ink-faint); }
+
+  .harness {
+    font-size: 0.92rem; color: var(--ink); background: var(--surface-2);
+    border-left: 3px solid var(--flag); border-radius: 0 6px 6px 0; padding: 0.7rem 0.9rem;
+  }
+  .harness strong { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--flag); display: block; margin-bottom: 0.3rem; }
+
+  .noresults {
+    text-align: center; color: var(--ink-faint); font-family: var(--mono); font-size: 0.85rem;
+    padding: 2.5rem 1rem; border: 1px dashed var(--hairline); border-radius: 8px;
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabbar {
+    display: flex; gap: 0.4rem; border-bottom: 1px solid var(--hairline); padding-bottom: 0;
+  }
+  .tabbtn {
+    font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.02em;
+    background: transparent; border: none; color: var(--ink-faint);
+    padding: 0.6rem 0.2rem; cursor: pointer; position: relative; top: 1px;
+    border-bottom: 2px solid transparent;
+  }
+  .tabbtn[aria-selected="true"] { color: var(--accent-ink); border-bottom-color: var(--accent); }
+  .tabbtn + .tabbtn { margin-left: 1.1rem; }
+  .tabpanel[hidden] { display: none; }
+
+  /* ---------- Summary tab ---------- */
+  .summary-lede {
+    font-size: 1.08rem; max-width: 66ch; padding: 1rem 1.2rem;
+    background: var(--accent-soft); border-radius: 8px; color: var(--ink);
+    text-wrap: pretty;
+  }
+  .summary-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: 6px; overflow: hidden;
+  }
+  .summary-stats .stat { background: var(--surface); padding: 1rem 0.9rem; display: flex; flex-direction: column; gap: 0.25rem; }
+  .summary-stats .val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.5rem; color: var(--ink); }
+  .summary-stats .label { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-muted); }
+
+  .scenariocard {
+    display: flex; flex-direction: column; gap: 0.4rem;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; padding: 1rem 1.15rem;
+  }
+  .scenariocard .sc-head { display: flex; align-items: baseline; gap: 0.55rem; }
+  .scenariocard .sc-letter {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--accent-ink);
+    background: var(--accent-soft); padding: 0.1rem 0.42rem; border-radius: 4px;
+  }
+  .scenariocard .sc-title { font-weight: 700; font-size: 0.98rem; }
+  .scenariocard .sc-body { font-size: 0.92rem; color: var(--ink-muted); max-width: 68ch; }
+  .scenariocard .sc-risk {
+    font-size: 0.86rem; margin-top: 0.15rem; padding-top: 0.5rem; border-top: 1px dashed var(--hairline);
+  }
+  .scenariocard .sc-risk strong { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--flag); margin-right: 0.4em; }
+
+  .copybar {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  }
+  .copybtn {
+    font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.02em;
+    background: var(--accent); color: #ffffff; border: none; border-radius: 6px;
+    padding: 0.5rem 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45em;
+  }
+  .copybtn:hover { filter: brightness(1.06); }
+  .copybtn.copied { background: var(--ink-muted); }
+  .audience-note { font-size: 0.86rem; color: var(--ink-faint); }
+
+  footer {
+    border-top: 1px solid var(--hairline); padding-top: 1.25rem; margin-top: 0.5rem;
+    font-family: var(--mono); font-size: 0.75rem; color: var(--ink-faint);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+  }
+
+  @media (max-width: 560px) {
+    .entrybody { padding-left: 1.1rem; }
+    summary .ttitle { min-width: 100%; order: 3; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Testing knowledge base · reference</div>
+    <h1>Invariant Index</h1>
+    <p class="dek">Every test scenario, failure mode, and harness artefact across the 24 QE test
+      archetypes — searchable by keyword, family, or tool.</p>
+  </header>
+
+  <div class="tabbar" role="tablist">
+    <button class="tabbtn" role="tab" id="tab-btn-browse" aria-selected="true" aria-controls="tab-browse" type="button">Browse index</button>
+    <button class="tabbtn" role="tab" id="tab-btn-summary" aria-selected="false" aria-controls="tab-summary" type="button">Scenario summary</button>
+  </div>
+
+  <section id="tab-summary" class="tabpanel" role="tabpanel" aria-labelledby="tab-btn-summary" hidden>
+
+    <p class="summary-lede">
+      IT Quality Engineering now has a documented, reviewed test design for every architecture
+      pattern in the catalog — 24 test archetypes across seven verification families, covering
+      231 catalog rows. Two of those archetypes, both touching authentication and data
+      protection, went through a full information-security review that caught real defects
+      before anything shipped.
+    </p>
+
+    <div class="summary-stats">
+      <div class="stat"><span class="val">24</span><span class="label">Archetypes</span></div>
+      <div class="stat"><span class="val">231</span><span class="label">Catalog rows covered</span></div>
+      <div class="stat"><span class="val">7</span><span class="label">Families</span></div>
+      <div class="stat"><span class="val">2</span><span class="label">InfoSec-reviewed</span></div>
+      <div class="stat"><span class="val">~150</span><span class="label">Scenarios defined</span></div>
+      <div class="stat"><span class="val">4</span><span class="label">Tools standardised</span></div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:0.85rem;">
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">A</span><span class="sc-title">Correctness &amp; money handling</span></div>
+        <p class="sc-body">Duplicate-charge prevention on retry, ledger debit/credit balance, exact
+          reversals, calculation determinism, and decision-table accuracy against a labelled
+          corpus — six archetypes covering every pattern that touches state or money.</p>
+      </div>
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">B</span><span class="sc-title">Messaging &amp; integration</span></div>
+        <p class="sc-body">Proves messages aren't dropped, duplicated, or misrouted between
+          services — transformation fidelity, delivery guarantees with dead-letter handling,
+          ordering under concurrency, and contract compatibility verified against the live
+          producer, not a stale mock.</p>
+      </div>
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">C</span><span class="sc-title">Load &amp; capacity</span></div>
+        <p class="sc-body">Proves rate limits, batch cutoffs, and multi-tenant systems hold their
+          declared limits under real concurrent load, and that one customer's traffic burst
+          cannot degrade another's.</p>
+      </div>
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">D</span><span class="sc-title">Resilience &amp; deployment</span></div>
+        <p class="sc-body">Proves circuit breakers actually open, fallbacks actually degrade
+          gracefully, and deploys/rotations complete with zero attributable failed requests —
+          verified by injecting the real fault, not by reviewing configuration.</p>
+      </div>
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">E</span><span class="sc-title">Data integrity</span></div>
+        <p class="sc-body">Proves reporting and analytics data converges correctly from source
+          systems, historical records can't be silently rewritten, and reconciliation is
+          independently recomputed rather than re-reading the same aggregate.</p>
+      </div>
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">F</span><span class="sc-title">Security</span></div>
+        <p class="sc-body">Proves access control and data protection actually work end-to-end —
+          not merely configured correctly. The most rigorously reviewed pair in the corpus.</p>
+        <p class="sc-risk"><strong>Risk avoided</strong>Review caught an authorisation check that
+          could report a pass even during a live outage, and a test design that couldn't
+          distinguish a fully compromised device from a healthy one — both fixed before merge.</p>
+      </div>
+
+      <div class="scenariocard">
+        <div class="sc-head"><span class="sc-letter">G</span><span class="sc-title">Observability &amp; client experience</span></div>
+        <p class="sc-body">Proves monitoring and alerting actually fire when something breaks
+          (not just that they're configured to), and that client apps degrade gracefully offline
+          and meet real performance budgets on real devices.</p>
+      </div>
+
+    </div>
+
+    <div class="copybar">
+      <p class="audience-note">Plain-text version below is sized for an email body — lift it directly or edit to taste.</p>
+      <button class="copybtn" id="copysummary" type="button">Copy summary for email</button>
+    </div>
+
+  </section>
+
+  <section id="tab-browse" class="tabpanel" role="tabpanel" aria-labelledby="tab-btn-browse">
+
+  <div class="controls">
+    <div class="searchrow">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M11.5 11.5L14.5 14.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <input id="search" type="text" placeholder="Search invariants, failure modes, harness detail…" autocomplete="off" />
+      <button class="clearbtn" id="clearsearch" type="button">Clear</button>
+    </div>
+    <div class="filtergroup" id="famfilters">
+      <span class="glabel">Family</span>
+    </div>
+    <div class="filtergroup" id="toolfilters">
+      <span class="glabel">Best-fit tool</span>
+    </div>
+  </div>
+
+  <p class="countline"><span id="countline">Showing 24 of 24 archetypes</span><span>Wave 15 · IT Quality Engineering</span></p>
+
+  <div id="results"></div>
+
+  </section>
+
+  <footer>
+    <span>Compiled from <code>knowledge-base/testing/archetypes/</code></span>
+    <span>2026-08-15</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var TOOLS = ["jmeter", "gatling", "k6", "locust"];
+  var TOOL_LABEL = { jmeter: "JMeter", gatling: "Gatling+Karate", k6: "k6", locust: "Locust" };
+
+  var FAMILIES = [
+    { key: "A", label: "Correctness & State" },
+    { key: "B", label: "Messaging & Integration" },
+    { key: "C", label: "Load & Capacity" },
+    { key: "D", label: "Resilience" },
+    { key: "E", label: "Data" },
+    { key: "F", label: "Security" },
+    { key: "G", label: "Observability & Client" }
+  ];
+
+  var DATA = [
+    { id: "TST-020", title: "Idempotency and Replay Safety", family: "A", oracle: "invariant-assertion",
+      invariants: [
+        "N identical requests with the same key produce exactly one state change",
+        "A replay returns the same status/body as the original, byte-for-byte",
+        "Different keys with identical payloads produce N distinct state changes",
+        "Same key + different payload is explicitly rejected (conflict), never silently ignored",
+        "Under true concurrency, exactly one duplicate wins; the other gets the stored response",
+        "Key-retention TTL is at least the client's max retry window",
+        "Consumer-side dedup survives broker redelivery (at-least-once)"
+      ],
+      taxonomy: ["Duplicate posting on client retry", "Key collision across customers", "Retention window shorter than client retry window", "Non-deterministic replay body", "Two concurrent duplicates both proceeding", "Gateway-only idempotency bypassed downstream"],
+      profiles: ["baseline", "load", "stress", "spike", "soak"],
+      toolFit: { jmeter: "best", gatling: "good", k6: "good", locust: "fair" },
+      harness: "A JMeter Synchronizing Timer holds N threads at a barrier and releases them simultaneously to force genuinely concurrent duplicate requests against the same idempotency key." },
+
+    { id: "TST-021", title: "Ledger and Monetary Invariant", family: "A", oracle: "invariant-assertion",
+      invariants: [
+        "sum(debits) == sum(credits) per journal",
+        "Sum of all entries per currency across the ledger is zero",
+        "A reversal exactly negates its original (accounts, currency, magnitude)",
+        "A reversal cannot itself be reversed more than once",
+        "Every account balance equals the independently recomputed sum of its entries",
+        "No entry accepted into a closed accounting period",
+        "Rounding remainder posted to a designated account, never discarded",
+        "Position after N concurrent postings equals the sum of the N amounts"
+      ],
+      taxonomy: ["Partial journal write leaving one leg posted", "Dropped rounding remainder", "Reversal not exact negation", "Double-reversal", "Concurrent-posting position drift", "Back-dated entry mutating a closed period"],
+      profiles: ["baseline", "load", "stress", "soak", "failover-under-load"],
+      toolFit: { jmeter: "best", locust: "good", gatling: "fair", k6: "fair" },
+      harness: "A JDBC PostProcessor re-derives debit/credit totals directly from source rows, then a JSR223 Assertion compares them exclusively in BigDecimal — double/float banned on both harness and system-under-test sides." },
+
+    { id: "TST-022", title: "Deterministic Calculation Engine", family: "A", oracle: "golden-dataset",
+      invariants: [
+        "Same input + effective date produce a bit-identical output on repeat invocation",
+        "Output matches the golden dataset at the declared scale",
+        "Rounding uses the declared mode, verified at an exact .5 boundary",
+        "A value exactly on a tier boundary resolves to the documented tier",
+        "Recalculation is idempotent across reruns",
+        "No floating-point arithmetic anywhere in the money path (static-analysis gate)"
+      ],
+      taxonomy: ["Wrong rounding mode", "Wrong day-count convention at boundaries", "Leap-year/29-Feb mishandling", "Float instead of decimal", "Tiered threshold off-by-one", "Rate change applied at wrong instant"],
+      profiles: ["baseline", "load"],
+      toolFit: { locust: "best", jmeter: "good", gatling: "fair", k6: "fair" },
+      harness: "Locust inline reproduces the expected value using decimal.Decimal / ROUND_HALF_EVEN — the harness's computation IS the oracle, not an approximation compared against it." },
+
+    { id: "TST-023", title: "Concurrent Limit & Counter Contention", family: "A", oracle: "invariant-assertion",
+      invariants: [
+        "Given N concurrent requests vs limit L, exactly min(N,L) succeed",
+        "Observed utilisation never exceeds the limit at any sampled instant",
+        "A rolled-back reservation returns exactly its own amount",
+        "A double release is rejected",
+        "Counter window boundary uses the declared timezone",
+        "No reservation outlives its declared TTL"
+      ],
+      taxonomy: ["Oversubscription under concurrency", "Lost update on read-modify-write", "Double release on rollback", "Reservation leak", "Wrong-timezone counter reset", "Deadlock between two limit checks taken in different orders"],
+      profiles: ["baseline", "load", "stress", "spike"],
+      toolFit: { jmeter: "best", gatling: "good", k6: "good", locust: "fair" },
+      harness: "A Synchronizing Timer plus a Counter cycling a bounded synthetic account pool releases N threads at once, then a JDBC PostProcessor reads persisted utilisation/limit columns directly, not the HTTP response." },
+
+    { id: "TST-024", title: "Saga and Compensation Correctness", family: "A", oracle: "invariant-assertion",
+      invariants: [
+        "Saga completes, or every committed step is compensated",
+        "Compensations execute in reverse order of forward commits",
+        "Each compensation is idempotent (replayed N≥2 times, one net effect)",
+        "Saga reaches terminal state within its declared timeout",
+        "No compensation runs for a step that never committed",
+        "Orchestrator restart resumes from persisted state, never from step 1"
+      ],
+      taxonomy: ["Compensation not executed for a partially succeeded step", "Compensation itself fails with no escalation", "Non-idempotent compensation applied twice", "Saga stuck with no timeout", "Out-of-order compensation corrupting state", "Compensation run for a step that never committed"],
+      profiles: ["baseline", "load", "soak", "failover-under-load"],
+      toolFit: { locust: "best", jmeter: "good", gatling: "good", k6: "fair" },
+      harness: "A Locust SequentialTaskSet chains forward steps, a bounded-wait poll for terminal state, and a reverse-order compensating branch as @task methods of one class." },
+
+    { id: "TST-025", title: "Decision Table and Screening Accuracy", family: "A", oracle: "confusion-matrix",
+      invariants: [
+        "Every input matches exactly one decision path — no gap, no overlap",
+        "Precision/recall/false-positive rate meet declared, business-owned thresholds",
+        "Every decision emits an explanation naming the fired rule",
+        "A list/policy update takes effect within its propagation window, without restart",
+        "No rule is unreachable (static reachability sweep)",
+        "Same input yields the same decision until ruleset version changes"
+      ],
+      taxonomy: ["Overlapping rules causing non-deterministic decisions", "No default rule (silent fall-through)", "Fuzzy-match threshold tuned to hide false negatives", "List update not effective until restart", "Unexplainable decisions", "Unreachable / dead rules"],
+      profiles: ["baseline", "load", "stress", "soak"],
+      toolFit: { locust: "best", jmeter: "good", gatling: "fair", k6: "fair" },
+      harness: "JMeter needs a synchronized(props) JSR223 block plus a tearDown Thread Group to accumulate the confusion matrix across threads; Locust does the same with a plain module-level Counter — no locking required." },
+
+    { id: "TST-026", title: "Message Transformation and Routing Correctness", family: "B", oracle: "contract-schema",
+      invariants: [
+        "Every source field maps to a defined target field or a documented discard",
+        "No message reaches a default/fallback route in a passing run",
+        "Unmapped enum values are rejected, never defaulted",
+        "Splitter output count equals the declared element count",
+        "Round-trip translation preserves amount precision and currency exactly",
+        "Non-ASCII text (Vietnamese diacritics) survives byte-identically",
+        "Enricher failure yields an error, never a partial message"
+      ],
+      taxonomy: ["Silent field truncation", "Unmapped enum defaulting", "Router falling through to default channel", "Enricher failing open", "Splitter losing the final element", "Character-encoding corruption", "Decimal precision loss on monetary translation"],
+      profiles: ["baseline", "load", "soak"],
+      toolFit: { jmeter: "best", gatling: "good", k6: "fair", locust: "fair" },
+      harness: "Native JMS/Kafka samplers publish a synthetic canonical message; JSR223 Assertions compare round-tripped amounts in BigDecimal and UTF-8 diacritic bytes byte-for-byte, loaded from a UTF-8 CSV to avoid editor re-normalisation." },
+
+    { id: "TST-027", title: "Ordering, Sequencing and Resequencing", family: "B", oracle: "invariant-assertion",
+      invariants: [
+        "Messages emitted in sequence order regardless of arrival order",
+        "A gap is detected and resolves within a bounded window, or escalates",
+        "The resequencer never emits the same message twice",
+        "Buffer bound enforced with defined overflow behaviour, never silent loss",
+        "The ordering guarantee's scope (per-key/per-partition/global) is documented and asserted"
+      ],
+      taxonomy: ["Out-of-order delivery overwriting later state", "Buffer overflow dropping silently", "Missing gap detection blocking forever", "Per-partition ordering mistaken for global", "Consumer-group rebalance reordering in-flight messages"],
+      profiles: ["baseline", "load", "stress", "soak"],
+      toolFit: { jmeter: "best", locust: "good", gatling: "fair", k6: "fair" },
+      harness: "A Kafka producer publishes a pre-shuffled synthetic sequence; a permanent gap is withheld entirely (never published) to prove bounded-wait escalation rather than an indefinite block." },
+
+    { id: "TST-028", title: "Fan-out / Fan-in Correlation", family: "B", oracle: "invariant-assertion",
+      invariants: [
+        "Aggregate emitted only when complete, or on timeout with an explicit partial marker",
+        "Correlation IDs are unique within the correlation window",
+        "Aggregate contents equal the union of received branch responses, no duplication",
+        "Fan-in latency approximates the slowest branch, not the sum of branches",
+        "A claim-check reference resolves for at least its declared retention period"
+      ],
+      taxonomy: ["Aggregator waiting indefinitely for a response that never arrives", "Partial aggregate emitted as complete", "Correlation ID collision merging conversations", "Claim-check payload expiring before retrieval", "Aggregate emitted twice on retry"],
+      profiles: ["baseline", "load", "spike", "failover-under-load"],
+      toolFit: { jmeter: "best", gatling: "good", k6: "good", locust: "fair" },
+      harness: "A Parallel Controller fans one request across N branch samplers concurrently (one deliberately routed to a blackhole endpoint), with a UUID correlation ID and a bounded-wait poll for the aggregate." },
+
+    { id: "TST-029", title: "Delivery Guarantee, Retry & DLQ", family: "B", oracle: "invariant-assertion",
+      invariants: [
+        "Every message is processed exactly once in effect, or lands in the DLQ — never silently lost",
+        "A broker restart loses nothing acknowledged as persisted",
+        "A poison message reaches the DLQ within declared attempts, without blocking its partition",
+        "Retry intervals follow the declared backoff curve, with jitter",
+        "DLQ depth is observable and alertable",
+        "An endpoint returning a permanent error stops being retried per policy"
+      ],
+      taxonomy: ["Message lost on broker restart (never actually persisted)", "Consumer acks before processing", "Poison message blocks partition indefinitely", "DLQ fills with no alert", "Retry without backoff amplifying an outage", "Redelivered message causing a duplicate side effect"],
+      profiles: ["baseline", "load", "spike", "soak", "failover-under-load"],
+      toolFit: { jmeter: "best", locust: "good", gatling: "fair", k6: "fair" },
+      harness: "A JSR223 PreProcessor injects one deterministically-rejectable poison message at a known partition offset, while a synthetic canary message continuously round-trips the same channel to prove liveness." },
+
+    { id: "TST-030", title: "Contract and Schema Compatibility", family: "B", oracle: "contract-schema",
+      invariants: [
+        "Every registered schema version satisfies its declared compatibility mode against its predecessor",
+        "Every consumer contract verifies against the current live producer, never a mock",
+        "Declared compatibility mode equals the registry's actual configured mode",
+        "Every CloudEvents required attribute is present and correctly typed",
+        "Every documented error code is reachable and its mapping is stable",
+        "A deliberately incompatible candidate schema is rejected by the registry"
+      ],
+      taxonomy: ["Producer adds a required field, breaking BACKWARD consumers", "Compat mode silently set to NONE", "Consumer tests passing against a stale mock", "Missing CloudEvents required attributes", "Error contract changed with no version bump"],
+      profiles: ["baseline"],
+      toolFit: { gatling: "best", k6: "good", jmeter: "fair", locust: "fair" },
+      harness: "The identical Karate .feature file already used as the merge-time contract suite is reused unchanged as the Gatling baseline load scenario via karate-gatling — one artefact, not two." },
+
+    { id: "TST-031", title: "Rate Limit, Throttle & Breakpoint", family: "C", oracle: "invariant-assertion",
+      invariants: [
+        "Offered load above the limit is rejected, not queued indefinitely",
+        "Accepted rate stays within the configured limit, measured globally not per instance",
+        "Every rejection carries a machine-readable retry hint",
+        "Shedding preserves the classes the declared policy prioritises",
+        "A queued request either meets its end-to-end budget or is rejected before enqueue",
+        "The limiter's own decision overhead is bounded and measured"
+      ],
+      taxonomy: ["Limit enforced per-instance rather than globally", "429 with no retry hint amplifying load", "Indiscriminate shedding", "Queue hiding overload while breaching latency budget", "Limiter itself becoming the bottleneck", "Burst allowance mistuned too low"],
+      profiles: ["baseline", "load", "stress", "spike", "scalability"],
+      toolFit: { jmeter: "best", k6: "good", gatling: "good", locust: "fair" },
+      harness: "A Throughput Shaping Timer step-ramps request rate precisely past the configured limit, with a JSR223 PostProcessor tallying accept/reject into a cross-thread props store for a true global rejection-rate figure — defines \"the knee\" other archetypes cross-link." },
+
+    { id: "TST-032", title: "Batch Window and Cutoff Throughput", family: "C", oracle: "invariant-assertion",
+      invariants: [
+        "Batch completes within its declared window at declared volume",
+        "A restart after mid-batch failure yields the same final state as an uninterrupted control run",
+        "Cutoff boundary uses the declared timezone AND business calendar",
+        "Every transaction is processed in exactly one business date, never two or none",
+        "Throughput degradation stays within its declared bound across 1x/2x/4x volume",
+        "Online latency during the batch window stays within its own budget"
+      ],
+      taxonomy: ["Batch exceeding its window and colliding with next cycle", "No restartability after mid-batch failure", "Cutoff on wrong timezone", "Partial batch commit with non-idempotent restart", "Late-arriving transaction assigned wrong business date", "Batch/online contention degrading online latency"],
+      profiles: ["baseline", "load", "scalability", "soak", "mixed"],
+      toolFit: { jmeter: "best", locust: "good", gatling: "fair", k6: "fair" },
+      harness: "A JDBC PostProcessor diffs the restarted run's final state field-by-field against a stored control-run snapshot — a bare status check can't distinguish clean restart from silent re-execution of an already-committed step." },
+
+    { id: "TST-033", title: "Multi-Tenant Isolation and Noisy-Neighbour", family: "C", oracle: "invariant-assertion",
+      invariants: [
+        "Tenant A at max quota does not push tenant B's P95 beyond tenant B's own budget",
+        "No response contains another tenant's data under any concurrency",
+        "A bulkhead's saturation is contained to its own pool",
+        "A cell failure's blast radius equals its declared tenant set — no more",
+        "Per-tenant quota is enforced per tenant, never a platform aggregate",
+        "Cost per transaction is attributable to exactly one tenant"
+      ],
+      taxonomy: ["One tenant's burst degrading another's latency", "Shared connection pool exhausted by a single tenant", "Cross-tenant data leakage under concurrency", "Cell failure exceeding declared blast radius", "Per-tenant quota not actually enforced", "Cost attribution wrong"],
+      profiles: ["baseline", "load", "stress", "mixed", "failover-under-load"],
+      toolFit: { jmeter: "best", gatling: "good", k6: "good", locust: "fair" },
+      harness: "Independent Thread Groups per tenant with distinct synthetic credentials and strictly separate per-tenant reports (never merged), plus a deliberate cross-tenant read that must be denied, never a 200." },
+
+    { id: "TST-034", title: "Blended Journey Workload", family: "C", oracle: "invariant-assertion",
+      invariants: [
+        "Every constituent journey meets its own tier budget, never a blended figure",
+        "Blend percentages match the declared mix within tolerance",
+        "No journey is starved below its declared share",
+        "Errors are attributed per journey, never only in aggregate",
+        "Cache/connection-pool steady state is reached before measurement begins"
+      ],
+      taxonomy: ["Aggregate P95 masking a low-volume journey's breach", "Blend percentages drifting from real traffic", "Low-volume high-value journey starved by scheduling", "Blend run too short to reach steady state", "One journey's failure misattributed to another"],
+      profiles: ["mixed", "load", "soak", "failover-under-load"],
+      toolFit: { jmeter: "best", gatling: "good", k6: "good", locust: "fair" },
+      harness: "A percent-execution Throughput Controller enforces each journey's declared share of iterations directly, with a separate per-journey Transaction Controller and report so budgets and error attribution stay distinguishable." },
+
+    { id: "TST-035", title: "Fault Injection and Graceful Degradation", family: "D", oracle: "invariant-assertion",
+      invariants: [
+        "Breaker opens within its declared threshold under the injected fault",
+        "While open, calls fail fast without reaching the dependency",
+        "Half-open probes are bounded and a probe failure reopens the breaker",
+        "Fallback path is exercised while open, and its result is marked degraded",
+        "Every callee's declared timeout is strictly less than its caller's remaining budget",
+        "Health check reflects the real state of every composed dependency",
+        "Exactly one leader exists during and after a partition",
+        "Recovery produces no thundering herd on the dependency",
+        "No regulated function is silently dropped by a degradation-tier transition"
+      ],
+      taxonomy: ["Breaker threshold configured unreachably high", "Fallback method itself fails", "Fallback returns stale data with no degraded flag", "Callee timeout longer than caller's remaining budget", "Health check reports healthy while a dependency is down", "Leader election flapping under partition", "Retry storm on recovery re-triggering the fault"],
+      profiles: ["baseline", "load", "spike", "failover-under-load"],
+      toolFit: { jmeter: "best", k6: "good", gatling: "good", locust: "fair" },
+      harness: "A JSR223 PreProcessor injects the declared fault at a recorded timestamp every later assertion measures against, and a second, un-throttled Thread Group polls the dependency's own offered-load counter so the main Thread Group's back-pressure never masks a real thundering herd." },
+
+    { id: "TST-036", title: "Zero-Downtime Deploy, Traffic Shift & Rotation", family: "D", oracle: "invariant-assertion",
+      invariants: [
+        "Zero failed requests attributable to a deploy, rotation, or traffic shift",
+        "In-flight requests either complete or are cleanly retriable",
+        "Readiness gates traffic until the instance is warm",
+        "Rollback restores prior behaviour completely, including schema compatibility",
+        "Rotation completes with no failed request attributable to it",
+        "Old and new strangler routes produce equivalent results for the same input",
+        "A flag flip is atomic from a single request's perspective"
+      ],
+      taxonomy: ["In-flight requests dropped at pod termination", "Readiness probe passing before warm-up", "Canary metrics window too short to catch a regression", "Rollback leaving a schema change applied", "Secret rotated while pooled connections hold the old credential", "Feature-flag flip producing inconsistent state within one request"],
+      profiles: ["baseline", "load", "failover-under-load"],
+      toolFit: { jmeter: "best", k6: "good", gatling: "good", locust: "fair" },
+      harness: "A JSR223 PreProcessor records the change-event start/end by polling the deployment controller (never a fixed sleep), and every failure is attributed by timestamp correlation; a shadow-comparison assertion sends one identical input to both old and new strangler routes in the same cycle." },
+
+    { id: "TST-037", title: "Read-Model Convergence and CDC Lag", family: "E", oracle: "invariant-assertion",
+      invariants: [
+        "Read model converges to match the write model within the declared bound",
+        "Lag is asserted at the tail percentile (p95/p99), never the mean",
+        "A full replay produces a projection identical to the incrementally built one",
+        "Every outbox row is eventually published exactly once",
+        "No event is lost or duplicated across a connector restart",
+        "Exceeding the convergence bound is a hard failure, never an indefinite wait"
+      ],
+      taxonomy: ["Read model never converges (dropped event)", "Convergence asserted by unbounded polling", "Lag measured as mean, hiding the tail", "Outbox row committed but never published", "Full replay diverging from incremental projection", "CDC connector restarting from the wrong offset"],
+      profiles: ["baseline", "load", "spike", "soak", "failover-under-load"],
+      toolFit: { jmeter: "best", locust: "good", gatling: "fair", k6: "fair" },
+      harness: "Two separate JDBC pools independently query the write-side outbox table and read-side projection table, inside a mandatory bounded-wait loop whose exceeded-bound is a hard failure, not a continued poll." },
+
+    { id: "TST-038", title: "Temporal and Historisation Correctness", family: "E", oracle: "golden-dataset",
+      invariants: [
+        "An as-of query returns exactly the row valid at that instant",
+        "Validity intervals per key are contiguous and non-overlapping",
+        "Exactly one current row exists per key",
+        "A late-arriving record lands in its correct effective period, by business timestamp not arrival",
+        "DST transitions produce neither duplicate nor missing periods",
+        "A retroactive correction creates a new version and preserves its predecessor",
+        "Downsampling preserves the declared extrema (min/max), not just the mean"
+      ],
+      taxonomy: ["As-of query returning the current row instead of the historically valid one", "Overlapping SCD-2 validity intervals", "Late-arriving data not back-dated correctly", "DST boundary producing duplicate/missing hour", "Retroactive correction overwriting history instead of versioning", "Downsampling losing a spike"],
+      profiles: ["baseline", "load", "scalability"],
+      toolFit: { jmeter: "best", locust: "good", gatling: "fair", k6: "fair" },
+      harness: "A JDBC PostProcessor diffs the as-of query's returned row field-by-field against the golden dataset's expected row — a non-empty-result check alone can't distinguish a correct historical answer from a silent fallback to the current row." },
+
+    { id: "TST-039", title: "Data Quality and Reconciliation", family: "E", oracle: "confusion-matrix",
+      invariants: [
+        "Every declared DQ rule executes and reports a result",
+        "Monetary reconciliation tolerance is exactly zero; any exception is named and approved",
+        "Reconciliation recomputes independently from source, never re-reads the same aggregate",
+        "A reference-data change propagates to all consumers within its declared window",
+        "Perturbing a source changes the derived value, proving stated lineage",
+        "Each DQ rule's recall against the dirty corpus meets its declared per-dimension threshold"
+      ],
+      taxonomy: ["DQ rule defined but never executed", "Reconciliation run with an undeclared non-zero tolerance", "Reference-data update not propagating to all consumers", "Lineage documented but never verified", "Dirty records counted in aggregate but never classified by dimension"],
+      profiles: ["baseline", "load"],
+      toolFit: { locust: "best", jmeter: "good", gatling: "fair", k6: "fair" },
+      harness: "A JSR223 PostProcessor accumulates a per-dimension confusion-matrix cell under an explicit lock; Locust's equivalent is a dict of plain Python Counters per dimension, updated inline with no lock at all." },
+
+    { id: "TST-040", title: "AuthN/AuthZ Matrix & Token Lifecycle", family: "F", oracle: "invariant-assertion",
+      invariants: [
+        "Every authorisation-matrix cell returns its expected allow/deny — full cross-product, never sampled",
+        "A deny cannot be bypassed by calling the service directly around the gateway",
+        "Expired, wrong-audience, wrong-issuer, tampered-signature, and algorithm-confusion tokens are all rejected",
+        "A revoked token is rejected before natural expiry, within the declared propagation window",
+        "A used refresh token cannot be reused",
+        "A client-bound token replayed by another client is rejected",
+        "mTLS asserts peer identity, not merely a valid chain",
+        "An entitlement change takes effect within its declared window, without re-authentication"
+      ],
+      taxonomy: ["Authorisation enforced at gateway but not at the service", "Expired token accepted via wide clock skew", "Algorithm-confusion forgery", "Infrastructure failure (5xx) scored as a correct denial", "Revocation not honoured until expiry", "Refresh-token reuse permitted", "mTLS validating chain but not identity"],
+      profiles: ["baseline", "load", "soak"],
+      toolFit: { jmeter: "best", k6: "good", gatling: "good", locust: "fair" },
+      harness: "A second, independent Thread Group repeats every deny-cell request directly against the service (no gateway hop) to catch gateway-only enforcement, while a Keystore Configuration element swaps client-certificate alias per Thread Group for every mTLS identity case in one run." },
+
+    { id: "TST-041", title: "Data Protection, Masking & Tokenisation", family: "F", oracle: "invariant-assertion",
+      invariants: [
+        "Sensitive data absent from every egress path — response, logs, traces, metrics, errors, webhooks, exports, support tooling",
+        "Format-preserving token domains are cryptographically separated and meet minimum domain size",
+        "Detokenisation requires entitlement, leaks nothing on rejection, and is always audited",
+        "HSM operation throughput meets its declared rate and its ceiling is located",
+        "Audit log entries are append-only, tamper-evident, and cross-checked against a write-once secondary store",
+        "A root-privileged on-device process cannot invoke the hardware-backed key without the declared auth factor",
+        "An enforcing CSP is present and actually blocks, with unique nonces under concurrency",
+        "An unattested deep link is rejected; the attestation file is served correctly",
+        "Push wire payloads carry only declared allow-listed fields",
+        "A random-surrogate vault issues no duplicate at the declared collision-probability volume",
+        "Tokenisation fails secure, never open, when the HSM is unavailable"
+      ],
+      taxonomy: ["Data masked in UI but present unmasked in logs/traces/errors", "Two FPE domains sharing one tweak (re-linkable)", "Tokenisation failing open when HSM unavailable", "Audit chain rewritten internally-consistently by a dual-privileged actor", "Hardware key invocable by a root process without the auth factor", "Missing/bypassable CSP", "Push payload carrying non-allow-listed fields"],
+      profiles: ["baseline", "load", "stress", "soak"],
+      toolFit: { jmeter: "best", k6: "good", locust: "good", gatling: "fair" },
+      harness: "A post-run JSR223 sampler stage sweeps arbitrary log/trace/metric backends for the synthetic sensitive value across every egress path, while HSM throughput is located via the same step-ramp method TST-031 established." },
+
+    { id: "TST-042", title: "Telemetry and Observability Verification", family: "G", oracle: "invariant-assertion",
+      invariants: [
+        "A trace spans the full journey including async hops",
+        "Metric cardinality stays within its declared bound at peak load",
+        "The log pipeline drops nothing at peak, or drops observably and countably",
+        "An error is always captured in traces regardless of the base sampling rate",
+        "Every declared alert actually fires in a drill",
+        "Burn-rate computation matches an independent recomputation from raw counters",
+        "Required structured-log fields are present on every record at peak"
+      ],
+      taxonomy: ["Trace broken at an async hop", "Metric cardinality explosion overwhelming the backend", "Log pipeline dropping records silently under burst", "Sampling configured so failing requests are never captured", "Alert defined but never firing", "Burn-rate alert firing on a recording-rule arithmetic error"],
+      profiles: ["load", "spike", "soak"],
+      toolFit: { jmeter: "best", k6: "good", locust: "good", gatling: "fair" },
+      harness: "A TearDownThreadGroup runs exactly once after the main load and queries the tracing/metrics/log backends' own APIs directly — the \"post-run backend-assertion phase\" every other archetype's Evidence section points back to." },
+
+    { id: "TST-043", title: "Client Experience, Offline Sync & Perf Budget", family: "G", oracle: "invariant-assertion",
+      invariants: [
+        "An offline queue replays in original order, exactly once, on reconnect",
+        "The queue is bounded with a defined overflow behaviour, never silent drop",
+        "An error boundary contains the failure and emits telemetry — no blank screen",
+        "Layout holds at the longest supported translation and in RTL",
+        "The declared Core Web Vitals (LCP/INP/CLS) budget is met on the declared throttled device/network class",
+        "Force-upgrade preserves or safely discards in-progress state; committed state is never lost"
+      ],
+      taxonomy: ["Offline queue replaying in wrong order after reconnect", "Offline queue duplicating on reconnect", "Error boundary swallowing an error with no telemetry", "i18n/RTL layout breaking at longest translation", "Core Web Vitals budget met on dev hardware but missed on target device class", "Force-upgrade blocking a user mid-transaction with unsaved state"],
+      profiles: ["baseline", "load"],
+      toolFit: { k6: "best", jmeter: "fair", gatling: "fair", locust: "fair" },
+      harness: "A JMeter plan proves the offline-queue/idempotency/force-upgrade invariants at the protocol level, while a k6-browser script intercepts the app's own real analytics-vitals beacon under a throttled profile — reading real client instrumentation rather than re-deriving Core Web Vitals independently." }
+  ];
+
+  var state = { search: "", families: new Set(FAMILIES.map(function (f) { return f.key; })), tools: new Set(TOOLS) };
+
+  function toolCell(tool, rating) {
+    var cls = rating ? "toolcell " + rating : "toolcell";
+    var label = TOOL_LABEL[tool] + (rating ? " · " + rating : " · —");
+    return '<span class="' + cls + '"><span class="dot"></span>' + label + '</span>';
+  }
+
+  function entryMatches(item) {
+    if (!state.families.has(item.family)) return false;
+    var bestTool = Object.keys(item.toolFit).filter(function (t) { return item.toolFit[t] === "best"; })[0];
+    if (!state.tools.has(bestTool)) return false;
+    if (state.search) {
+      var hay = (item.id + " " + item.title + " " + item.invariants.join(" ") + " " + item.taxonomy.join(" ") + " " + item.harness).toLowerCase();
+      if (hay.indexOf(state.search) === -1) return false;
+    }
+    return true;
+  }
+
+  function render() {
+    var root = document.getElementById("results");
+    root.innerHTML = "";
+    var shown = 0;
+
+    FAMILIES.forEach(function (fam) {
+      var items = DATA.filter(function (d) { return d.family === fam.key; });
+      var visible = items.filter(entryMatches);
+      shown += visible.length;
+
+      var section = document.createElement("section");
+      section.className = "family";
+      if (visible.length === 0) { section.hidden = true; }
+
+      var head = document.createElement("div");
+      head.className = "fam-head";
+      head.innerHTML = '<span class="fam-letter">' + fam.key + '</span><span>' + fam.label + '</span><span class="fam-count">' + visible.length + " / " + items.length + '</span>';
+      section.appendChild(head);
+
+      items.forEach(function (item) {
+        var match = entryMatches(item);
+        var det = document.createElement("details");
+        det.className = "entry";
+        if (!match) det.hidden = true;
+
+        var bestTool = Object.keys(item.toolFit).filter(function (t) { return item.toolFit[t] === "best"; })[0];
+
+        var summary = document.createElement("summary");
+        summary.innerHTML =
+          '<span class="caret">▸</span>' +
+          '<span class="tid">' + item.id + '</span>' +
+          '<span class="ttitle">' + item.title + '</span>' +
+          '<span class="oraclebadge">' + item.oracle + '</span>' +
+          '<span class="toolbadge">best fit: ' + TOOL_LABEL[bestTool] + '</span>';
+        det.appendChild(summary);
+
+        var body = document.createElement("div");
+        body.className = "entrybody";
+
+        var invHtml = '<h4>Invariants — ' + item.invariants.length + ' scenarios</h4><ol class="invariants">' +
+          item.invariants.map(function (inv, i) { return '<li><span class="itag">I' + (i + 1) + '</span><span>' + inv + '</span></li>'; }).join("") +
+          '</ol>';
+
+        var taxHtml = '<div><h4>Failure taxonomy</h4><ul class="taxonomy">' +
+          item.taxonomy.map(function (t) { return '<li>' + t + '</li>'; }).join("") + '</ul></div>';
+
+        var profHtml = '<div><h4>Profiles</h4><div class="profilerow">' +
+          item.profiles.map(function (p) { return '<span class="profilechip">' + p + '</span>'; }).join("") + '</div></div>';
+
+        var toolHtml = '<div><h4>Tool fit</h4><div class="toolgrid">' +
+          TOOLS.map(function (t) { return toolCell(t, item.toolFit[t]); }).join("") + '</div></div>';
+
+        var harnessHtml = '<div class="harness"><strong>Harness artefact</strong>' + item.harness + '</div>';
+
+        body.innerHTML = invHtml + taxHtml + profHtml + toolHtml + harnessHtml;
+        det.appendChild(body);
+        section.appendChild(det);
+      });
+
+      root.appendChild(section);
+    });
+
+    if (shown === 0) {
+      var none = document.createElement("div");
+      none.className = "noresults";
+      none.textContent = "No archetypes match this filter combination.";
+      root.appendChild(none);
+    }
+
+    document.getElementById("countline").textContent = "Showing " + shown + " of " + DATA.length + " archetypes";
+    document.getElementById("clearsearch").style.display = state.search ? "inline-block" : "none";
+  }
+
+  function buildFilters() {
+    var famWrap = document.getElementById("famfilters");
+    FAMILIES.forEach(function (fam) {
+      var btn = document.createElement("button");
+      btn.className = "togglechip";
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", "true");
+      btn.textContent = fam.key;
+      btn.title = fam.label;
+      btn.addEventListener("click", function () {
+        if (state.families.has(fam.key)) { state.families.delete(fam.key); btn.setAttribute("aria-pressed", "false"); }
+        else { state.families.add(fam.key); btn.setAttribute("aria-pressed", "true"); }
+        render();
+      });
+      famWrap.appendChild(btn);
+    });
+
+    var toolWrap = document.getElementById("toolfilters");
+    TOOLS.forEach(function (tool) {
+      var btn = document.createElement("button");
+      btn.className = "togglechip";
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", "true");
+      btn.textContent = TOOL_LABEL[tool];
+      btn.addEventListener("click", function () {
+        if (state.tools.has(tool)) { state.tools.delete(tool); btn.setAttribute("aria-pressed", "false"); }
+        else { state.tools.add(tool); btn.setAttribute("aria-pressed", "true"); }
+        render();
+      });
+      toolWrap.appendChild(btn);
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", function (e) {
+    state.search = e.target.value.trim().toLowerCase();
+    render();
+  });
+  document.getElementById("clearsearch").addEventListener("click", function () {
+    state.search = "";
+    document.getElementById("search").value = "";
+    render();
+  });
+
+  buildFilters();
+  render();
+
+  // ---------- Tabs ----------
+  var tabBrowseBtn = document.getElementById("tab-btn-browse");
+  var tabSummaryBtn = document.getElementById("tab-btn-summary");
+  var tabBrowsePanel = document.getElementById("tab-browse");
+  var tabSummaryPanel = document.getElementById("tab-summary");
+
+  function selectTab(which) {
+    var browseActive = which === "browse";
+    tabBrowseBtn.setAttribute("aria-selected", browseActive ? "true" : "false");
+    tabSummaryBtn.setAttribute("aria-selected", browseActive ? "false" : "true");
+    tabBrowsePanel.hidden = !browseActive;
+    tabSummaryPanel.hidden = browseActive;
+  }
+  tabBrowseBtn.addEventListener("click", function () { selectTab("browse"); });
+  tabSummaryBtn.addEventListener("click", function () { selectTab("summary"); });
+
+  // ---------- Copy summary for email ----------
+  var EMAIL_SUMMARY = [
+    "Testing Knowledge Base — Progress Summary",
+    "",
+    "IT Quality Engineering now has a documented, reviewed test design for every architecture",
+    "pattern in the catalog: 24 test archetypes across seven verification families, covering",
+    "231 catalog rows (up from 191). Two archetypes — authentication/authorisation and data",
+    "protection — went through a full information-security review that caught real defects",
+    "before anything shipped.",
+    "",
+    "Key figures:",
+    "- 24 test archetypes, 7 families, 231 catalog rows covered (up from 191)",
+    "- ~150 individual test scenarios (invariants) defined and mapped to failure modes",
+    "- 2 archetypes formally InfoSec-reviewed and approved",
+    "- 4 performance tools standardised (JMeter, Gatling+Karate, k6, Locust), one recommended per scenario",
+    "",
+    "What's now covered, by family:",
+    "A. Correctness & money handling — duplicate-charge prevention, ledger balance integrity,",
+    "   exact reversals, calculation determinism, decision-table accuracy.",
+    "B. Messaging & integration — no dropped/duplicated/misrouted messages, delivery",
+    "   guarantees with dead-letter handling, contract compatibility against live producers.",
+    "C. Load & capacity — rate limits, batch cutoffs, and multi-tenant isolation hold under",
+    "   real concurrent load; one customer's burst can't degrade another's.",
+    "D. Resilience & deployment — circuit breakers, graceful fallback, and zero-downtime",
+    "   deploys verified by injecting the real fault, not by reviewing configuration.",
+    "E. Data integrity — reporting/analytics convergence, tamper-proof historical records,",
+    "   independently recomputed reconciliation.",
+    "F. Security — access control and data protection verified end-to-end. The review process",
+    "   caught an authorisation check that could pass during a live outage, and a device-",
+    "   compromise test that couldn't tell a compromised device from a healthy one — both fixed",
+    "   before merge.",
+    "G. Observability & client experience — monitoring/alerting verified to actually fire, not",
+    "   just be configured; client apps verified for offline resilience and real performance",
+    "   budgets on real devices.",
+    "",
+    "Full detail (searchable): [link to the Invariant Index]",
+    "Process report: [link to the Wave 15 Ledger]"
+  ].join("\n");
+
+  var copyBtn = document.getElementById("copysummary");
+  copyBtn.addEventListener("click", function () {
+    var done = function () {
+      copyBtn.textContent = "Copied";
+      copyBtn.classList.add("copied");
+      setTimeout(function () { copyBtn.textContent = "Copy summary for email"; copyBtn.classList.remove("copied"); }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(EMAIL_SUMMARY).then(done, done);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = EMAIL_SUMMARY;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      done();
+    }
+  });
+})();
+</script>
