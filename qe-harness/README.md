@@ -12,6 +12,173 @@ have nothing to run. This directory is the runnable counterpart: a synthetic ref
 and seven harness modules, one per archetype family, each in the tool
 [TST-010](../knowledge-base/testing/tooling/tool-selection-matrix.md) names as its best fit.
 
+## Architecture — How the Pieces Fit
+
+**New here? Read this section first.** It is the map; everything below it is detail.
+
+### In one paragraph
+
+The [testing knowledge base](../knowledge-base/testing/README.md) is **doctrine** — 24 archetype
+documents stating what must be true of a system and how to prove it. It ships no code. This
+directory is its **runnable counterpart**, and it has four parts: a deliberately-defective
+[reference SUT](./reference-sut/) to test *against*; seven [harness modules](./harness/) that do
+the testing; one [binding file](./traceability/modules.yml) declaring which module implements
+which archetype; and an [evidence chain](./traceability/) that turns a run into the
+`test_acceptance_criteria` block a DAB submission requires. Nothing here invents a requirement.
+Every invariant and every threshold traces back to a knowledge-base document, and
+[one gate](../scripts/validate-harness-coverage.py) fails the build when a trace breaks.
+
+### The four layers
+
+```mermaid
+flowchart TB
+    subgraph L1["1 · DOCTRINE — the knowledge base, ships no code"]
+        direction LR
+        ARCH["<b>archetype doc</b><br/>e.g. TST-021<br/><i>invariants · oracle type</i>"]
+        TOOL["<b>TST-010</b><br/>tool selection matrix"]
+        NFRDOC["<b>NFR rows</b><br/>performance targets"]
+        ARCH ~~~ TOOL ~~~ NFRDOC
+    end
+
+    subgraph L2["2 · BINDING — doctrine into executable config"]
+        direction LR
+        MOD["<b>traceability/modules.yml</b><br/><i>archetype → tool · path<br/>· defect_flag</i>"]
+        THR["<b>profiles/_nfr-thresholds.yml</b><br/><i>threshold_ref → a number</i>"]
+        PROF["<b>profiles/*.yml</b><br/><i>8 TST-002 load profiles</i>"]
+        MOD ~~~ THR ~~~ PROF
+    end
+
+    subgraph L3["3 · EXECUTION"]
+        direction LR
+        HARNESS["<b>harness module</b><br/><i>jmeter · gatling-karate<br/>· k6 · locust</i>"] -->|"HTTP + JDBC"| SUT["<b>reference-sut</b><br/><i>real behaviour,<br/>defect-injectable</i>"]
+    end
+
+    subgraph L4["4 · EVIDENCE"]
+        direction LR
+        FRAG["<b>traceability/runs/*.json</b><br/><i>one fragment per run</i>"] --> TAC["<b>test_acceptance_<br/>criteria.yml</b>"] --> DAB["<b>DAB submission</b>"]
+    end
+
+    L1 ==> L2 ==> L3 ==> L4
+```
+
+Read it top to bottom: **doctrine** says what to prove, **binding** says who proves it and with
+which numbers, **execution** proves it, **evidence** records the proof in the form governance
+accepts.
+
+### The gate is what holds the layers together
+
+The layers above are only trustworthy because one script asserts they still agree. Every
+`make verify` runs [`validate-harness-coverage.py`](../scripts/validate-harness-coverage.py),
+which fails the build on any of these:
+
+| # | Check | Catches |
+| --- | --- | --- |
+| 1 | Every `modules.yml` archetype resolves to a real archetype document | A module bound to an archetype that does not exist, or was renamed |
+| 2 | Each module's `tool` equals TST-010's declared best fit for that archetype | Someone quietly reimplementing a module in a tool the corpus did not choose |
+| 3 | Each module `path` exists on disk | A moved or deleted module directory |
+| 4 | `coverage: partial` requires a non-empty `partial_reason` | A partial module passing itself off as complete |
+| 5 | No 13–19 digit numeric string anywhere under `qe-harness/` | Real card data pasted into seed data or fixtures |
+| 6 | Every `threshold_ref` resolves to a real `NFR-*` row **and** an existing heading anchor | A threshold citing an NFR section that has since been renamed |
+| 7 | Every `traceability/runs/*.json` validates against `evidence.schema.json` | Fragment drift between the four independent emitters |
+
+Check 7 matters more than it looks. `harness/common/` is JVM, so k6 and Locust cannot use its
+evidence emitter — there are four thin emitters instead, one per language. Drift between them is
+caught by validating all their output against one schema, not by code review, which will not
+catch it reliably. And check 2 is the whole reason this directory sits in the same repo as the
+corpus: without a mechanical assertion that harness and doctrine agree, a git submodule would be
+the better answer.
+
+### Follow one archetype end to end: TST-021
+
+Every module works the same way. Tracing one is the fastest way to understand all seven.
+
+| Step | Where | What happens |
+| --- | --- | --- |
+| 1 | [`archetypes/ledger-monetary-invariant.md`](../knowledge-base/testing/archetypes/ledger-monetary-invariant.md) | Doctrine. Catalog ID `TST-021`, applies to patterns `BSP-001`/`BSP-015`/`BSP-016`, declares oracle `invariant-assertion` and invariants I1–I8 in prose. |
+| 2 | [`traceability/modules.yml`](./traceability/modules.yml) | Binding. `archetype: TST-021` → `tool: jmeter`, `path: .../tst-021-ledger`, `coverage: full`, `defect_flag: ledger-unbalanced`. The gate checks `jmeter` really is TST-010's declared best fit for this archetype. |
+| 3 | [`harness/jmeter/tst-021-ledger/`](./harness/jmeter/tst-021-ledger/) | The module. `plan.jmx` seeds two synthetic accounts, fires 8 concurrent threads × 5 loops at `POST /transfers`, then asserts in a teardown group via `assert-trial-balance.groovy`. Its own [README](./harness/jmeter/tst-021-ledger/README.md) lists the three invariants it actually checks. |
+| 4 | [`reference-sut/`](./reference-sut/) | The target. A real double-entry ledger on Postgres — one DB transaction per transfer — so a concurrent transfer storm can *genuinely* break the trial balance if the code is wrong. |
+| 5 | `traceability/runs/<ts>-TST-021.json` | The evidence. One fragment carrying `archetype`, `oracle`, `result`, each invariant's `id`/`description`/`result`, and every threshold's `threshold_ref`. Shape is fixed by [`evidence.schema.json`](./traceability/evidence.schema.json). |
+| 6 | `traceability/test_acceptance_criteria.yml` | The aggregate. [`bin/merge-fragments.py`](./bin/merge-fragments.py) merges all fragments into the single block `TST-001` defines. Generated, so it is gitignored — run `make run-all` to produce it. |
+
+Then the part that makes it trustworthy:
+
+```
+make run ARCH=TST-021    # against the clean SUT  → MUST pass
+make run-defects         # with ledger-unbalanced injected → MUST fail
+```
+
+Each module is paired with a **defect flag** — a real behaviour change the SUT can be told to
+adopt over HTTP (`POST /_test/defect/ledger-unbalanced` makes `TransferService` skip the credit
+leg of every transfer). A module that cannot detect its own paired defect is not a test, so
+`make run-defects` asserts all seven fail. This is the harness testing *itself*, and it is why
+the SUT is bundled rather than pointed at a real service.
+
+### What each layer owns
+
+| Layer | Lives in | Owns | Generated? |
+| --- | --- | --- | --- |
+| Doctrine | `../knowledge-base/testing/` | Archetypes, invariants, oracle types, tool selection, NFR targets | No — hand-authored, governed |
+| Binding | [`traceability/modules.yml`](./traceability/modules.yml) | archetype → tool, path, coverage, defect flag | No — hand-maintained |
+| Thresholds | [`profiles/_nfr-thresholds.yml`](./profiles/_nfr-thresholds.yml) | Numbers, each citing an `NFR-####anchor` | No — hand-maintained |
+| Load profiles | `profiles/baseline.yml` … (8 files) | Workload shape per [TST-002](../knowledge-base/testing/strategy/performance-test-standard.md) profile | No |
+| SUT | [`reference-sut/`](./reference-sut/) | Java 21 + Spring Boot service, 7 capabilities implemented, 24 declared | No |
+| Modules | [`harness/`](./harness/) | The tests, in 4 tools across 3 build systems (Maven, npm, pip) | No |
+| Run fragments | `traceability/runs/*.json` | One record per module run | **Yes** — by the modules |
+| Coverage table | [`traceability/harness-coverage.md`](./traceability/harness-coverage.md) | 24-row status view | **Yes** — `render-harness-coverage.py` |
+| Aggregate | `traceability/test_acceptance_criteria.yml` | The DAB evidence block | **Yes** — `merge-fragments.py`; gitignored |
+
+The `Makefile` is the single façade over all three build systems, so `make up && make run-all`
+works regardless of which language a module is written in. They are deliberately *not* unified —
+see [§4.3 of the design doc](../docs/superpowers/specs/2026-08-24-wave-16-qe-harness-design.md).
+
+### Which module, which tool, which oracle
+
+| Family | Archetype | Tool | Oracle |
+| --- | --- | --- | --- |
+| A — Correctness & State | TST-021 Ledger & Monetary Invariant | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-030 Contract & Schema Compatibility | Gatling + Karate | contract-schema |
+| C — Load & Capacity | TST-031 Rate Limit, Throttle & Breakpoint | JMeter | invariant-assertion |
+| D — Resilience | TST-035 Fault Injection & Graceful Degradation | JMeter | invariant-assertion |
+| E — Data | TST-039 Data Quality & Reconciliation | Locust | confusion-matrix |
+| F — Security | TST-040 AuthN/AuthZ Matrix & Token Lifecycle | JMeter | invariant-assertion |
+| G — Observability & Client | TST-043 Client Experience & Perf Budget | k6 | invariant-assertion |
+
+One archetype per family, so all four tools and three of the four oracle types are exercised.
+`golden-dataset` is not implemented — no family representative uses it as primary oracle; it
+lands with `TST-022` or `TST-038` in a later wave. `TST-039` uses Locust rather than JMeter
+because [its archetype document §6](../knowledge-base/testing/archetypes/data-quality-reconciliation.md)
+justifies that departure; the harness follows the corpus where the corpus deliberately departs
+from the default.
+
+### Three names that mean more than one thing
+
+These trip up every new reader. Worth 60 seconds now.
+
+- **`TST-###` is a catalog-row ID, not an archetype ID.** `TST-001`–`TST-009` are strategy
+  documents, `TST-010`–`TST-014` are tooling guides, **`TST-016` is this harness itself**,
+  `TST-017`–`TST-019` are reserved, and only **`TST-020`–`TST-043` are the 24 archetypes**.
+  `evidence.schema.json` enforces the archetype range mechanically via the pattern
+  `^TST-0[2-4][0-9]$`.
+- **"Profile" means three different things**, sometimes on adjacent lines: a **Spring** profile
+  (`@Profile("!prod")`), a **Docker Compose** profile (`make up PROFILES=core`), and a
+  **TST-002 performance** profile (`profiles/load.yml`). Check which one is meant.
+- **Invariant IDs in a fragment are module-local.** A fragment's `I1` is the first invariant
+  *that module* asserts, listed in the module's own README — it is not an index into the
+  archetype document's numbering. TST-021's archetype declares I1–I8; its module asserts three,
+  renumbered I1–I3.
+
+### Where to look next
+
+| You want to… | Go to |
+| --- | --- |
+| Run something immediately | [Quick Start](#quick-start) below |
+| Know what is and is not implemented | [`traceability/harness-coverage.md`](./traceability/harness-coverage.md) |
+| Understand one module in depth | That module's own `README.md` under [`harness/`](./harness/) |
+| Know why it is built this way | [Wave 16 design doc](../docs/superpowers/specs/2026-08-24-wave-16-qe-harness-design.md) — decisions, rejected alternatives |
+| Add a module for a new archetype | Add a row to `modules.yml`, create the module dir, emit a schema-valid fragment, then `make verify` |
+| Understand the doctrine itself | [Testing knowledge base README](../knowledge-base/testing/README.md) |
+
 ## Copying This Reference Implementation Into a Real Service
 
 This SUT exposes unauthenticated test-control endpoints: `POST /_test/defect/{flag}` and

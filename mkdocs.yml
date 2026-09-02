@@ -12,24 +12,32 @@ site_dir: ./public
 
 theme:
   name: material
-  custom_dir: overrides
+  # Material's own bundled palette CSS hardcodes its dark-mode background/
+  # foreground rules to the literal scheme name "slate" -- confirmed by
+  # inspecting the generated stylesheet, no rule exists for any other custom
+  # name. "light"/"dark" (the names this repo used previously) never
+  # matched that rule, so toggling only ever recolored primary/accent
+  # (which *are* generated per arbitrary name) while the page background
+  # silently stayed light. "default"/"slate" are Material's real names.
   palette:
-    - scheme: light
-      primary: indigo
-      accent: blue
+    - scheme: default
+      primary: white
+      accent: red
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    - scheme: dark
-      primary: indigo
-      accent: blue
+    - scheme: slate
+      primary: black
+      accent: red
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  font:
-    text: Roboto
-    code: Roboto Mono
-  logo: assets/logo.png
+  # Google Fonts disabled: the Techcombank design system specifies SF Pro
+  # Display, which is not self-hostable here (Apple's font license doesn't
+  # cover redistributing it on a non-Apple site) -- see stylesheets/extra.css
+  # for the fallback-stack approach instead.
+  font: false
+  logo: assets/techcombank-mobile-mark.webp
   favicon: assets/favicon.ico
   features:
     - navigation.instant
@@ -65,7 +73,7 @@ nav:
 
   - Architecture Knowledge Base:
     - Principles: knowledge-base/principles/README.md
-    - Design Patterns: knowledge-base/patterns/
+    - Design Patterns: knowledge-base/patterns/README.md
     - Testing (QE):
       - Overview: knowledge-base/testing/README.md
       - Test Strategy Standard: knowledge-base/testing/strategy/test-strategy-standard.md
@@ -104,6 +112,17 @@ nav:
         - Data Protection, Masking and Tokenisation: knowledge-base/testing/archetypes/data-protection-masking-tokenisation.md
         - Telemetry and Observability Verification: knowledge-base/testing/archetypes/telemetry-verification.md
         - Client Experience, Offline Sync and Performance Budget Testing: knowledge-base/testing/archetypes/client-experience-offline-perf.md
+      - QE Harness (Reference Implementation):
+        - Architecture & Quick Start: qe-harness/README.md
+        - Coverage Status: qe-harness/traceability/harness-coverage.md
+        - Modules:
+          - TST-021 Ledger & Monetary Invariant (JMeter): qe-harness/harness/jmeter/tst-021-ledger/README.md
+          - TST-030 Contract & Schema Compatibility (Gatling + Karate): qe-harness/harness/gatling-karate/tst-030-contract/README.md
+          - TST-031 Rate Limit, Throttle & Breakpoint (JMeter): qe-harness/harness/jmeter/tst-031-ratelimit/README.md
+          - TST-035 Fault Injection & Graceful Degradation (JMeter): qe-harness/harness/jmeter/tst-035-faultinjection/README.md
+          - TST-039 Data Quality & Reconciliation (Locust): qe-harness/harness/locust/tst_039_recon/README.md
+          - TST-040 AuthN/AuthZ Matrix & Token Lifecycle (JMeter): qe-harness/harness/jmeter/tst-040-authz/README.md
+          - TST-043 Client Experience & Perf Budget (k6): qe-harness/harness/k6/tst-043-clientexp/README.md
     - Technology Radar: knowledge-base/technology-radar.md
     - Glossary: knowledge-base/glossary.md
 
@@ -189,8 +208,15 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-      slugify: !!python/object:pymdownx.slugs.slugify
-        case: lower
+      # `!!python/object:` (a bare pickled-state tag) stopped deserializing
+      # under current PyYAML/pymdown-extensions -- confirmed empirically,
+      # it raises `TypeError: invalid partial state` at config-load time,
+      # before mkdocs even starts building, so no page ever got past this.
+      # `!!python/object/apply:` (calling the constructor with kwds) is
+      # pymdown-extensions' own documented form and works unchanged.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
@@ -202,7 +228,16 @@ markdown_extensions:
 plugins:
   - search:
       lang: en
-  - mermaid2
+  - mermaid2:
+      arguments:
+        theme: base
+        themeVariables:
+          primaryColor: "#f5f6f8"
+          primaryTextColor: "#212121"
+          primaryBorderColor: "#ed1c24"
+          lineColor: "#616161"
+          secondaryColor: "#ffffff"
+          tertiaryColor: "#ffffff"
   - exclude:
       glob:
         - ".*"
@@ -214,6 +249,16 @@ plugins:
         - "node_modules/**/*"
         - ".gitlab/**/*"
         - "templates/**/*"
+        # qe-harness's own build output: Maven/npm/pip artefacts, none
+        # of it hand-authored docs. Without these, mkdocs walks
+        # qe-harness/harness/jmeter/target/**/report-template/ (JMeter's
+        # bundled bower_components) and qe-harness/harness/k6/node_modules/
+        # -- thousands of vendored READMEs that dwarf the harness's own 9
+        # real markdown files and make a full build impractically slow.
+        - "qe-harness/**/target/**/*"
+        - "qe-harness/**/node_modules/**/*"
+        - "qe-harness/**/.venv/**/*"
+        - "qe-harness/**/.pytest_cache/**/*"
   - git-revision-date-localized:
       enable_creation_date: true
   - minify:
@@ -233,9 +278,6 @@ extra:
 
 extra_css:
   - stylesheets/extra.css
-
-extra_javascript:
-  - javascripts/mermaid-config.js
 
 copyright: >
   Copyright &copy; 2024 - 2026 Techcombank.
