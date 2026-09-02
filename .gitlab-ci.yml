@@ -386,7 +386,7 @@ build:mkdocs:
   stage: build
   image: python:3.11-slim
   before_script:
-    - pip install --quiet mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin
+    - pip install --quiet mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin mkdocs-exclude
   script:
     - echo "🏗️  Building MkDocs site..."
     - mkdocs build --strict -f mkdocs.yml -d ./public
@@ -551,7 +551,7 @@ docs:review-preview:
   stage: build
   image: python:3.11-slim
   before_script:
-    - pip install --quiet mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin
+    - pip install --quiet mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin mkdocs-exclude
   script:
     - mkdocs build --strict -f mkdocs.yml -d ./public
   artifacts:
