@@ -4231,3 +4231,748 @@ git commit -m "feat(sut): add messaging observability endpoints as harness groun
 ```
 
 ---
+
+## Task 17: SUT — TST-026 Transformation and Routing
+
+**Files:**
+- Create: `…/sut/capability/messaging/RoutingService.java`, `TransformController.java`
+- Create: `…/reference-sut/src/main/resources/contracts/payment-message.schema.json`
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Test: `…/sut/capability/messaging/RoutingServiceTest.java`
+
+**Interfaces:**
+- Consumes: `MessagingTopology`, `RabbitTemplate`, `MessageLog`
+- Produces: `POST /messaging/publish`, `GET /messaging/routed`; the published JSON Schema
+  TST-026's `contract-schema` oracle validates against; defect flag `route-default-fallthrough`
+
+- [ ] **Step 1: Write the failing test**
+
+`RoutingServiceTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-026 message transformation and routing. */
+class RoutingServiceTest extends AbstractMessagingIntegrationTest {
+
+    @Test
+    void routesOnlyOnDeclaredConditionsAndQuarantinesTheRest() {
+        routing.publish("pay.domestic.credit", samplePayload("VND", "1500.00"));
+        routing.publish("pay.unknown.kind", samplePayload("VND", "1500.00"));
+        assertTrue(awaitQueueDepth(MessagingTopology.Q_DOMESTIC, 1));
+        assertTrue(awaitQueueDepth(MessagingTopology.Q_UNROUTABLE, 1),
+            "I2: an unmatched key must reach quarantine, never a default route");
+    }
+
+    @Test
+    void anUnmappedEnumIsRejectedNeverDefaulted() {
+        assertThrows(RoutingService.UnmappedEnum.class,
+            () -> routing.publish("pay.domestic.credit", samplePayload("VND", "1500.00")
+                .replace("\"CREDIT\"", "\"TELEPORT\"")),
+            "I3: an unknown enum member must be rejected, not silently defaulted");
+    }
+
+    @Test
+    void amountScaleAndCurrencySurviveRoundTrip() {
+        String routed = routing.transform(samplePayload("VND", "1500.00"));
+        assertEquals(0, new BigDecimal("1500.00").compareTo(routing.amountOf(routed)),
+            "I5: compareTo, not equals -- scale must survive but need not be identical");
+        assertEquals("VND", routing.currencyOf(routed));
+    }
+
+    @Test
+    void vietnameseDiacriticsSurviveByteIdentically() {
+        String name = "Nguyễn Thị Hoà";
+        String routed = routing.transform(samplePayload("VND", "1500.00").replace("PARTY", name));
+        assertTrue(routed.contains(name), "I6: diacritics must survive byte-identically");
+    }
+
+    @Test
+    void defaultFallthroughDefectBreaksOnlyTheQuarantineInvariant() {
+        withDefect("route-default-fallthrough", () ->
+            routing.publish("pay.unknown.kind", samplePayload("VND", "1500.00")));
+        assertTrue(awaitQueueDepth(MessagingTopology.Q_DOMESTIC, 1),
+            "the defect must route an unmatched key to a real queue");
+        assertEquals(0L, queueDepth(MessagingTopology.Q_UNROUTABLE));
+    }
+
+    private String samplePayload(String currency, String amount) {
+        return """
+            {"messageId":"msg-0001","kind":"CREDIT","currency":"%s","amount":"%s","party":"PARTY"}
+            """.formatted(currency, amount).strip();
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=RoutingServiceTest
+```
+
+Expected: FAIL — `RoutingService` does not exist.
+
+- [ ] **Step 3: Publish the message contract**
+
+`contracts/payment-message.schema.json`. This is what the module's `contract-schema` oracle
+validates every routed message against:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Routed payment message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["messageId", "kind", "currency", "amount", "party", "route"],
+  "properties": {
+    "messageId": { "type": "string", "pattern": "^msg-[0-9]{4}$" },
+    "kind": { "enum": ["CREDIT", "DEBIT", "REVERSAL"] },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "amount": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
+    "party": { "type": "string", "minLength": 1 },
+    "route": { "enum": ["domestic", "intl", "quarantine"] }
+  }
+}
+```
+
+`amount` is a **string** carrying an explicit two-place scale, not a JSON number: I5 requires
+scale to survive the round trip, and a JSON number would let a parser normalise `1500.00` to
+`1500`. `messageId`'s pattern caps at four digits, well clear of gate check 5's thirteen.
+
+- [ ] **Step 4: Write the service**
+
+`RoutingService.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.techcombank.qe.sut.DefectFlags;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.Set;
+
+/**
+ * TST-026 message transformation and routing capability.
+ *
+ * <p><b>Every field maps or is a documented discard (I1)</b> -- the transform
+ * copies the declared set and appends the resolved route; anything else is a
+ * schema violation the published contract rejects rather than a silent pass.
+ *
+ * <p><b>Amounts travel as scaled strings, not JSON numbers (I5).</b> A JSON
+ * number lets a parser normalise 1500.00 to 1500, which would destroy exactly
+ * the scale the invariant exists to protect. Comparison is by
+ * {@code BigDecimal.compareTo}, never {@code equals}.
+ *
+ * <p><b>Defect injection:</b> {@code route-default-fallthrough} rewrites an
+ * unmatched routing key to a real one, so an unroutable message reaches a live
+ * queue and the quarantine stays empty -- I2 alone fails while transformation
+ * fidelity (I1/I5/I6) is untouched.
+ */
+@Service
+public class RoutingService {
+
+    /** Thrown when a message carries an enum member outside the declared domain. */
+    public static class UnmappedEnum extends RuntimeException {
+        public UnmappedEnum(String field, String value) {
+            super("unmapped " + field + ": " + value);
+        }
+    }
+
+    private static final Set<String> KINDS = Set.of("CREDIT", "DEBIT", "REVERSAL");
+
+    private final RabbitTemplate rabbit;
+    private final MessagingTopology topology;
+    private final MessageLog log;
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    public RoutingService(RabbitTemplate rabbit, MessagingTopology topology, MessageLog log) {
+        this.rabbit = rabbit;
+        this.topology = topology;
+        this.log = log;
+    }
+
+    public void publish(String routingKey, String payload) {
+        topology.declareTopology();
+        String transformed = transform(payload);
+
+        String effectiveKey = routingKey;
+        if (DefectFlags.isActive("route-default-fallthrough")
+                && !routingKey.startsWith("pay.domestic.")
+                && !routingKey.startsWith("pay.intl.")) {
+            // The defect: an unmatched key is rewritten to a real one rather
+            // than being left to the alternate exchange, so quarantine stays
+            // empty and I2 fails. Transformation is untouched.
+            effectiveKey = "pay.domestic.credit";
+        }
+
+        log.recordPublished(effectiveKey, null);
+        rabbit.convertAndSend(MessagingTopology.ROUTE_EXCHANGE, effectiveKey, transformed);
+    }
+
+    /** Transforms and appends the resolved route. Rejects an unmapped enum
+     *  rather than defaulting it (I3). */
+    public String transform(String payload) {
+        try {
+            ObjectNode in = (ObjectNode) mapper.readTree(payload);
+            String kind = in.path("kind").asText();
+            if (!KINDS.contains(kind)) {
+                throw new UnmappedEnum("kind", kind);
+            }
+            ObjectNode out = mapper.createObjectNode();
+            out.put("messageId", in.path("messageId").asText());
+            out.put("kind", kind);
+            out.put("currency", in.path("currency").asText());
+            // Kept as a string so the declared scale survives (I5).
+            out.put("amount", in.path("amount").asText());
+            // Written through as-is so diacritics stay byte-identical (I6).
+            out.put("party", in.path("party").asText());
+            out.put("route", "domestic");
+            return mapper.writeValueAsString(out);
+        } catch (UnmappedEnum e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("cannot transform payload", e);
+        }
+    }
+
+    public BigDecimal amountOf(String message) {
+        try {
+            JsonNode node = mapper.readTree(message);
+            return new BigDecimal(node.path("amount").asText());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("cannot read amount", e);
+        }
+    }
+
+    public String currencyOf(String message) {
+        try {
+            return mapper.readTree(message).path("currency").asText();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("cannot read currency", e);
+        }
+    }
+}
+```
+
+- [ ] **Step 5: Write the controller**
+
+`TransformController.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
+
+/** TST-026's HTTP surface. */
+@RestController
+public class TransformController {
+
+    private final RoutingService routing;
+    private final RabbitAdmin admin;
+
+    public TransformController(RoutingService routing, RabbitAdmin admin) {
+        this.routing = routing;
+        this.admin = admin;
+    }
+
+    /** POST /messaging/publish?routingKey=pay.domestic.credit -> 202, or 422 on
+     *  an unmapped enum (I3: rejected, never defaulted). */
+    @PostMapping("/messaging/publish")
+    public ResponseEntity<?> publish(@RequestParam String routingKey, @RequestBody String payload) {
+        try {
+            routing.publish(routingKey, payload);
+            return ResponseEntity.accepted().build();
+        } catch (RoutingService.UnmappedEnum e) {
+            return ResponseEntity.unprocessableEntity().body(e.getMessage());
+        }
+    }
+
+    /** POST /messaging/transform -> the transformed message, for the module's
+     *  contract-schema oracle to validate without consuming from a queue. */
+    @PostMapping(value = "/messaging/transform", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> transform(@RequestBody String payload) {
+        try {
+            return ResponseEntity.ok(routing.transform(payload));
+        } catch (RoutingService.UnmappedEnum e) {
+            return ResponseEntity.unprocessableEntity().body(e.getMessage());
+        }
+    }
+
+    /** GET /messaging/routed -> per-queue depths, so I2's verdict is one call. */
+    @GetMapping("/messaging/routed")
+    public RoutedResponse routed() {
+        return new RoutedResponse(
+            depthOf(MessagingTopology.Q_DOMESTIC),
+            depthOf(MessagingTopology.Q_INTL),
+            depthOf(MessagingTopology.Q_UNROUTABLE));
+    }
+
+    /** GET /messaging/contract -> the published JSON Schema the module validates against. */
+    @GetMapping(value = "/messaging/contract", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> contract() throws IOException {
+        String schema = new String(
+            new ClassPathResource("contracts/payment-message.schema.json").getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8);
+        return ResponseEntity.status(HttpStatus.OK).body(schema);
+    }
+
+    private long depthOf(String queue) {
+        Properties props = admin.getQueueProperties(queue);
+        return props == null ? 0L : ((Number) props.get(RabbitAdmin.QUEUE_MESSAGE_COUNT)).longValue();
+    }
+
+    public record RoutedResponse(long domestic, long intl, long quarantine) {}
+}
+```
+
+- [ ] **Step 6: Register the flag and capability**
+
+Add `"route-default-fallthrough"` to `DefectFlags.KNOWN_FLAGS`, `"TST-026"` to
+`CapabilityRegistry.IMPLEMENTED` and to `IMPLEMENTED_AT_WAVE_17`. Add
+`@Autowired protected RoutingService routing;` to `AbstractMessagingIntegrationTest`.
+
+- [ ] **Step 7: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, including all five `RoutingServiceTest` tests.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add TST-026 transformation and routing with a published contract"
+```
+
+---
+
+## Task 18: Module — TST-026 Message Transformation & Routing (JMeter, contract-schema)
+
+**This is the only module in the wave using the `contract-schema` oracle, and the first caller
+of `ContractSchema` in the repository's history.** `com.networknt:json-schema-validator` is
+absent from `testPlanLibraries`, which runs with `downloadLibraryDependencies=false` — so
+transitives are not resolved and every jar must be listed explicitly.
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-026-routing/{plan.jmx,assert-routing.groovy,README.md}`
+- Modify: `qe-harness/harness/jmeter/pom.xml` (`testPlanLibraries`)
+- Modify: `qe-harness/traceability/modules.yml`
+- Test: `…/jmeter/Tst026ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `POST /messaging/publish`, `POST /messaging/transform`, `GET /messaging/routed`,
+  `GET /messaging/contract` (Task 17); `ContractSchema` from `qe-harness-common`
+- Produces: `run-module.sh TST-026`; the first fragment in the repo with
+  `oracle: contract-schema`
+
+- [ ] **Step 1: Resolve the dependency's full transitive set**
+
+`ContractSchema` uses the 1.x `JsonSchemaFactory`/`SpecVersion` API. Find the exact version
+`qe-harness-common` compiles against, then enumerate every jar it needs at runtime:
+
+```bash
+/usr/bin/grep -n -A3 "json-schema-validator" qe-harness/harness/common/pom.xml
+cd qe-harness/harness && mvn -q -pl common dependency:tree -Dincludes=com.networknt
+```
+
+Record the version and every transitive coordinate. Expect `json-schema-validator` plus at
+minimum a `com.ethlo.time:itu` and `org.apache.commons:commons-lang3`; **do not guess** — use
+what `dependency:tree` prints. `1.5.9` is the version `reference-sut` pins for the same reason
+(2.x replaced this API entirely).
+
+- [ ] **Step 2: Add them to `testPlanLibraries`**
+
+In `harness/jmeter/pom.xml`, append inside `<testPlanLibraries>`, using the exact coordinates
+Step 1 printed:
+
+```xml
+            <!-- TST-026 (Wave 17) is the first assertion script anywhere in this
+                 repo to call ContractSchema, so json-schema-validator reaches
+                 JMeter's classpath here for the first time. downloadLibraryDependencies
+                 is false, so transitives are NOT resolved -- every jar the
+                 validator needs at runtime must be listed explicitly, exactly as
+                 the Jackson and Postgres entries above already are. Version 1.5.9
+                 matches reference-sut's own pin: 2.x replaced the
+                 JsonSchemaFactory/SpecVersion API that ContractSchema calls. -->
+            <artifact>com.networknt:json-schema-validator:1.5.9</artifact>
+```
+
+plus one `<artifact>` line per transitive coordinate from Step 1.
+
+- [ ] **Step 3: Prove the classpath resolves before writing the plan**
+
+A missing transitive here surfaces as a `NoClassDefFoundError` inside a JSR223 element, which
+does **not** fail the Maven build — it produces no fragment, and `run-jmeter.sh` then reports
+`no evidence fragment written`. Catch it now instead:
+
+```bash
+cd qe-harness/harness && mvn -q -N install && mvn -q -pl common install
+cd .. && mkdir -p /tmp/w17-probe && cat > /tmp/w17-probe/probe.groovy <<'GROOVY'
+import com.techcombank.qe.harness.oracle.ContractSchema
+import com.fasterxml.jackson.databind.ObjectMapper
+def m = new ObjectMapper()
+def schema = m.readTree('{"type":"object","required":["a"]}')
+def ok = m.readTree('{"a":1}')
+def bad = m.readTree('{}')
+assert ContractSchema.validate(schema, ok).isEmpty()
+assert !ContractSchema.validate(schema, bad).isEmpty()
+println "ContractSchema resolves and validates"
+GROOVY
+```
+
+Run that probe through the same `groovy` the plan will use (or as a temporary JUnit test in
+`harness/common`). Expected: `ContractSchema resolves and validates`. If it throws
+`NoClassDefFoundError`, a transitive is still missing — return to Step 1.
+
+- [ ] **Step 4: Write the module README**
+
+`tst-026-routing/README.md`:
+
+```markdown
+# TST-026 -- Message Transformation & Routing (JMeter)
+
+Oracle: **contract-schema**. Best-fit tool per TST-010: JMeter.
+
+| ID | Invariant |
+|---|---|
+| I1 | Every source field maps, or is a documented discard |
+| I2 | Zero messages reach a default or fallback route |
+| I3 | An unmapped enum is rejected, never defaulted |
+| I4 | Splitter output count equals the declared element count |
+| I5 | Round trip preserves amount scale and currency (BigDecimal compareTo == 0) |
+| I6 | Vietnamese diacritics survive byte-identically |
+| I7 | An enricher failure yields an error and zero partial messages |
+
+Defect proof: with `route-default-fallthrough` active this module MUST report I2 failed and
+I1/I5/I6 still passed.
+
+This is the **only** module in the harness using the `contract-schema` oracle, and the first
+caller of `ContractSchema` anywhere in this repository. Every routed message is validated
+against `GET /messaging/contract` -- the schema the SUT itself publishes -- rather than against
+a copy pasted into this module, so the contract cannot drift from what the service serves.
+
+`amount` travels as a **scaled string**, not a JSON number: a JSON number lets a parser
+normalise `1500.00` to `1500`, destroying exactly the scale I5 exists to protect. I5 compares
+with `BigDecimal.compareTo`, never `equals`.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Reset Messaging Fixture`, 1 thread, 1 loop) purges the routing
+   queues and clears the published log, then fetches `GET /messaging/contract` once and stores
+   it for the assertion.
+2. **Main Thread Group** (`Publish Mixed Keys`, 6 threads x 4 loops) posts to
+   `POST /messaging/publish` with a deliberate mix: matched `pay.domestic.*` and `pay.intl.*`
+   keys, unmatched keys that must quarantine (I2), a payload carrying `Nguyễn Thị Hoà` for I6,
+   a two-place `amount` for I5, and one `kind` outside the declared domain that must come back
+   `422` for I3.
+3. **TearDown Thread Group** (`Verify Routing`, 1 thread, 1 loop) reads
+   `GET /messaging/routed` for I2's verdict, replays one message through
+   `POST /messaging/transform` for I1/I5/I6, then `assert-routing.groovy` validates the
+   transformed message against the published schema with `ContractSchema` and evaluates I1-I7.
+
+## Running it
+
+```
+make up PROFILES="core messaging"     # the broker is NOT in the core profile
+./bin/run-module.sh TST-026
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/route-default-fallthrough   # 204
+./bin/run-module.sh TST-026                                                 # must report I2 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                           # 204
+```
+
+With the defect active, `RoutingService.publish` rewrites an unmatched routing key to a real
+one, so the message reaches `qe.q.route.domestic` and the quarantine queue stays empty. The
+transform itself is untouched, so I1, I5 and I6 still pass -- which is what makes the proof
+specific rather than merely sensitive.
+```
+
+- [ ] **Step 5: Write the failing test**
+
+`Tst026ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * TST-026 transformation and routing module. Requires
+ * {@code make up PROFILES="core messaging"} -- the broker is not in the core
+ * profile, so a core-only stack cannot serve this module.
+ */
+class Tst026ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-026", Map.of());
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void emitsTheContractSchemaOracle() throws Exception {
+        ModuleResult r = runner.run("TST-026", Map.of());
+        assertEquals("contract-schema", r.fragment().oracle(),
+            "this is the only module using this oracle; the fragment must say so");
+    }
+
+    @Test
+    void reportsQuarantineFailureAgainstTheFallthroughDefect() throws Exception {
+        ModuleResult r = runner.run("TST-026", Map.of("SUT_DEFECT", "route-default-fallthrough"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I2") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I5") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: transformation fidelity is untouched");
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I6") && i.result() == RunFragment.Result.PASSED));
+    }
+}
+```
+
+- [ ] **Step 6: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst026ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 7: Add the binding row**
+
+Insert into `modules.yml` after `TST-023` and before `TST-030`:
+
+```yaml
+  - archetype: TST-026
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-026-routing
+    coverage: full
+    defect_flag: route-default-fallthrough
+```
+
+- [ ] **Step 8: Write the assertion script**
+
+`assert-routing.groovy`:
+
+```groovy
+// TST-026 message transformation and routing assertion (Wave 17).
+//
+// The repository's FIRST caller of ContractSchema. Every routed message is
+// validated against the schema the SUT itself publishes at
+// GET /messaging/contract -- not a copy pasted into this module -- so the
+// contract cannot drift from what the service actually serves.
+//
+// This module's oracle is contract-schema, not invariant-assertion: it is the
+// only one of the eight Wave 17 modules for which that is true, and
+// evidence.schema.json's oracle enum is what makes the distinction machine-
+// checkable.
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.ContractSchema
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import java.math.BigDecimal
+import java.nio.file.Path
+
+ObjectMapper mapper = new ObjectMapper()
+
+String schemaJson    = vars.get("contract_schema")
+String transformed   = vars.get("transformed_message")
+long domesticDepth   = Long.parseLong(vars.get("routed_domestic"))
+long intlDepth       = Long.parseLong(vars.get("routed_intl"))
+long quarantineDepth = Long.parseLong(vars.get("routed_quarantine"))
+long unmatchedSent   = Long.parseLong(props.getProperty("tst026_unmatched_sent"))
+long unmappedEnumRejected = Long.parseLong(props.getProperty("tst026_unmapped_rejected"))
+long unmappedEnumSent     = Long.parseLong(props.getProperty("tst026_unmapped_sent"))
+long splitterDeclared = Long.parseLong(props.getProperty("tst026_split_declared"))
+long splitterObserved = Long.parseLong(props.getProperty("tst026_split_observed"))
+long enricherPartials = Long.parseLong(props.getProperty("tst026_enricher_partials"))
+
+def schemaNode  = mapper.readTree(schemaJson)
+def messageNode = mapper.readTree(transformed)
+
+// I1 is the contract-schema oracle proper: a message whose fields do not all
+// map (or are not documented discards) cannot satisfy the published schema,
+// whose additionalProperties is false.
+RunFragment.Entry i1 = ContractSchema.check(
+    "I1", "Every source field maps, or is a documented discard",
+    schemaNode, messageNode)
+
+String declaredParty = "Nguyễn Thị Hoà"
+BigDecimal declaredAmount = new BigDecimal("1500.00")
+BigDecimal observedAmount = new BigDecimal(messageNode.path("amount").asText())
+
+RunFragment.Entry i2 = InvariantAssertion.check(
+    "I2", "Zero messages reach a default or fallback route",
+    { unmatchedSent > 0L && quarantineDepth == unmatchedSent } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "An unmapped enum is rejected, never defaulted",
+    { unmappedEnumSent > 0L && unmappedEnumRejected == unmappedEnumSent } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "Splitter output count equals the declared element count",
+    { splitterObserved == splitterDeclared } as java.util.function.BooleanSupplier)
+RunFragment.Entry i5 = InvariantAssertion.check(
+    "I5", "Round trip preserves amount scale and currency",
+    { declaredAmount.compareTo(observedAmount) == 0 &&
+      messageNode.path("currency").asText() == "VND" } as java.util.function.BooleanSupplier)
+RunFragment.Entry i6 = InvariantAssertion.check(
+    "I6", "Vietnamese diacritics survive byte-identically",
+    { messageNode.path("party").asText() == declaredParty } as java.util.function.BooleanSupplier)
+RunFragment.Entry i7 = InvariantAssertion.check(
+    "I7", "An enricher failure yields an error and zero partial messages",
+    { enricherPartials == 0L } as java.util.function.BooleanSupplier)
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+RunFragment fragment = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("contract-schema")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+    .invariant(i2.id(), i2.description(), i2.result())
+    .invariant(i3.id(), i3.description(), i3.result())
+    .invariant(i4.id(), i4.description(), i4.result())
+    .invariant(i5.id(), i5.description(), i5.result())
+    .invariant(i6.id(), i6.description(), i6.result())
+    .invariant(i7.id(), i7.description(), i7.result())
+    .build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "I1 schema-conformant: ${i1.result().wire()}\n" +
+    "I2 zero-default-route: ${i2.result().wire()} (quarantine=${quarantineDepth}, unmatchedSent=${unmatchedSent}, domestic=${domesticDepth}, intl=${intlDepth})\n" +
+    "I3 unmapped-enum-rejected: ${i3.result().wire()} (${unmappedEnumRejected}/${unmappedEnumSent})\n" +
+    "I4 splitter-count: ${i4.result().wire()} (${splitterObserved}/${splitterDeclared})\n" +
+    "I5 scale-and-currency: ${i5.result().wire()} (observed=${observedAmount})\n" +
+    "I6 diacritics-intact: ${i6.result().wire()}\n" +
+    "I7 no-partial-on-enricher-failure: ${i7.result().wire()} (partials=${enricherPartials})\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+- [ ] **Step 9: Build the JMeter plan**
+
+`plan.jmx`, same skeleton as the earlier modules. Specifics:
+
+- `SetupThreadGroup` "Reset Messaging Fixture", 1/1, `on_sample_error=stopthread`: an
+  `HTTPSamplerProxy` `GET /messaging/contract` whose `JSR223PostProcessor` writes
+  `vars.put("contract_schema", prev.getResponseDataAsString())`; an inline `JSR223Sampler`
+  zeroing `tst026_unmatched_sent`, `tst026_unmapped_sent`, `tst026_unmapped_rejected`,
+  `tst026_split_declared`, `tst026_split_observed`, `tst026_enricher_partials` in `props`.
+- `ThreadGroup` "Publish Mixed Keys", 6 threads / 4 loops, `on_sample_error=continue` (a
+  deliberate `422` is data): a `JSR223PreProcessor` selecting the case for this iteration from
+  `ctx.getThreadNum()` and `vars.getIteration()` — matched domestic, matched intl, unmatched,
+  or unmapped-enum — writing the routing key and body into `vars` and, inside
+  `synchronized (props) { … }`, incrementing `tst026_unmatched_sent` or `tst026_unmapped_sent`;
+  an `HTTPSamplerProxy` `POST /messaging/publish?routingKey=${routingKey}` with
+  `postBodyRaw=true`; and a `JSR223PostProcessor` incrementing `tst026_unmapped_rejected` when
+  the response code is `422`.
+
+  The body for the diacritic case must be written with `contentEncoding=UTF-8` on the sampler,
+  or I6 fails for an encoding reason rather than a routing one:
+  `{"messageId":"msg-0001","kind":"CREDIT","currency":"VND","amount":"1500.00","party":"Nguyễn Thị Hoà"}`
+- `PostThreadGroup` "Verify Routing", 1/1: `GET /messaging/routed` whose PostProcessor writes
+  `routed_domestic`, `routed_intl`, `routed_quarantine`; `POST /messaging/transform` with the
+  diacritic payload, whose PostProcessor writes
+  `vars.put("transformed_message", prev.getResponseDataAsString())`; then the `assert-routing`
+  `JSR223Sampler` with `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+For I4 and I7, set `tst026_split_declared`/`tst026_split_observed` from a single
+`POST /messaging/transform` of a batch payload and `tst026_enricher_partials` from the count of
+`422` responses that nonetheless left a queue depth behind — both computed in the setUp group's
+inline script so the teardown reads settled values.
+
+- [ ] **Step 10: Run the tests**
+
+```bash
+cd qe-harness && make down && make up PROFILES="core messaging"
+cd harness && mvn -q -pl jmeter test -Dtest=Tst026ModuleTest
+```
+
+Expected: PASS, 3 tests. If the run reports `no evidence fragment written for TST-026`, the
+assertion script threw — almost certainly a missing transitive from Step 1. Check the JMeter log
+under `harness/jmeter/target/jmeter/logs/`.
+
+- [ ] **Step 11: Verify the gate, especially the oracle enum**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep -E "TST-026|check7" || echo "no findings"
+python3 -c "
+import json, pathlib
+f = sorted(pathlib.Path('qe-harness/traceability/runs').glob('*-TST-026.json'))[-1]
+d = json.loads(f.read_text())
+print('oracle:', d['oracle'])
+print('module:', d['module'])
+"
+python3 scripts/render-harness-coverage.py
+```
+
+Expected: no findings; `oracle: contract-schema` and `module: jmeter`. Check 7 validates the
+`oracle` value against the schema's four-member enum, so a typo fails the gate.
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add qe-harness/harness qe-harness/traceability
+git commit -m "feat(harness): add TST-026 routing module, the first ContractSchema caller"
+```
+
+---
