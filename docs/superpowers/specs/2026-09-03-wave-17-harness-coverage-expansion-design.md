@@ -46,15 +46,29 @@ messaging archetype reuses.
 
 **In scope — integrity fixes (Phase 0):**
 
-1. `knowledge-base/testing/README.md` — the stale claim that the `golden-dataset` oracle is
-   unimplemented. It exists; the doc is wrong.
+1. **Stale module counts and per-family framing.** `qe-harness/README.md:147` claims "One
+   archetype per family, so all four tools and three of the four oracle types are exercised"
+   and carries a 7-row table; `knowledge-base/testing/README.md:16` says "7 of the 24". Wave 17
+   makes it 15 modules across 7 families. **Note:** the adjacent `golden-dataset` sentence in
+   `qe-harness/README.md` is *not* stale — it says that oracle is not implemented as any family
+   representative's primary oracle, landing with `TST-022`/`TST-038`, and since neither is in
+   Wave 17's scope that remains true. Leave it alone.
 2. `knowledge-base/testing/archetypes/data-protection-masking-tokenisation.md` (TST-041)
-   contains a **NUL byte** — `file` reports it as `data` rather than text, and grep silently
-   returns nothing against it. A data-hygiene defect that hides content from tooling.
+   contains **one NUL byte** at offset 48027, line 618 — `file` reports it as `data` rather
+   than text, and grep silently returns nothing against it. It sits **inside a Groovy string
+   literal**: `join("<NUL>")`. This is a semantics decision, not a deletion — `tr -d '\0'`
+   yields `join("")`, an empty separator, which lets a marker match across two adjacent values
+   and arguably inverts line 617's stated intent. The replacement must be chosen deliberately.
    (Archetype docs are slug-named, not `TST-0NN.md`.)
-3. `TST-025` and `TST-036` have contradictory `primary_tool` values across their covering rows
-   in `_testing-coverage.yml`, so gate check 2 reports "cannot verify tool" for any module
-   added against them. Fixing the corpus now unblocks later waves.
+3. **`TST-025`'s `primary_tool` conflict only.** Three locust-only rows (`BSP-003`, `BSP-010`,
+   `SEC-009`) move to `jmeter`. The two `jmeter` rows must **not** be touched: `SEC-010` also
+   carries `TST-040` and `BSP-019` also carries `TST-032`, so editing them changes those
+   archetypes' best-fit sets — and TST-040 is an implemented `jmeter` module, so flipping
+   `SEC-010` would break check 2 for a working module. **`TST-036` is deferred**: its lone
+   dissenter `MOB-006` (`k6`) also carries `TST-043`, an implemented `k6` module, so no
+   mechanical edit fixes it — the row must lose `TST-036` or be split, which needs an owner.
+   Both conflicts are latent (neither archetype has a `modules.yml` row), so neither blocks
+   this wave.
 4. `TST-043` re-labelled `coverage: partial` with an honest `partial_reason`. It ships 4
    substitute server-side HTTP invariants in place of its 6 real client-side ones.
 
@@ -89,6 +103,15 @@ coverage data these scripts validate, so wiring them here protects this wave's o
 6. **`TST-029` I2 gets a real broker restart, gated out of CI** — Toxiproxy severance would
    prove reconnection, not durable-queue survival, and dressing one up as the other is the
    failure mode this whole harness exists to prevent.
+7. **Two uncited bounds become application config, not NFR amendments** (§7.1). The governed
+   NFR spine stays untouched; traceability is a §11 follow-up if the board wants it.
+8. **Migrations split `V3`/`V4`/`V5`, one per capability**, rather than a single `V3` carrying
+   three tables. A monolithic migration would couple three otherwise-independent tasks — the
+   reservation task could not commit without also creating the outbox and idempotency tables it
+   never touches. Note `idempotency_key` must be added to
+   `AbstractLedgerIntegrationTest.resetLedgerFixture()`'s TRUNCATE list explicitly: the
+   existing `CASCADE` only reaches tables with an FK to `account`, so a standalone table would
+   silently leak state between tests.
 
 ## 4. Architecture
 
@@ -170,8 +193,19 @@ Minimal but sufficient for all four Slice B archetypes:
 | `qe.dlx` → `qe.q.dlq` | DLX + DLQ | TST-029 I1/I3/I5 |
 | `qe.q.retry.{1,2,3}` | per-queue `x-message-ttl` → DLX back to `qe.q.work` | TST-029 I4 backoff ladder |
 
-All queues `durable: true` for TST-029 I2. The broker needs `SPRING_RABBITMQ_*` env and the SUT
-a `depends_on` on it — neither exists today.
+All queues `durable: true` for TST-029 I2.
+
+**No hard `depends_on`.** `reference-sut` is in compose profile `["core"]`; `broker` is in
+`["messaging"]`. Adding `depends_on: broker: {condition: service_healthy}` would make
+`docker compose --profile core up` fail outright, and since `reference-sut`'s healthcheck hits
+`/_capabilities`, a broker-connection failure at startup would mark the container unhealthy and
+break all seven existing modules. So the AMQP connection must be **lazy**: `--profile core`
+boots unchanged with no broker, and messaging modules require `PROFILES="core messaging"`.
+Broker config arrives as `SPRING_RABBITMQ_*` env vars on the compose service — matching how the
+datasource is already supplied, since neither config file declares `spring.datasource.*` at all.
+`spring-boot-starter-amqp` is BOM-managed by Boot 3.5.16, so it takes no explicit `<version>`
+(the `spring-boot-starter-aop` precedent); `org.testcontainers:rabbitmq` likewise from
+testcontainers-bom 1.21.4, test-scoped.
 
 ### 5.4 Defect flags
 
@@ -233,17 +267,47 @@ The traceability gate is **7 checks**, not 6 (`scripts/validate-harness-coverage
 | 3 | `path` exists on disk | Create 8 module directories |
 | 4 | `coverage ∈ {full, partial}`, partial needs reason | 2 partials (TST-027, TST-037) + the `TST-043` relabel |
 | 5 | No 13–19 consecutive digits under `qe-harness/` except `traceability/runs/` | **Slice B hazard** — hyphenated correlation IDs (`corr-a1b2-c3d4`), ISO-8601 not epoch-millis |
-| 6 | `threshold_ref` → `NFR-NNN#anchor` that resolves | ⚠️ **unverified — see §10** |
+| 6 | `threshold_ref` → `NFR-NNN#anchor` that resolves | ✅ resolved — see §7.1 |
 | 7 | Evidence validates against schema | Correct enums per above |
 
 Also enforced: no duplicate `modules.yml` archetype entries. And `CapabilityRegistry.IMPLEMENTED`
 must extend 7 → 15, or `/_capabilities` keeps reporting the wrong thing.
 `render-harness-coverage.py` must be re-run so `harness-coverage.md` is not stale.
 
-**One existing test fails by design and must be rewritten**, not deleted:
-`CapabilityRegistryTest#waveSixteenImplementsExactlySevenCapabilities` asserts the set has
-exactly seven entries. Wave 17 replaces it with the equivalent assertion for fifteen, keeping
-the guard that stops the registry drifting from reality.
+**Three existing tests fail by design and must be rewritten**, not deleted — all in
+`CapabilityRegistryTest`: `waveSixteenImplementsExactlySevenCapabilities` (asserts `7` and the
+exact set), `seventeenArchetypesRemainDeclared` (asserts `17`), and
+`statusOfDeclaredButUnimplementedIsDeclared` (asserts `TST-022` is `declared` — safe, since
+Wave 17 does not implement TST-022). `CapabilityControllerTest` must also be checked in case it
+probes one of the eight. Wave 17 keeps every guard, restated for the new set.
+
+### 7.1 Threshold provenance — how check 6 is satisfied
+
+Check 6 validates **only** `qe-harness/profiles/_nfr-thresholds.yml`; a bound declared anywhere
+else is invisible to it. Auditing the five NFR docs against Wave 17's four threshold-shaped
+needs:
+
+| Need | Anchor | Resolution |
+|---|---|---|
+| TST-034 per-journey p95 | ✅ `NFR-002#end-to-end-budgets-per-tier-customer-facing` | Already in use by three entries. Add per-journey entries sharing this one ref with differing `name`/`value` (e.g. `p95_latency_t1_ms: 500`) |
+| TST-023 utilisation | ✅ N/A | I2's bound `L` is a per-account declared limit read from the SUT's own data — a fixture value, not an SLO. **No `threshold_ref`; citing one would be wrong** |
+| TST-037 convergence bound | ❌ none | The corpus states lag only in **message counts** (Kafka, 1,000/10,000 msg). NFR-002's 50/80 ms "database write (sync replicated)" row is the *synchronous* write-path ack inside one request's budget — citing it for an asynchronous projection would be a category error |
+| TST-029 DLQ depth | ❌ none | The entire NFR corpus contains **one** DLQ mention, in NFR-004's runbook prose, and it is not a threshold |
+
+Wave 16's inherited constraints forbid modifying any NFR row, so the two uncited bounds are
+declared as **application configuration**, not NFR citations:
+`app.readmodel.convergence-bound-ms` and `app.messaging.dlq-alert-depth` in
+`application.properties`. This follows the established `app.recon.freshness-window-seconds=300`
+precedent — one declared value, read by both the service and its test, never duplicated as a
+literal — and `application.yml`'s own rule that operational configuration "are resilience
+configuration, not performance thresholds — no `NFR-*` citation is required". Neither bound
+enters `_nfr-thresholds.yml`, so check 6 has nothing new to resolve and the governed NFR spine
+is untouched.
+
+**Accepted trade-off:** these two bounds are not traceable to an NFR SLO. If the architecture
+board later wants that traceability, it is a governed NFR amendment in its own right — adding a
+`### Read-model convergence budgets` section to NFR-002 and a DLQ-depth section to NFR-003 —
+and is recorded in §11 as a follow-up rather than smuggled into this wave.
 
 ## 8. Failure Handling
 
@@ -323,7 +387,8 @@ the MR path.
 
 | Risk | Detail | Mitigation |
 |---|---|---|
-| **Gate check 6 anchors unverified** | TST-037's convergence bound and TST-029's DLQ-depth alert both need `threshold_ref`s. Whether existing NFR anchors cover them is **unknown**. Fabricating an anchor fails the gate | Explicit verification task at the head of the plan. If no anchor exists, the NFR doc is updated *before* any module references it |
+| ~~Gate check 6 anchors unverified~~ — **resolved** | Audited: two of four needs have anchors, two have none anywhere in the corpus | Declared as application config instead of NFR citations (§7.1). Governed NFR spine untouched; traceability recorded as a §11 follow-up |
+| TST-026 needs a new harness dependency | It is the only one of the eight using the `contract-schema` oracle, `ContractSchema` **has never been called by anything**, and `com.networknt:json-schema-validator` is absent from `testPlanLibraries` — which runs with `downloadLibraryDependencies=false`, so transitives are not resolved | Its task carries the pom edit and must enumerate the dependency's transitives by hand; sequenced first in Slice B so the cost surfaces early |
 | Broker in CI is untested ground | Wave 16's `qe-harness` stage has never run on a real runner; Phase 2 adds RabbitMQ to it | Healthcheck gating; Phase 2 sequenced after Phase 1 ships |
 | TST-034's profile parsing is unprecedented | No code in the repo reads a profile file today; `blend_ref` is `null` | `ProfileResolver` built as a first-class shared component with its own tests, not inline plan logic |
 | Digit-run rule (check 5) trips Slice B | Correlation IDs, sequence numbers and epoch-millis all tend to 13+ digits | Hyphenated short IDs and ISO-8601 mandated in §6; verified by the gate itself |
@@ -350,3 +415,16 @@ Recorded so the next wave inherits them rather than rediscovering them:
 8. `.markdownlint.json` is still absent while CI's `validate:markdown-lint` job references it.
 9. `.trivyignore`'s license allowlist is repo-wide rather than path-scoped.
 10. Making test evidence a formal DAB submission gate — needs EA Board / DAB chair approval.
+11. **NFR traceability for two bounds.** If the board wants `app.readmodel.convergence-bound-ms`
+    and `app.messaging.dlq-alert-depth` traceable to the NFR spine, that is a governed
+    amendment: a `### Read-model convergence budgets (asynchronous projections)` section in
+    NFR-002 (slug `read-model-convergence-budgets-asynchronous-projections`) and a
+    `### Dead-letter queue depth alert thresholds` section in NFR-003 (slug
+    `dead-letter-queue-depth-alert-thresholds`), then `_nfr-thresholds.yml` entries citing them.
+    Keep headings ASCII — NFR-003's `Tết` heading is a live example of a slug that can never be
+    cited, since check 6's anchor pattern is `[a-z0-9-]+` only.
+12. **`TST-036`'s `primary_tool` conflict.** `MOB-006` carries both `TST-036` (`k6`) and
+    `TST-043`, an implemented `k6` module, so no mechanical edit resolves it. The row must lose
+    `TST-036` or be split — an owner's decision, deferred out of Wave 17.
+13. **`.gitlab-ci.yml`'s header comment** lists five stages and omits `qe-harness` — already
+    stale before this wave.
