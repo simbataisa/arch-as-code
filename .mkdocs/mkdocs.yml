@@ -1,14 +1,17 @@
-site_name: Techcombank Architecture
+site_name: Engineering Knowledge Base
 site_description: Architecture-As-Code repository with Design Approval Board governance
-site_author: Techcombank EA Team
-site_url: https://techcombank.gitlab.io/architecture
+site_author: Dennis Dao
+site_url: https://github.com/kb/
 
-repo_name: architecture
-repo_url: https://gitlab.com/techcombank/architecture
+repo_name: arch-as-code
+repo_url: https://github.com/simbataisa/arch-as-code
 edit_uri: edit/main/docs/
 
-docs_dir: .
-site_dir: ./public
+docs_dir: ..
+# The config lives in this child directory because MkDocs requires docs_dir to
+# be a sibling of the config file. The repository root remains the docs source,
+# and the generated site stays outside it to avoid recursive copying.
+site_dir: ../../arch-as-code-site
 
 theme:
   name: material
@@ -32,13 +35,13 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  # Google Fonts disabled: the Techcombank design system specifies SF Pro
+  # Google Fonts disabled: the TCB design system specifies SF Pro
   # Display, which is not self-hostable here (Apple's font license doesn't
   # cover redistributing it on a non-Apple site) -- see stylesheets/extra.css
   # for the fallback-stack approach instead.
   font: false
-  logo: assets/techcombank-mobile-mark.webp
-  favicon: assets/favicon.ico
+  logo: assets/engibase/engibase-logo-light.png
+  favicon: assets/engibase/engibase-favicon.ico
   features:
     - navigation.instant
     - navigation.instant.prefetch
@@ -54,22 +57,25 @@ theme:
     - content.tooltips
 
 nav:
-  - Home: index.md
+  - Home: README.md
   - Getting Started:
-    - Overview: README.md
     - Contributing Guide: CONTRIBUTING.md
     - DAB Process: governance/dab-process/README.md
 
   - Governance:
     - Design Approval Board: governance/dab-process/README.md
-    - Standards & Criteria: governance/standards/
+    - Standards & Criteria:
+        - API Standards: governance/standards/api-standards.md
+        - Data Classification: governance/standards/data-classification.md
+        - Diagram Standards: governance/standards/diagram-standards.md
+        - Enterprise Architecture Catalog: governance/standards/enterprise-architecture-catalog.md
+        - Naming Conventions: governance/standards/naming-conventions.md
+        - Security Baseline: governance/standards/security-baseline.md
     - Review Process: governance/dab-process/README.md
-    - CODEOWNERS: .gitlab/CODEOWNERS
 
   - Registry:
     - DAB Index: registry/dab-index.md
     - Active Submissions: registry/active-submissions.md
-    - Approved DABs: registry/approved-dabs.md
 
   - Architecture Knowledge Base:
     - Principles: knowledge-base/principles/README.md
@@ -123,8 +129,6 @@ nav:
           - TST-039 Data Quality & Reconciliation (Locust): qe-harness/harness/locust/tst_039_recon/README.md
           - TST-040 AuthN/AuthZ Matrix & Token Lifecycle (JMeter): qe-harness/harness/jmeter/tst-040-authz/README.md
           - TST-043 Client Experience & Perf Budget (k6): qe-harness/harness/k6/tst-043-clientexp/README.md
-    - Technology Radar: knowledge-base/technology-radar.md
-    - Glossary: knowledge-base/glossary.md
 
   - Domain Architectures:
     - Payments:
@@ -143,12 +147,10 @@ nav:
     - Lending:
       - Domain Overview: domains/lending/README.md
       - Domain Model: domains/lending/domain-model.md
-      - Context Map: domains/lending/context-map.md
 
     - Data Platform:
       - Domain Overview: domains/data-platform/README.md
       - Domain Model: domains/data-platform/domain-model.md
-      - Technology Radar: domains/data-platform/technology-radar.md
 
     - Digital Channels:
       - Domain Overview: domains/digital-channels/README.md
@@ -249,6 +251,12 @@ plugins:
         - "node_modules/**/*"
         - ".gitlab/**/*"
         - "templates/**/*"
+        # Historical drafts and planning notes are kept in Git but are not
+        # part of the published knowledge-base navigation.
+        - "docs/superpowers/**/*"
+        - "dab/**"
+        - "Architecture-As-Code-Proposal-Techcombank.md"
+        - "testing-knowledge-base-report.md"
         # qe-harness's own build output: Maven/npm/pip artefacts, none
         # of it hand-authored docs. Without these, mkdocs walks
         # qe-harness/harness/jmeter/target/**/report-template/ (JMeter's
@@ -266,19 +274,22 @@ plugins:
       minify_js: true
       minify_css: true
 
+validation:
+  nav:
+    omitted_files: ignore
+  links:
+    # Directory links are valid repository navigation but do not have a
+    # corresponding README in every source directory. Anchor validation is
+    # disabled because the custom slugifier intentionally preserves heading
+    # punctuation used by the corpus.
+    unrecognized_links: ignore
+    absolute_links: ignore
+    anchors: ignore
+
 extra:
   version:
     provider: mike
     default: latest
-  social:
-    - icon: fontawesome/brands/slack
-      link: https://techcombank.slack.com/archives/C0XXXXXX
-    - icon: fontawesome/brands/gitlab
-      link: https://gitlab.com/techcombank/architecture
 
 extra_css:
   - stylesheets/extra.css
-
-copyright: >
-  Copyright &copy; 2024 - 2026 Techcombank.
-  Architecture is managed by Enterprise Architecture Board.

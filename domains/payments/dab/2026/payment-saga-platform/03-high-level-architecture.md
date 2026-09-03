@@ -1,6 +1,6 @@
 # II.2 High-level Architecture
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.1 Key Design Concerns](02-key-design-concerns.md)
+[< Back to Index](./README.md) | [← Previous: II.1 Key Design Concerns](02-key-design-concerns.md)
 
 ---
 

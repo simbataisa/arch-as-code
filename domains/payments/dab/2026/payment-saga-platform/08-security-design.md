@@ -1,6 +1,6 @@
 # II.7 Security Design
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.6 Infrastructure Design](07-infrastructure-design.md)
+[< Back to Index](./README.md) | [← Previous: II.6 Infrastructure Design](07-infrastructure-design.md)
 
 ---
 

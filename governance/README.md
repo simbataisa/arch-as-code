@@ -1,8 +1,8 @@
-# Techcombank Architecture Governance Framework
+# Architecture Governance Framework
 
 ## Overview
 
-This directory contains the official governance framework for Techcombank's architecture decision-making, design approval processes, and technology standards. The framework ensures consistent, secure, and scalable architecture across all business domains and technology initiatives.
+This directory contains the official governance framework for architecture decision-making, design approval processes, and technology standards. The framework ensures consistent, secure, and scalable architecture across all business domains and technology initiatives.
 
 **Owned by:** Enterprise Architecture Technology (EAT) Team
 
@@ -13,7 +13,7 @@ This directory contains the official governance framework for Techcombank's arch
 ## Framework Structure
 
 ### Design Approval Board (DAB) Process
-The DAB is Techcombank's primary mechanism for reviewing and approving significant architecture changes, new platforms, and cross-domain integrations.
+The DAB is the primary mechanism for reviewing and approving significant architecture changes, new platforms, and cross-domain integrations.
 
 - **[DAB Process Overview](./dab-process/README.md)** — What is a DAB, when it's required, participants, and lifecycle
 - **[Full DAB Process](./dab-process/dab-full-process.md)** — Comprehensive track for major initiatives (10-day SLA)
@@ -48,7 +48,7 @@ Significant decisions made by the Architecture team that establish precedent and
 2. **Traceability** — Every decision is versioned and linked to business context
 3. **Security-First** — Mandatory baseline controls apply to all initiatives
 4. **Efficiency** — Clear SLAs and fast-track processes minimize approval delays
-5. **Scalability** — Framework supports Techcombank's growth across domains
+5. **Scalability** — Framework supports growth across domains
 
 ---
 
@@ -99,7 +99,7 @@ Changes to governance framework require:
 
 ## Related Resources
 
-- Techcombank Architecture Repository (GitLab)
+- Architecture Repository (GitLab)
 - Confluence: Enterprise Architecture (legacy, being migrated to this framework)
 - IT Security Policy: Data Classification and Protection
 - Incident Management Procedures

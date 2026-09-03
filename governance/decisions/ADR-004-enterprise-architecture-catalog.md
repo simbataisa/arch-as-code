@@ -148,8 +148,8 @@ Maintain the catalog in Confluence with a Word-doc-style table.
 - Compliance Matrix: [`knowledge-base/compliance/compliance-mapping-matrix.md`](../../knowledge-base/compliance/compliance-mapping-matrix.md)
 - Research Notes: [`knowledge-base/_research-notes.md`](../../knowledge-base/_research-notes.md)
 - Reviewer Registry: [`registry/catalog-reviewers.yml`](../../registry/catalog-reviewers.yml)
-- Brainstorming spec: [`docs/superpowers/specs/2026-05-08-banking-enterprise-architecture-catalog-design.md`](../../docs/superpowers/specs/2026-05-08-banking-enterprise-architecture-catalog-design.md)
-- Implementation plan: [`docs/superpowers/plans/2026-05-08-banking-enterprise-architecture-catalog.md`](../../docs/superpowers/plans/2026-05-08-banking-enterprise-architecture-catalog.md)
+- Brainstorming spec: `docs/superpowers/specs/2026-05-08-banking-enterprise-architecture-catalog-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-05-08-banking-enterprise-architecture-catalog.md`
 - Gate review logs: `governance/decisions/REVIEW-LOG-2026-05-09-G{1,2,2.5,3,4,5}.md`
 
 ---

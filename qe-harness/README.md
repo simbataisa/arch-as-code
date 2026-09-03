@@ -130,7 +130,7 @@ the SUT is bundled rather than pointed at a real service.
 
 The `Makefile` is the single façade over all three build systems, so `make up && make run-all`
 works regardless of which language a module is written in. They are deliberately *not* unified —
-see [§4.3 of the design doc](../docs/superpowers/specs/2026-08-24-wave-16-qe-harness-design.md).
+see §4.3 of `docs/superpowers/specs/2026-08-24-wave-16-qe-harness-design.md`.
 
 ### Which module, which tool, which oracle
 
@@ -185,7 +185,7 @@ These trip up every new reader. Worth 60 seconds now.
 | Run something immediately | [Quick Start](#quick-start) below |
 | Know what is and is not implemented | [`traceability/harness-coverage.md`](./traceability/harness-coverage.md) |
 | Understand one module in depth | That module's own `README.md` under [`harness/`](./harness/) |
-| Know why it is built this way | [Wave 16 design doc](../docs/superpowers/specs/2026-08-24-wave-16-qe-harness-design.md) — decisions, rejected alternatives |
+| Know why it is built this way | `docs/superpowers/specs/2026-08-24-wave-16-qe-harness-design.md` — decisions, rejected alternatives |
 | Add a module for a new archetype | Add a row to `modules.yml`, create the module dir, emit a schema-valid fragment, then `make verify` |
 | Understand the doctrine itself | [Testing knowledge base README](../knowledge-base/testing/README.md) |
 

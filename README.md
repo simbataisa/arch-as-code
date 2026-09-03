@@ -1,4 +1,4 @@
-# Techcombank Architecture
+# Architecture
 
 Architecture-As-Code repository for Design Approval Board (DAB) governance. This
 repository is the source of truth for Techcombank's architecture decisions, reusable
@@ -29,14 +29,15 @@ triggers a Full vs. Light DAB and the approval SLA.
 
 ## Building the documentation site
 
-The whole repository is the MkDocs source (`docs_dir: .` in [`mkdocs.yml`](mkdocs.yml)),
+The whole repository is the MkDocs source (`docs_dir: ..` in
+`.mkdocs/mkdocs.yml`),
 so anything you can browse here in plain Markdown also renders as a navigable site with
 search, versioning, and Mermaid diagrams.
 
 ```bash
 pip install mkdocs mkdocs-material mkdocs-mermaid2-plugin pymdown-extensions \
   mkdocs-git-revision-date-localized-plugin mkdocs-minify-plugin mkdocs-exclude
-mkdocs serve
+mkdocs serve -f ./.mkdocs/mkdocs.yml
 ```
 
 ## Contributing

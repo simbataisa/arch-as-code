@@ -59,6 +59,53 @@
   --md-typeset-a-color: var(--tcb-accent);
 }
 
+/* ENGIBase header branding. Material exposes one theme.logo setting, so the
+   rendered image source is switched here for the active palette and viewport. */
+.md-header__button.md-logo {
+  align-items: center;
+  display: flex;
+  height: 2.4rem;
+  margin: 0;
+  padding: 0.2rem 0.4rem;
+}
+
+.md-header__button.md-logo img {
+  height: 2rem;
+  max-width: 14rem;
+  object-fit: contain;
+  width: auto;
+}
+
+/* Keep Material's title container as the flexible header spacer while hiding
+   its duplicate site name; the ENGIBase artwork already contains the wordmark. */
+.md-header__title {
+  font-size: 0;
+  margin-left: 0;
+}
+
+[data-md-color-scheme="default"] .md-header__button.md-logo img {
+  content: url("../assets/engibase/engibase-logo-light.png");
+}
+
+[data-md-color-scheme="slate"] .md-header__button.md-logo img {
+  content: url("../assets/engibase/engibase-logo-dark.png");
+}
+
+@media screen and (max-width: 76.234375em) {
+  .md-header__button.md-logo img {
+    height: 2.1rem;
+    max-width: 3rem;
+  }
+
+  [data-md-color-scheme="default"] .md-header__button.md-logo img {
+    content: url("../assets/engibase/engibase-mobile-light.png");
+  }
+
+  [data-md-color-scheme="slate"] .md-header__button.md-logo img {
+    content: url("../assets/engibase/engibase-mobile-dark.png");
+  }
+}
+
 body,
 .md-typeset {
   font-family: "SF Pro Display", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;

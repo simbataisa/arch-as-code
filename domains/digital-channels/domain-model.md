@@ -177,9 +177,8 @@ graph TB
 
 ## See Also
 
-- [Digital Channels Context Map](../context-map.md)
-- [Mobile App Project](../dab/2026/mobile-app-redesign/README.md)
-- [Chatbot Platform Project](../dab/2026/chatbot-ai-platform/README.md)
+- [Mobile App Project](./dab/2026/mobile-app-redesign/README.md)
+- [Chatbot Platform Project](./dab/2026/chatbot-ai-platform/README.md)
 
 ---
 

@@ -113,7 +113,7 @@ cp templates/reviewers-template.yml reviewers.yml
 # Edit with your domain's specialist architects
 ```
 
-See [reviewers.yml Format](#reviewersynml-format) below.
+See [reviewers.yml Format](#create-reviewersyml) below.
 
 #### 6. Validate Your Submission
 

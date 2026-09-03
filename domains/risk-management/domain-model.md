@@ -173,8 +173,7 @@ Customer risk classification for ongoing monitoring:
 
 ## See Also
 
-- [Risk Management Context Map](../context-map.md)
-- [Fraud Detection ML Project](../dab/2026/fraud-detection-ml/README.md)
+- [Fraud Detection ML Project](./dab/2026/fraud-detection-ml/README.md)
 
 ---
 

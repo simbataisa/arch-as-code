@@ -1,6 +1,6 @@
 # II.6 Infrastructure Design
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.5 Integration Design](06-integration-design.md)
+[< Back to Index](./README.md) | [← Previous: II.5 Integration Design](06-integration-design.md)
 
 ---
 

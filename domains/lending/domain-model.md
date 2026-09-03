@@ -190,8 +190,7 @@ Disbursement
 
 ## See Also
 
-- [Lending Context Map](../context-map.md)
-- [Auto Loan Origination Project](../dab/2026/auto-loan-origination/README.md)
+- [Auto Loan Origination Project](./dab/2026/auto-loan-origination/README.md)
 
 ---
 

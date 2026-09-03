@@ -1,6 +1,6 @@
 # II.3 Data Design
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.2 High-level Architecture](03-high-level-architecture.md)
+[< Back to Index](./README.md) | [← Previous: II.2 High-level Architecture](03-high-level-architecture.md)
 
 ---
 

@@ -232,8 +232,8 @@ registry/ (Generated output)
 
 ## Related Documentation
 
-- [DAB Submission Guidelines](../templates/README.md)
+- DAB Submission Guidelines: `templates/README.md`
 - [Domain Ownership](domain-owners.yml)
-- [Full DAB Template](../templates/dab-full/README.md)
-- [Light DAB Template](../templates/dab-light/README.md)
-- [Architecture Decision Records](../templates/adr/ADR-TEMPLATE.md)
+- Full DAB Template: `templates/dab-full/`
+- Light DAB Template: `templates/dab-light/`
+- Architecture Decision Records: `templates/adr/ADR-TEMPLATE.md`

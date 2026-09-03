@@ -1,6 +1,6 @@
 # II. PROPOSED SOLUTION
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md)
+[< Back to Index](./README.md)
 
 ---
 

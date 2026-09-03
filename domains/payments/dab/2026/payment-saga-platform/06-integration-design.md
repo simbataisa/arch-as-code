@@ -1,6 +1,6 @@
 # II.5 Integration Detailed Design
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.4 Detailed Design](05-detailed-design.md)
+[< Back to Index](./README.md) | [← Previous: II.4 Detailed Design](05-detailed-design.md)
 
 ---
 

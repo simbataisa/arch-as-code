@@ -345,9 +345,9 @@ Comments and suggestions welcome on:
 
 ## See Also
 
-- [Payments Domain README](../../README.md)
-- [Technology Radar - SAGA & Temporal](../../technology-radar.md)
-- [Payment Flow Template](../../shared/diagrams/payment-flow-template.md)
+- [Payments Domain README](../../../README.md)
+- [Technology Radar - SAGA & Temporal](../../../technology-radar.md)
+- [Payment Flow Template](../../../shared/diagrams/payment-flow-template.md)
 - [Temporal Documentation](https://docs.temporal.io)
 
 ---

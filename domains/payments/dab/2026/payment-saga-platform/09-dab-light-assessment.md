@@ -1,6 +1,6 @@
 # III. DAB LIGHT ASSESSMENT
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.7 Security Design](08-security-design.md)
+[< Back to Index](./README.md) | [← Previous: II.7 Security Design](08-security-design.md)
 
 ---
 

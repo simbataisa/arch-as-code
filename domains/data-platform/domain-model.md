@@ -194,9 +194,8 @@ Real-time dashboards (Tableau, Looker) backed by warehouse and streaming data.
 
 ## See Also
 
-- [Data Platform Context Map](../context-map.md)
-- [Lakehouse Migration Project](../dab/2026/lakehouse-migration/README.md)
-- [Real-Time Analytics Project](../dab/2026/real-time-analytics/README.md)
+- [Lakehouse Migration Project](./dab/2026/lakehouse-migration/README.md)
+- [Real-Time Analytics Project](./dab/2026/real-time-analytics/README.md)
 
 ---
 

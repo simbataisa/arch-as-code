@@ -1,6 +1,6 @@
 # II.4 Detailed Design
 
-[< Back to Index](../DAB_Payment_SAGA_Platform.md) | [← Previous: II.3 Data Design](04-data-design.md)
+[< Back to Index](./README.md) | [← Previous: II.3 Data Design](04-data-design.md)
 
 ---
 
