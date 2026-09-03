@@ -7051,3 +7051,767 @@ broker topology is now the substrate any future messaging archetype reuses. Phas
 the one archetype that needed it.
 
 ---
+
+## Task 25: SUT — TST-020 Idempotency on POST /transfers
+
+Sequenced last on purpose. I7 is "dedup survives broker redelivery", which was unsatisfiable
+before Phase 2 existed — running this task earlier would have bought a `partial` where a `full`
+was available.
+
+**Files:**
+- Create: `…/db/migration/V5__idempotency_keys.sql`
+- Create: `…/sut/capability/ledger/IdempotencyService.java`
+- Modify: `…/sut/capability/ledger/LedgerController.java`, `TransferService.java`
+- Modify: `…/sut/capability/ledger/AbstractLedgerIntegrationTest.java` (**TRUNCATE list**)
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Modify: `…/reference-sut/src/main/resources/application.properties`
+- Test: `…/sut/capability/ledger/IdempotencyServiceTest.java`
+
+**Interfaces:**
+- Consumes: `JdbcTemplate`, `TransferService`, `MessagingTopology` (for I7's redelivery path)
+- Produces: `Idempotency-Key` handling on `POST /transfers`, `GET /transfers/idempotency/{key}`;
+  defect flag `idempotency-key-ignored`
+
+- [ ] **Step 1: Write the failing test**
+
+`IdempotencyServiceTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.ledger;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-020 idempotency and replay. */
+class IdempotencyServiceTest extends AbstractLedgerIntegrationTest {
+
+    @Test
+    void repeatedSameKeyRequestsProduceOneStateChange() {
+        String key = "idem-0001";
+        for (int i = 0; i < 5; i++) {
+            idempotency.execute(key, requestBody(500L), () -> service.transfer("ACC-000001", "ACC-000002", 500L));
+        }
+        assertEquals(2, ledgerEntryCount(), "I1: five same-key requests, one balanced pair");
+    }
+
+    @Test
+    void aReplayReturnsAByteIdenticalStoredResponse() {
+        String key = "idem-0002";
+        String first = idempotency.execute(key, requestBody(500L),
+            () -> service.transfer("ACC-000001", "ACC-000002", 500L)).body();
+        String replay = idempotency.execute(key, requestBody(500L),
+            () -> service.transfer("ACC-000001", "ACC-000002", 500L)).body();
+        assertEquals(first, replay, "I2: the replay must be byte-identical, not merely equivalent");
+    }
+
+    @Test
+    void distinctKeysProduceDistinctStateChanges() {
+        for (int i = 1; i <= 3; i++) {
+            idempotency.execute("idem-100" + i, requestBody(500L),
+                () -> service.transfer("ACC-000001", "ACC-000002", 500L));
+        }
+        assertEquals(6, ledgerEntryCount(), "I3: three distinct keys, three balanced pairs");
+    }
+
+    @Test
+    void sameKeyWithADifferentPayloadIsAConflict() {
+        String key = "idem-0003";
+        idempotency.execute(key, requestBody(500L),
+            () -> service.transfer("ACC-000001", "ACC-000002", 500L));
+        assertThrows(IdempotencyService.PayloadConflict.class,
+            () -> idempotency.execute(key, requestBody(999L),
+                () -> service.transfer("ACC-000001", "ACC-000002", 999L)),
+            "I4: a reused key with a changed payload must conflict, never silently replay");
+    }
+
+    @Test
+    void underTrueConcurrencyOneWinsAndTheRestAreServedTheStoredResponse() throws Exception {
+        String key = "idem-0004";
+        String body = requestBody(500L);
+        List<Callable<String>> calls = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            calls.add(() -> idempotency.execute(key, body,
+                () -> service.transfer("ACC-000001", "ACC-000002", 500L)).body());
+        }
+        ExecutorService pool = Executors.newFixedThreadPool(12);
+        List<String> bodies = new ArrayList<>();
+        try {
+            for (Future<String> f : pool.invokeAll(calls)) {
+                bodies.add(f.get());
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(2, ledgerEntryCount(), "I5: exactly one winner writes state");
+        assertEquals(1, bodies.stream().distinct().count(),
+            "I5: every caller sees the same stored response");
+    }
+
+    @Test
+    void theKeyTtlCoversTheDeclaredClientRetryWindow() {
+        // I6 is a configuration relationship, so it is asserted against the two
+        // declared properties rather than by waiting out a TTL.
+        assertTrue(idempotency.keyTtlSeconds() >= idempotency.clientMaxRetryWindowSeconds(),
+            "I6: key TTL must be at least the declared client retry window");
+    }
+
+    @Test
+    void ignoredKeyDefectBreaksOnlyTheDeduplicationInvariant() {
+        String key = "idem-0005";
+        withDefect("idempotency-key-ignored", () -> {
+            for (int i = 0; i < 3; i++) {
+                idempotency.execute(key, requestBody(500L),
+                    () -> service.transfer("ACC-000001", "ACC-000002", 500L));
+            }
+        });
+        assertEquals(6, ledgerEntryCount(), "the defect must write three pairs for one key");
+        assertEquals(0L, trialBalance.net(),
+            "the defect must be specific: the ledger stays balanced");
+    }
+
+    private String requestBody(long amountMinor) {
+        return "{\"from\":\"ACC-000001\",\"to\":\"ACC-000002\",\"amountMinor\":" + amountMinor + "}";
+    }
+
+    private long ledgerEntryCount() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM ledger_entry", Long.class);
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=IdempotencyServiceTest
+```
+
+Expected: FAIL — `IdempotencyService` does not exist.
+
+- [ ] **Step 3: Write the migration**
+
+`V5__idempotency_keys.sql`:
+
+```sql
+-- V5: idempotency keys for TST-020 idempotency and replay (Wave 17).
+-- See com.techcombank.qe.sut.capability.ledger.IdempotencyService.
+--
+-- The UNIQUE constraint on idempotency_key is what makes I5 (true concurrency:
+-- one wins, the rest are served the stored response) enforceable rather than
+-- merely intended. Two concurrent inserts cannot both succeed; the loser
+-- catches the violation and reads the winner's stored response. A
+-- check-then-insert in application code could not promise that.
+--
+-- payload_hash exists for I4: a reused key carrying a DIFFERENT payload must
+-- conflict rather than silently replay someone else's result, which is the
+-- more dangerous of the two failures.
+--
+-- response_body is stored verbatim so a replay is BYTE-identical (I2), not
+-- merely equivalent -- re-serialising would risk key reordering or whitespace
+-- drift.
+--
+-- NOTE: this table has NO foreign key to account, so it is NOT reached by
+-- AbstractLedgerIntegrationTest's TRUNCATE ... CASCADE. It must be added to
+-- that TRUNCATE list explicitly or keys leak between tests.
+
+CREATE TABLE idempotency_key (
+    id             BIGSERIAL PRIMARY KEY,
+    idempotency_key VARCHAR(64) NOT NULL UNIQUE,
+    payload_hash   VARCHAR(64) NOT NULL,
+    response_body  TEXT        NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at     TIMESTAMPTZ NOT NULL,
+    CONSTRAINT idempotency_key_format CHECK (idempotency_key ~ '^idem-[A-Za-z0-9-]{1,58}$')
+);
+
+CREATE INDEX idempotency_key_expires_at_idx ON idempotency_key (expires_at);
+```
+
+The `idempotency_key_format` CHECK keeps keys to a hyphenated short form at the database level,
+so no code path — injected defect included — can write a key containing a 13-digit run that
+would fail gate check 5.
+
+- [ ] **Step 4: Write the service**
+
+`IdempotencyService.java`:
+
+```java
+package com.techcombank.qe.sut.capability.ledger;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.function.Supplier;
+
+/**
+ * TST-020 idempotency and replay capability.
+ *
+ * <p><b>The unique constraint is the mechanism, not a safety net.</b> Under true
+ * concurrency (I5) two callers race to insert the same key; exactly one wins,
+ * and the loser catches {@link DuplicateKeyException} and reads the winner's
+ * stored response. A check-then-insert in application code could not promise
+ * that, because both callers could pass the check.
+ *
+ * <p><b>Responses are stored verbatim (I2).</b> A replay must be byte-identical,
+ * so re-serialising is not an option -- key order or whitespace could drift.
+ *
+ * <p><b>A reused key with a different payload conflicts (I4)</b> rather than
+ * replaying someone else's result, which is the more dangerous failure of the
+ * two.
+ *
+ * <p><b>Defect injection:</b> {@code idempotency-key-ignored} skips the key
+ * lookup entirely and always executes, so N same-key requests produce N state
+ * changes. I1 fails; the ledger stays balanced throughout, so TST-021's
+ * invariants are untouched -- the defect is specific.
+ */
+@Service
+public class IdempotencyService {
+
+    /** Thrown when a key is reused with a different payload (I4). */
+    public static class PayloadConflict extends RuntimeException {
+        public PayloadConflict(String key) {
+            super("idempotency key reused with a different payload: " + key);
+        }
+    }
+
+    /** The outcome of an idempotent execution. */
+    public record Outcome(String body, boolean replayed) {}
+
+    private final JdbcTemplate jdbc;
+    private final long keyTtlSeconds;
+    private final long clientMaxRetryWindowSeconds;
+
+    public IdempotencyService(JdbcTemplate jdbc,
+                              @Value("${app.idempotency.key-ttl-seconds}") long keyTtlSeconds,
+                              @Value("${app.idempotency.client-max-retry-window-seconds}") long clientMaxRetryWindowSeconds) {
+        this.jdbc = jdbc;
+        this.keyTtlSeconds = keyTtlSeconds;
+        this.clientMaxRetryWindowSeconds = clientMaxRetryWindowSeconds;
+    }
+
+    public long keyTtlSeconds() {
+        return keyTtlSeconds;
+    }
+
+    public long clientMaxRetryWindowSeconds() {
+        return clientMaxRetryWindowSeconds;
+    }
+
+    /** Executes {@code action} at most once per key. */
+    public Outcome execute(String key, String payload, Supplier<Object> action) {
+        if (DefectFlags.isActive("idempotency-key-ignored")) {
+            // The defect: no lookup, no record. Every call executes.
+            return new Outcome(render(action.get()), false);
+        }
+
+        String hash = sha256(payload);
+        List<StoredKey> existing = find(key);
+        if (!existing.isEmpty()) {
+            return replayOrConflict(key, hash, existing.get(0));
+        }
+
+        String body = render(action.get());
+        try {
+            jdbc.update(
+                "INSERT INTO idempotency_key (idempotency_key, payload_hash, response_body, expires_at) "
+                    + "VALUES (?, ?, ?, now() + make_interval(secs => ?))",
+                key, hash, body, (double) keyTtlSeconds);
+            return new Outcome(body, false);
+        } catch (DuplicateKeyException e) {
+            // I5's loser path: another caller won the race between our lookup
+            // and our insert. Serve their stored response rather than surfacing
+            // a 500 -- the constraint violation is expected here, not an error.
+            List<StoredKey> winner = find(key);
+            if (winner.isEmpty()) {
+                throw e;
+            }
+            return replayOrConflict(key, hash, winner.get(0));
+        }
+    }
+
+    private Outcome replayOrConflict(String key, String hash, StoredKey stored) {
+        if (!stored.payloadHash().equals(hash)) {
+            throw new PayloadConflict(key);
+        }
+        return new Outcome(stored.responseBody(), true);
+    }
+
+    private List<StoredKey> find(String key) {
+        return jdbc.query(
+            "SELECT payload_hash, response_body FROM idempotency_key "
+                + "WHERE idempotency_key = ? AND expires_at > now()",
+            (rs, n) -> new StoredKey(rs.getString("payload_hash"), rs.getString("response_body")),
+            key);
+    }
+
+    /** Verbatim rendering: the stored body is what a replay returns, so this is
+     *  the one place the response's bytes are decided. */
+    private String render(Object result) {
+        return "{\"transferRef\":\"" + result + "\"}";
+    }
+
+    private static String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    private record StoredKey(String payloadHash, String responseBody) {}
+}
+```
+
+- [ ] **Step 5: Wire it into the controller**
+
+In `LedgerController.java`, accept the header and keep the existing unkeyed path working —
+every pre-Wave-17 caller, including TST-021's plan, sends no `Idempotency-Key`:
+
+```java
+    /** POST /transfers {from, to, amountMinor} -> 201 {transferRef}.
+     *
+     *  <p>An optional Idempotency-Key header makes the call replay-safe
+     *  (TST-020). Without it the behaviour is exactly as before, so TST-021's
+     *  module and every other existing caller are unaffected. A replay returns
+     *  200 rather than 201: the resource was not created by this request. */
+    @PostMapping("/transfers")
+    public ResponseEntity<?> transfer(@RequestBody TransferRequest request,
+                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                      @RequestBody(required = false) String rawBody) {
+        if (idempotencyKey == null) {
+            UUID ref = transferService.transfer(request.from(), request.to(), request.amountMinor());
+            return ResponseEntity.status(HttpStatus.CREATED).body(new TransferResponse(ref));
+        }
+        try {
+            IdempotencyService.Outcome outcome = idempotency.execute(idempotencyKey, rawBody,
+                () -> transferService.transfer(request.from(), request.to(), request.amountMinor()));
+            return ResponseEntity
+                .status(outcome.replayed() ? HttpStatus.OK : HttpStatus.CREATED)
+                .header("Idempotent-Replay", String.valueOf(outcome.replayed()))
+                .body(outcome.body());
+        } catch (IdempotencyService.PayloadConflict e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
+    }
+```
+
+Spring cannot bind two `@RequestBody` parameters — take the raw body once and parse it, or read
+it through a small `HttpServletRequest` wrapper. Verify the chosen approach compiles before
+proceeding; if binding fights you, hash the canonical form
+`request.from() + "|" + request.to() + "|" + request.amountMinor()` instead of the raw bytes and
+note the deviation in the module README, since I2's byte-identical guarantee applies to the
+**response**, not the request.
+
+Add `GET /transfers/idempotency/{key}` returning `{present, replayed, keyTtlSeconds,
+clientMaxRetryWindowSeconds}` so the harness can assert I6 against declared configuration.
+
+- [ ] **Step 6: Declare the TTL properties**
+
+Append to `application.properties`:
+
+```properties
+# TST-020 idempotency and replay (Wave 17). I6 requires the key TTL to cover at
+# least the declared client retry window; IdempotencyServiceTest asserts that
+# relationship between these two declared values rather than waiting out a TTL.
+app.idempotency.key-ttl-seconds=900
+app.idempotency.client-max-retry-window-seconds=300
+```
+
+- [ ] **Step 7: Fix the TRUNCATE list — this is the leak**
+
+`idempotency_key` has no FK to `account`, so `AbstractLedgerIntegrationTest`'s
+`TRUNCATE TABLE ledger_entry, account RESTART IDENTITY CASCADE` does **not** reach it. Without
+this change, keys survive between tests and `repeatedSameKeyRequestsProduceOneStateChange`
+passes or fails depending on test order:
+
+```java
+    @BeforeEach
+    void resetLedgerFixture() {
+        DefectFlags.clear();
+        // idempotency_key has no FK to account, so CASCADE does not reach it --
+        // truncate it explicitly or keys leak into the next test.
+        jdbc.execute("TRUNCATE TABLE idempotency_key RESTART IDENTITY");
+        jdbc.execute("TRUNCATE TABLE ledger_entry, account RESTART IDENTITY CASCADE");
+        jdbc.update("INSERT INTO account (account_ref, party_name) VALUES (?, ?)",
+            "ACC-000001", "Test Fixture Debtor Co");
+        jdbc.update("INSERT INTO account (account_ref, party_name) VALUES (?, ?)",
+            "ACC-000002", "Test Fixture Creditor Co");
+    }
+```
+
+Add `@Autowired protected IdempotencyService idempotency;` to the same base class.
+
+- [ ] **Step 8: Register the flag and capability**
+
+Add `"idempotency-key-ignored"` to `KNOWN_FLAGS`, `"TST-020"` to `IMPLEMENTED` and to
+`IMPLEMENTED_AT_WAVE_17` — the fifteenth and final entry.
+
+- [ ] **Step 9: Run the full SUT suite**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, including all seven `IdempotencyServiceTest` tests **and** the pre-existing
+`TransferServiceTest`/`LedgerConcurrencyTest`, which must be unaffected by the new header.
+
+- [ ] **Step 10: Prove the unkeyed path is unchanged**
+
+```bash
+cd qe-harness && make down && make up PROFILES=core
+./bin/run-module.sh TST-021
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8080/transfers \
+  -H 'Content-Type: application/json' \
+  -d '{"from":"ACC-000001","to":"ACC-000002","amountMinor":100}'
+```
+
+Expected: TST-021 still passes, and the unkeyed POST still returns `201`.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add TST-020 idempotency with a unique-constraint race winner"
+```
+
+---
+
+## Task 26: Module — TST-020 Idempotency & Replay (JMeter, full I1–I7)
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-020-idempotency/{plan.jmx,assert-idempotency.groovy,README.md}`
+- Modify: `qe-harness/traceability/modules.yml`
+- Test: `…/jmeter/Tst020ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `POST /transfers` with `Idempotency-Key`, `GET /transfers/idempotency/{key}`,
+  `POST /messaging/work` (I7's redelivery path)
+- Produces: `run-module.sh TST-020`; the fifteenth module
+
+- [ ] **Step 1: Write the module README**
+
+`tst-020-idempotency/README.md`:
+
+```markdown
+# TST-020 -- Idempotency & Replay (JMeter)
+
+Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
+
+| ID | Invariant |
+|---|---|
+| I1 | N same-key requests produce exactly one state change |
+| I2 | A replay returns a byte-identical status and body |
+| I3 | N distinct keys produce N state changes |
+| I4 | The same key with a different payload is a conflict |
+| I5 | Under true concurrency one wins and the other is served the stored response |
+| I6 | Key TTL is at least the declared client max retry window |
+| I7 | Deduplication survives broker redelivery |
+
+Defect proof: with `idempotency-key-ignored` active this module MUST report I1 failed and I2/I4
+still passed.
+
+**Why this module is last in the wave.** I7 requires a broker that redelivers, which did not
+exist in this repository until Wave 17's Phase 2. Running TST-020 before the broker landed
+would have meant shipping `coverage: partial` with I7 unreached; sequencing it after buys the
+full set. That ordering was a design decision, not an accident -- see the design spec's
+decision 2.
+
+I5 rests on the `idempotency_key` table's UNIQUE constraint, not on application-level
+check-then-insert: under a synchronised burst two callers race, exactly one insert survives, and
+the loser catches the violation and serves the winner's stored response. I2 compares the replay
+**byte for byte**, which is why the response body is stored verbatim rather than re-serialised.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Reset Idempotency Fixture`, 1 thread, 1 loop) truncates
+   `idempotency_key` explicitly -- it has no FK to `account`, so a `CASCADE` misses it -- plus
+   `ledger_entry`/`account`, and seeds the two fixture accounts.
+2. **Main Thread Group** (`Same-Key Burst`, 12 threads x 1 loop) fires
+   `POST /transfers` with one shared `Idempotency-Key` behind a **Synchronizing Timer** (group
+   size 12) so the race in I5 is genuine rather than sequential. A `JSR223PostProcessor` tallies
+   `201` versus `200` responses and collects the distinct response bodies.
+3. **TearDown Thread Group** (`Verify Idempotency`, 1 thread, 1 loop) exercises the remaining
+   invariants directly: three distinct keys for I3; the same key with a changed amount for I4,
+   requiring `409`; `GET /transfers/idempotency/{key}` for I6's declared-configuration check;
+   and a `POST /messaging/work` redelivery for I7. `assert-idempotency.groovy` then evaluates
+   I1-I7.
+
+## Running it
+
+```
+make up PROFILES="core messaging"     # I7 needs the broker
+./bin/run-module.sh TST-020
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/idempotency-key-ignored   # 204
+./bin/run-module.sh TST-020                                              # must report I1 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                        # 204
+```
+
+With the defect active, `IdempotencyService.execute` skips the key lookup entirely and always
+executes, so twelve same-key requests write twelve balanced pairs. The ledger stays balanced
+throughout, so TST-021's invariants are untouched -- which is what makes the proof specific.
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`Tst020ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * TST-020 idempotency module. Requires make up PROFILES="core messaging" --
+ * I7's redelivery path needs the broker Phase 2 introduced.
+ */
+class Tst020ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-020", Map.of());
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void assertsAllSevenInvariantsIncludingTheBrokerRedeliveryOne() throws Exception {
+        ModuleResult r = runner.run("TST-020", Map.of());
+        assertEquals(7, r.fragment().invariants().size());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I7") && i.result() == RunFragment.Result.PASSED),
+            "I7 is why this module is sequenced after Phase 2; it must be genuinely evaluated");
+    }
+
+    @Test
+    void reportsDeduplicationFailureAgainstTheIgnoredKeyDefect() throws Exception {
+        ModuleResult r = runner.run("TST-020", Map.of("SUT_DEFECT", "idempotency-key-ignored"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I1") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I4") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: conflict detection is bypassed, not broken");
+    }
+}
+```
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst020ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 4: Add the binding row**
+
+Insert into `modules.yml` as the **first** module row, before `TST-021`, keeping archetype
+order:
+
+```yaml
+  - archetype: TST-020
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-020-idempotency
+    coverage: full
+    defect_flag: idempotency-key-ignored
+```
+
+- [ ] **Step 5: Write the assertion script**
+
+`assert-idempotency.groovy`:
+
+```groovy
+// TST-020 idempotency and replay assertion (Wave 17).
+//
+// Sequenced last in the wave deliberately: I7 (dedup survives broker
+// redelivery) needs the broker Phase 2 introduced, so running this module
+// earlier would have meant shipping coverage: partial with I7 unreached.
+//
+// I2 compares the replay BYTE FOR BYTE. The SUT stores its response verbatim
+// rather than re-serialising, so a body that differs by key order or whitespace
+// is a real violation, not a formatting artefact.
+
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import groovy.json.JsonSlurper
+
+import java.nio.file.Path
+
+long entriesAfterBurst = Long.parseLong(vars.get("entries_after_burst"))
+long distinctBodies = Long.parseLong(props.getProperty("tst020_distinct_bodies"))
+long createdResponses = Long.parseLong(props.getProperty("tst020_created_responses"))
+long replayResponses = Long.parseLong(props.getProperty("tst020_replay_responses"))
+long burstSize = Long.parseLong(props.getProperty("tst020_burst_size"))
+
+long entriesAfterDistinctKeys = Long.parseLong(vars.get("entries_after_distinct_keys"))
+long distinctKeysSent = Long.parseLong(vars.get("distinct_keys_sent"))
+boolean conflictObserved = Boolean.parseBoolean(vars.get("conflict_observed"))
+boolean redeliveryDeduped = Boolean.parseBoolean(vars.get("redelivery_deduped"))
+
+def ttlInfo = new JsonSlurper().parseText(vars.get("ttl_info"))
+long keyTtlSeconds = ttlInfo.keyTtlSeconds as Long
+long clientRetryWindowSeconds = ttlInfo.clientMaxRetryWindowSeconds as Long
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+RunFragment.Entry i1 = InvariantAssertion.check(
+    "I1", "N same-key requests produce exactly one state change",
+    { burstSize > 1L && entriesAfterBurst == 2L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i2 = InvariantAssertion.check(
+    "I2", "A replay returns a byte-identical status and body",
+    { distinctBodies == 1L && replayResponses > 0L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "N distinct keys produce N state changes",
+    { entriesAfterDistinctKeys == distinctKeysSent * 2L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "The same key with a different payload is a conflict",
+    { conflictObserved } as java.util.function.BooleanSupplier)
+RunFragment.Entry i5 = InvariantAssertion.check(
+    "I5", "Under true concurrency one wins and the rest are served the stored response",
+    { createdResponses == 1L && replayResponses == burstSize - 1L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i6 = InvariantAssertion.check(
+    "I6", "Key TTL is at least the declared client max retry window",
+    { keyTtlSeconds >= clientRetryWindowSeconds } as java.util.function.BooleanSupplier)
+RunFragment.Entry i7 = InvariantAssertion.check(
+    "I7", "Deduplication survives broker redelivery",
+    { redeliveryDeduped } as java.util.function.BooleanSupplier)
+
+RunFragment fragment = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("invariant-assertion")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+    .invariant(i2.id(), i2.description(), i2.result())
+    .invariant(i3.id(), i3.description(), i3.result())
+    .invariant(i4.id(), i4.description(), i4.result())
+    .invariant(i5.id(), i5.description(), i5.result())
+    .invariant(i6.id(), i6.description(), i6.result())
+    .invariant(i7.id(), i7.description(), i7.result())
+    .build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "I1 one-state-change: ${i1.result().wire()} (entries=${entriesAfterBurst}, burst=${burstSize})\n" +
+    "I2 byte-identical-replay: ${i2.result().wire()} (distinctBodies=${distinctBodies}, replays=${replayResponses})\n" +
+    "I3 distinct-keys-distinct-changes: ${i3.result().wire()} (entries=${entriesAfterDistinctKeys}, keys=${distinctKeysSent})\n" +
+    "I4 payload-conflict: ${i4.result().wire()}\n" +
+    "I5 one-winner: ${i5.result().wire()} (created=${createdResponses}, replayed=${replayResponses})\n" +
+    "I6 ttl-covers-retry-window: ${i6.result().wire()} (ttl=${keyTtlSeconds}s, window=${clientRetryWindowSeconds}s)\n" +
+    "I7 dedup-survives-redelivery: ${i7.result().wire()}\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+- [ ] **Step 6: Build the JMeter plan**
+
+`plan.jmx`:
+
+- `SetupThreadGroup` "Reset Idempotency Fixture", 1/1, `on_sample_error=stopthread`: an inline
+  `JSR223Sampler` running `TRUNCATE TABLE idempotency_key RESTART IDENTITY` **and**
+  `TRUNCATE TABLE ledger_entry, account RESTART IDENTITY CASCADE` (two statements — the CASCADE
+  does not reach `idempotency_key`), inserting `ACC-000001`/`ACC-000002`, and zeroing
+  `tst020_distinct_bodies`, `tst020_created_responses`, `tst020_replay_responses` plus
+  `props.put("tst020_burst_size", "12")` and an empty `tst020_seen_bodies` accumulator.
+- `ThreadGroup` "Same-Key Burst", 12 threads / 1 loop, `on_sample_error=continue`: a `SyncTimer`
+  with `groupSize` **12** and `timeoutInMs` 10000 — the race in I5 is only real if all twelve
+  threads are released together; an `HTTPSamplerProxy` `POST /transfers` with `postBodyRaw=true`,
+  body `{"from":"ACC-000001","to":"ACC-000002","amountMinor":500}`, and a `HeaderManager` child
+  adding `Idempotency-Key: idem-burst-0001`; a `JSR223PostProcessor` which, inside
+  `synchronized (props) { … }`, increments `tst020_created_responses` on `201` and
+  `tst020_replay_responses` on `200`, appends the body to the accumulator and recomputes the
+  distinct count into `tst020_distinct_bodies`.
+- `PostThreadGroup` "Verify Idempotency", 1/1, in order:
+  1. An inline `JSR223Sampler` reading `SELECT COUNT(*) FROM ledger_entry` into
+     `vars.put("entries_after_burst", …)` — I1's verdict.
+  2. Three `HTTPSamplerProxy` `POST /transfers` calls with `Idempotency-Key: idem-distinct-0001`
+     / `-0002` / `-0003`, then an inline `JSR223Sampler` writing
+     `entries_after_distinct_keys` and `distinct_keys_sent` (`3`).
+  3. An `HTTPSamplerProxy` `POST /transfers` reusing `idem-burst-0001` with
+     `amountMinor: 999`, whose PostProcessor writes
+     `vars.put("conflict_observed", String.valueOf(prev.getResponseCode() == "409"))` — I4.
+  4. An `HTTPSamplerProxy` `GET /transfers/idempotency/idem-burst-0001` whose PostProcessor
+     writes `vars.put("ttl_info", prev.getResponseDataAsString())` — I6.
+  5. For I7: an `HTTPSamplerProxy` `POST /messaging/work?jobId=job-idem-0001&poison=false`
+     followed by a **second** submission of the same job id, then a bounded poll (10s) of
+     `SELECT COUNT(*) FROM ledger_entry` confirming the redelivered work did not double-write;
+     write the outcome to `vars.put("redelivery_deduped", …)`.
+  6. The `assert-idempotency` `JSR223Sampler` with
+     `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+- [ ] **Step 7: Run the tests**
+
+```bash
+cd qe-harness && make down && make up PROFILES="core messaging"
+cd harness && mvn -q -pl jmeter test -Dtest=Tst020ModuleTest
+```
+
+Expected: PASS, 3 tests.
+
+- [ ] **Step 8: Verify the gate and the capability count**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py; echo "harness=$?"
+python3 scripts/render-harness-coverage.py
+curl -s http://localhost:8080/_capabilities | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('implemented:', sum(1 for v in d.values() if v=='implemented'))
+"
+```
+
+Expected: `harness=0` and `implemented: 15`.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add qe-harness/harness/jmeter qe-harness/traceability
+git commit -m "feat(harness): add TST-020 idempotency module with full I1-I7 coverage"
+```
+
+---
