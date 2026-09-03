@@ -1652,3 +1652,700 @@ git commit -m "feat(harness): add TST-023 concurrent limit JMeter module"
 ```
 
 ---
+
+## Task 9: SUT Capability — TST-037 Read-Model Lag and Outbox
+
+`V2` already provides the `account_balance_report` matview (with the unique index that enables
+`REFRESH CONCURRENTLY`) and the `report_refresh_timestamp` companion table. Missing: an HTTP
+surface exposing lag, and an outbox with `published_count` for I4.
+
+**Files:**
+- Create: `…/db/migration/V4__outbox_and_reporting.sql`
+- Create: `…/sut/capability/reporting/ReportingController.java`, `ReportingService.java`
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Modify: `…/reference-sut/src/main/resources/application.properties`
+- Test: `…/sut/capability/reporting/AbstractReportingIntegrationTest.java`, `ReportingServiceTest.java`
+
+**Interfaces:**
+- Consumes: `JdbcTemplate`, the `V2` matview and `report_refresh_timestamp`
+- Produces: `GET /reporting/lag`, `POST /reporting/refresh`, `GET /reporting/outbox`; defect
+  flag `outbox-published-count-stale`; property `app.readmodel.convergence-bound-ms`
+
+- [ ] **Step 1: Write the failing test**
+
+`ReportingServiceTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.reporting;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-037 read-model convergence and CDC lag. */
+class ReportingServiceTest extends AbstractReportingIntegrationTest {
+
+    @Test
+    void refreshDrivesLagToNearZero() {
+        service.refresh();
+        ReportingService.Lag lag = service.lag();
+        assertTrue(lag.p95Ms() < convergenceBoundMs(),
+            "I1: the read model must converge inside the declared bound");
+        assertTrue(lag.p99Ms() < convergenceBoundMs(), "I2: p99 is asserted, not just p95");
+    }
+
+    @Test
+    void lagExposesBothTailPercentilesNeverTheMean() {
+        service.refresh();
+        ReportingService.Lag lag = service.lag();
+        assertTrue(lag.p95Ms() >= 0 && lag.p99Ms() >= 0);
+        assertTrue(lag.p99Ms() >= lag.p95Ms(), "p99 can never be below p95");
+    }
+
+    @Test
+    void everyPublishedOutboxRowIsCountedExactlyOnce() {
+        service.enqueue("acct-balance-changed", "ACC-000001");
+        service.publishPending();
+        assertEquals(0L, service.outboxMiscountedRows(),
+            "I4: every published row must have published_count = 1");
+    }
+
+    @Test
+    void staleCountDefectBreaksOnlyTheOutboxInvariant() {
+        service.enqueue("acct-balance-changed", "ACC-000001");
+        withDefect("outbox-published-count-stale", service::publishPending);
+        assertTrue(service.outboxMiscountedRows() > 0,
+            "the defect must leave a published row with published_count = 0");
+        service.refresh();
+        assertTrue(service.lag().p95Ms() < convergenceBoundMs(),
+            "the defect must be specific: convergence is untouched");
+    }
+}
+```
+
+- [ ] **Step 2: Run it and confirm it fails to compile**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=ReportingServiceTest
+```
+
+Expected: FAIL — `ReportingService` does not exist.
+
+- [ ] **Step 3: Write the migration**
+
+`V4__outbox_and_reporting.sql`:
+
+```sql
+-- V4: transactional outbox for TST-037 read-model convergence (Wave 17).
+-- See com.techcombank.qe.sut.capability.reporting.ReportingService.
+--
+-- V2 already supplies account_balance_report (a real MATERIALIZED VIEW) and
+-- report_refresh_timestamp (its per-account freshness bookkeeping). What
+-- TST-037 additionally needs is I4's evidence surface: "every outbox row is
+-- published exactly once". published_count is a counter rather than a boolean
+-- precisely so double-publication is observable, not just non-publication --
+-- a boolean flag would make the two failures indistinguishable.
+--
+-- No FK to account: the aggregate_ref is a business reference (ACC-000001),
+-- not an id, so an outbox row survives its aggregate. This means the table is
+-- NOT reached by AbstractLedgerIntegrationTest's TRUNCATE ... CASCADE, so any
+-- test touching it must truncate it explicitly.
+
+CREATE TABLE outbox (
+    id              BIGSERIAL PRIMARY KEY,
+    event_type      VARCHAR(64) NOT NULL,
+    aggregate_ref   VARCHAR(16) NOT NULL,
+    published_count INTEGER     NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    published_at    TIMESTAMPTZ,
+    CONSTRAINT outbox_published_count_sane CHECK (published_count >= 0)
+);
+
+CREATE INDEX outbox_pending_idx ON outbox (id) WHERE published_at IS NULL;
+```
+
+- [ ] **Step 4: Write the service**
+
+`ReportingService.java`:
+
+```java
+package com.techcombank.qe.sut.capability.reporting;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * TST-037 read-model convergence and CDC lag capability.
+ *
+ * <p><b>Percentiles, not the mean:</b> {@link #lag()} returns p95 and p99 and
+ * deliberately exposes no mean at all. Invariant I2 fails a run that asserts
+ * only the mean regardless of what the mean shows, so offering one here would
+ * be offering a footgun.
+ *
+ * <p><b>Defect injection:</b> {@code outbox-published-count-stale} publishes
+ * the row (setting published_at) but never increments published_count, so I4
+ * alone fails -- convergence and the percentile shape are untouched.
+ */
+@Service
+public class ReportingService {
+
+    /** Read-model staleness at the tail. No mean is exposed, by design (I2). */
+    public record Lag(long p95Ms, long p99Ms, long accountsCovered) {}
+
+    private final JdbcTemplate jdbc;
+
+    public ReportingService(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    /** Rebuilds the matview and upserts per-account freshness, using the same
+     *  ON CONFLICT ... DO UPDATE idiom DefectSeeder.refresh() established. */
+    @Transactional
+    public void refresh() {
+        jdbc.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY account_balance_report");
+        jdbc.update(
+            "INSERT INTO report_refresh_timestamp (account_id, refreshed_at) "
+                + "SELECT account_id, now() FROM account_balance_report "
+                + "ON CONFLICT (account_id) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at");
+    }
+
+    /** Tail-percentile staleness across every tracked account. Computed in
+     *  Postgres via percentile_disc so the SUT, not the harness, owns the
+     *  definition of the percentile. */
+    public Lag lag() {
+        List<Lag> rows = jdbc.query(
+            "SELECT "
+                + "  COALESCE(CAST(percentile_disc(0.95) WITHIN GROUP "
+                + "    (ORDER BY EXTRACT(EPOCH FROM (now() - refreshed_at)) * 1000) AS BIGINT), 0) AS p95, "
+                + "  COALESCE(CAST(percentile_disc(0.99) WITHIN GROUP "
+                + "    (ORDER BY EXTRACT(EPOCH FROM (now() - refreshed_at)) * 1000) AS BIGINT), 0) AS p99, "
+                + "  COUNT(*) AS covered "
+                + "FROM report_refresh_timestamp",
+            (rs, n) -> new Lag(rs.getLong("p95"), rs.getLong("p99"), rs.getLong("covered")));
+        return rows.get(0);
+    }
+
+    @Transactional
+    public long enqueue(String eventType, String aggregateRef) {
+        return jdbc.queryForObject(
+            "INSERT INTO outbox (event_type, aggregate_ref) VALUES (?, ?) RETURNING id",
+            Long.class, eventType, aggregateRef);
+    }
+
+    /** Publishes every pending row. The count increment is what the defect
+     *  skips -- publication itself still happens, so the failure is a
+     *  miscount, not a silent drop. */
+    @Transactional
+    public int publishPending() {
+        if (DefectFlags.isActive("outbox-published-count-stale")) {
+            return jdbc.update(
+                "UPDATE outbox SET published_at = now() WHERE published_at IS NULL");
+        }
+        return jdbc.update(
+            "UPDATE outbox SET published_at = now(), published_count = published_count + 1 "
+                + "WHERE published_at IS NULL");
+    }
+
+    /** I4's evidence: rows that were published but not counted exactly once. */
+    public long outboxMiscountedRows() {
+        return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM outbox WHERE published_at IS NOT NULL AND published_count <> 1",
+            Long.class);
+    }
+}
+```
+
+- [ ] **Step 5: Write the controller**
+
+`ReportingController.java`:
+
+```java
+package com.techcombank.qe.sut.capability.reporting;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/** TST-037 read-model capability's HTTP surface. */
+@RestController
+public class ReportingController {
+
+    private final ReportingService reporting;
+    private final long convergenceBoundMs;
+
+    public ReportingController(ReportingService reporting,
+                               @Value("${app.readmodel.convergence-bound-ms}") long convergenceBoundMs) {
+        this.reporting = reporting;
+        this.convergenceBoundMs = convergenceBoundMs;
+    }
+
+    /** GET /reporting/lag -> {p95Ms, p99Ms, accountsCovered, convergenceBoundMs}.
+     *  The bound is returned alongside the measurement so the harness asserts
+     *  against the SUT's declared configuration rather than a literal of its own. */
+    @GetMapping("/reporting/lag")
+    public LagResponse lag() {
+        ReportingService.Lag lag = reporting.lag();
+        return new LagResponse(lag.p95Ms(), lag.p99Ms(), lag.accountsCovered(), convergenceBoundMs);
+    }
+
+    /** POST /reporting/refresh -> 204. */
+    @PostMapping("/reporting/refresh")
+    public ResponseEntity<Void> refresh() {
+        reporting.refresh();
+        return ResponseEntity.noContent().build();
+    }
+
+    /** GET /reporting/outbox -> {miscountedRows}. I4's verdict. */
+    @GetMapping("/reporting/outbox")
+    public OutboxResponse outbox() {
+        return new OutboxResponse(reporting.outboxMiscountedRows());
+    }
+
+    public record LagResponse(long p95Ms, long p99Ms, long accountsCovered, long convergenceBoundMs) {}
+
+    public record OutboxResponse(long miscountedRows) {}
+}
+```
+
+- [ ] **Step 6: Declare the convergence bound as application config**
+
+Append to `application.properties`. This is the resolution of the spec's §7.1 open item — no
+NFR corpus edit, following the `app.recon.freshness-window-seconds` precedent:
+
+```properties
+# TST-037 read-model convergence (Wave 17). The declared bound a projection must
+# converge inside, in milliseconds. Deliberately NOT projected into
+# profiles/_nfr-thresholds.yml and carrying no NFR-* citation: the NFR corpus
+# states lag only in message counts (Kafka consumer lag, NFR-003 CPM-3 and
+# NFR-004), and NFR-002's 50/80 ms "database write (sync replicated)" row is the
+# synchronous write-path ack inside one request's latency budget, not an
+# asynchronous projection bound -- citing either would fabricate provenance.
+# Same convention as app.recon.freshness-window-seconds: one declared value,
+# read by both ReportingController and the tests, never duplicated as a literal.
+app.readmodel.convergence-bound-ms=5000
+```
+
+- [ ] **Step 7: Add the defect flag and register the capability**
+
+Add `"outbox-published-count-stale"` to `DefectFlags.KNOWN_FLAGS`, `"TST-037"` to
+`CapabilityRegistry.IMPLEMENTED`, and `"TST-037"` to `CapabilityRegistryTest`'s
+`IMPLEMENTED_AT_WAVE_17` — all in this commit.
+
+- [ ] **Step 8: Write the test base class**
+
+`AbstractReportingIntegrationTest.java` — same singleton-container pattern as Task 7, with two
+differences that matter:
+
+```java
+package com.techcombank.qe.sut.capability.reporting;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+
+/**
+ * Postgres-via-Testcontainers fixture for the reporting capability (TST-037).
+ * Singleton container in a static initialiser -- see
+ * AbstractLedgerIntegrationTest's javadoc for why not @Container.
+ */
+@SpringBootTest
+abstract class AbstractReportingIntegrationTest {
+
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    static {
+        POSTGRES.start();
+    }
+
+    @DynamicPropertySource
+    static void datasourceProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.flyway.connect-retries", () -> 10);
+        registry.add("spring.flyway.connect-retries-interval", () -> "1s");
+    }
+
+    @Autowired
+    protected JdbcTemplate jdbc;
+
+    @Autowired
+    protected ReportingService service;
+
+    /** Read from the declared property, never duplicated as a literal. */
+    @Value("${app.readmodel.convergence-bound-ms}")
+    private long convergenceBoundMs;
+
+    protected long convergenceBoundMs() {
+        return convergenceBoundMs;
+    }
+
+    @BeforeEach
+    void resetReportingFixture() {
+        DefectFlags.clear();
+        // outbox has no FK to account, so CASCADE does not reach it -- truncate
+        // it explicitly or published rows leak into the next test.
+        jdbc.execute("TRUNCATE TABLE outbox RESTART IDENTITY");
+        jdbc.execute("TRUNCATE TABLE report_refresh_timestamp, ledger_entry, account "
+            + "RESTART IDENTITY CASCADE");
+        jdbc.update("INSERT INTO account (account_ref, party_name) VALUES (?, ?)",
+            "ACC-000001", "Test Fixture Reporting Co");
+        jdbc.update("INSERT INTO ledger_entry (transfer_ref, account_id, amount_minor) "
+            + "SELECT gen_random_uuid(), id, 500 FROM account WHERE account_ref = ?", "ACC-000001");
+    }
+
+    protected void withDefect(String flag, Runnable action) {
+        DefectFlags.activate(flag);
+        try {
+            action.run();
+        } finally {
+            DefectFlags.clear();
+        }
+    }
+}
+```
+
+If `gen_random_uuid()` is unavailable, add `CREATE EXTENSION IF NOT EXISTS pgcrypto;` to `V4`
+— check first with `psql -c "SELECT gen_random_uuid();"` against the container image; Postgres
+16 provides it in core.
+
+- [ ] **Step 9: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS. `staleCountDefectBreaksOnlyTheOutboxInvariant` proves specificity.
+
+- [ ] **Step 10: Verify the endpoints**
+
+```bash
+cd qe-harness && make down && make up PROFILES=core
+curl -s -X POST http://localhost:8080/reporting/refresh -o /dev/null -w '%{http_code}\n'
+curl -s http://localhost:8080/reporting/lag | python3 -m json.tool
+```
+
+Expected: `204`, then a body carrying `p95Ms`, `p99Ms`, `accountsCovered` and
+`convergenceBoundMs: 5000`. Confirm **no `mean` field is present**.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add TST-037 read-model lag endpoints and transactional outbox"
+```
+
+---
+
+## Task 10: Module — TST-037 Read-Model Convergence & CDC Lag (JMeter, partial)
+
+This module is `coverage: partial`. I5 (no loss or duplication across a connector restart)
+needs a CDC connector that does not exist in this repository, and inventing a substitute would
+repeat exactly the sin Task 4 corrected on TST-043.
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-037-readmodel/{plan.jmx,assert-readmodel.groovy,README.md}`
+- Modify: `qe-harness/traceability/modules.yml`
+- Test: `…/jmeter/Tst037ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `GET /reporting/lag`, `POST /reporting/refresh`, `GET /reporting/outbox` (Task 9)
+- Produces: `run-module.sh TST-037` writing one fragment; the first `partial` JMeter module
+
+- [ ] **Step 1: Write the module README**
+
+`tst-037-readmodel/README.md`:
+
+```markdown
+# TST-037 -- Read-Model Convergence & CDC Lag (JMeter)
+
+Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
+Coverage: **partial** -- see `partial_reason` in `traceability/modules.yml`.
+
+| ID | Invariant | Asserted here |
+|---|---|---|
+| I1 | The read model converges inside the declared bound | yes |
+| I2 | Lag is asserted at p95 **and** p99, never the mean | yes |
+| I3 | A replayed projection equals the incremental one, field by field | yes |
+| I4 | Every outbox row has published_count = 1 | yes |
+| I5 | No loss or duplication across a connector restart | **no -- not implemented** |
+| I6 | Exceeding the bound is a hard FAIL, never an indefinite wait | yes |
+
+I5 needs a CDC connector this repository does not contain. It is reported `not-evaluated` with
+a reason rather than substituted -- a substitute server-side check would be a different
+invariant wearing I5's name, which is the failure mode `TST-043`'s honest relabelling exists to
+warn about.
+
+The convergence bound is `app.readmodel.convergence-bound-ms`, returned by `GET /reporting/lag`
+alongside the measurement, so this module asserts against the SUT's declared configuration
+rather than a literal of its own. It carries **no** `threshold_ref`: the NFR corpus states lag
+only in message counts, so citing an NFR row would fabricate provenance (design spec 7.1).
+
+Defect proof: with `outbox-published-count-stale` active this module MUST report I4 failed and
+I1/I2 still passed.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Seed Ledger Activity`, 1 thread, 1 loop) truncates and seeds via
+   JDBC, then enqueues outbox rows.
+2. **Main Thread Group** (`Refresh and Sample Lag`, 4 threads x 3 loops) alternates
+   `POST /reporting/refresh` with `GET /reporting/lag`, keeping the maximum observed p95 and
+   p99 in `props`. **I6 is structural, not a timer**: the plan never waits for convergence, it
+   samples a bounded number of times and fails if the bound is still breached -- an indefinite
+   wait is the behaviour I6 forbids.
+3. **TearDown Thread Group** (`Verify Convergence`, 1 thread, 1 loop) calls
+   `POST /reporting/refresh` once more, reads `GET /reporting/lag` and `GET /reporting/outbox`,
+   compares a replayed projection against the incremental one for I3, then
+   `assert-readmodel.groovy` evaluates I1-I4 and I6, and emits I5 as `not-evaluated`.
+
+## Running it
+
+```
+make up PROFILES=core
+./bin/run-module.sh TST-037
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/outbox-published-count-stale   # 204
+./bin/run-module.sh TST-037                                                    # must report I4 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                              # 204
+```
+
+With the defect active, `ReportingService.publishPending` sets `published_at` but never
+increments `published_count`, so `GET /reporting/outbox` reports a miscounted row and I4 alone
+fails. Convergence is untouched, which is what makes the proof specific.
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`Tst037ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-037 read-model convergence module. Requires make up PROFILES=core. */
+class Tst037ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-037", Map.of());
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void reportsTheUnimplementedInvariantAsNotEvaluated() throws Exception {
+        ModuleResult r = runner.run("TST-037", Map.of());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I5")
+                && i.result() == RunFragment.Result.NOT_EVALUATED),
+            "I5 needs a CDC connector this repo lacks and must never report passed");
+    }
+
+    @Test
+    void reportsOutboxFailureAgainstTheStaleCountDefect() throws Exception {
+        ModuleResult r = runner.run("TST-037", Map.of("SUT_DEFECT", "outbox-published-count-stale"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I4") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I1") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: convergence is untouched");
+    }
+}
+```
+
+Note `RunFragment.result()` returns `PASSED` when some invariants passed and none failed, so a
+`not-evaluated` I5 does not drag the fragment to `NOT_EVALUATED` — that only happens when
+nothing at all was evaluated.
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst037ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 4: Add the binding row**
+
+Insert into `modules.yml` in archetype order, after `TST-035` and before `TST-039`:
+
+```yaml
+  - archetype: TST-037
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-037-readmodel
+    coverage: partial
+    partial_reason: >-
+      I5 (no loss or duplication across a connector restart) requires a CDC connector this
+      repository does not contain. I1-I4 and I6 are asserted; I5 is reported not-evaluated
+      rather than substituted.
+    defect_flag: outbox-published-count-stale
+```
+
+- [ ] **Step 5: Write the assertion script**
+
+`assert-readmodel.groovy`:
+
+```groovy
+// TST-037 read-model convergence and CDC lag assertion (Wave 17).
+//
+// Runs in the TearDown Thread Group after every sampling thread has finished.
+// The convergence bound is read from the SUT's own GET /reporting/lag response
+// (convergenceBoundMs), never hardcoded here -- same measure-the-declared-
+// configuration rule TST-040's clock-skew and TST-039's freshness tests follow.
+//
+// I5 is emitted NOT_EVALUATED with a reason. It is not substituted: a
+// server-side stand-in would be a different invariant wearing I5's name.
+
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import java.nio.file.Path
+
+long boundMs        = Long.parseLong(vars.get("lag_boundMs"))
+long p95Ms          = Long.parseLong(vars.get("lag_p95Ms"))
+long p99Ms          = Long.parseLong(vars.get("lag_p99Ms"))
+long maxP95Observed = Long.parseLong(props.getProperty("tst037_max_p95"))
+long maxP99Observed = Long.parseLong(props.getProperty("tst037_max_p99"))
+long miscounted     = Long.parseLong(vars.get("outbox_miscounted"))
+long replayDrift    = Long.parseLong(vars.get("replay_drift"))
+long samplesTaken   = Long.parseLong(props.getProperty("tst037_samples"))
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+RunFragment.Entry i1 = InvariantAssertion.check(
+    "I1", "The read model converges inside the declared bound",
+    { p95Ms <= boundMs } as java.util.function.BooleanSupplier)
+RunFragment.Entry i2 = InvariantAssertion.check(
+    "I2", "Lag is asserted at p95 and p99, never the mean",
+    { maxP95Observed <= boundMs && maxP99Observed <= boundMs } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "A replayed projection equals the incremental one, field by field",
+    { replayDrift == 0L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "Every published outbox row has published_count = 1",
+    { miscounted == 0L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i6 = InvariantAssertion.check(
+    "I6", "Exceeding the bound is a hard FAIL, never an indefinite wait",
+    { samplesTaken > 0L } as java.util.function.BooleanSupplier)
+
+RunFragment fragment = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("invariant-assertion")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+    .invariant(i2.id(), i2.description(), i2.result())
+    .invariant(i3.id(), i3.description(), i3.result())
+    .invariant(i4.id(), i4.description(), i4.result())
+    .invariant("I5", "No loss or duplication across a connector restart",
+               RunFragment.Result.NOT_EVALUATED)
+    .invariant(i6.id(), i6.description(), i6.result())
+    .build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "I1 converges-within-bound: ${i1.result().wire()} (p95=${p95Ms}ms, bound=${boundMs}ms)\n" +
+    "I2 tail-percentiles-asserted: ${i2.result().wire()} (maxP95=${maxP95Observed}, maxP99=${maxP99Observed})\n" +
+    "I3 replay-matches-incremental: ${i3.result().wire()} (drift=${replayDrift})\n" +
+    "I4 outbox-counted-once: ${i4.result().wire()} (miscounted=${miscounted})\n" +
+    "I5 connector-restart: not-evaluated (needs a CDC connector this repo lacks)\n" +
+    "I6 bounded-not-waiting: ${i6.result().wire()} (samples=${samplesTaken})\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+Note `RunFragment.Builder.invariant(...)` takes a `Result` directly, so a `not-evaluated`
+invariant needs no reason — only `threshold(...)` enforces that. The reason lives in the module
+README and the `partial_reason`.
+
+- [ ] **Step 6: Build the JMeter plan**
+
+`plan.jmx`, same skeleton as Task 8. Specifics:
+
+- `SetupThreadGroup` "Seed Ledger Activity", 1/1, `on_sample_error=stopthread`: an inline
+  `JSR223Sampler` truncating `outbox` (explicitly — no FK to `account`, so `CASCADE` misses it)
+  plus `report_refresh_timestamp, ledger_entry, account RESTART IDENTITY CASCADE`, inserting
+  `ACC-000001` and a few ledger entries, then `INSERT INTO outbox (event_type, aggregate_ref)`
+  twice. Zero `tst037_max_p95`, `tst037_max_p99` and `tst037_samples` in `props`.
+- `ThreadGroup` "Refresh and Sample Lag", 4 threads / 3 loops, `on_sample_error=continue`: a
+  `POST /reporting/refresh` sampler, then a `GET /reporting/lag` sampler whose
+  `JSR223PostProcessor` parses the body and, inside `synchronized (props) { … }`, raises
+  `tst037_max_p95`/`tst037_max_p99` and increments `tst037_samples`. **No timer that waits for
+  convergence** — twelve bounded samples, then the verdict.
+- `PostThreadGroup` "Verify Convergence", 1/1: `POST /reporting/refresh`; `GET /reporting/lag`
+  whose PostProcessor writes `vars.put("lag_p95Ms", …)`, `lag_p99Ms`, `lag_boundMs`;
+  `GET /reporting/outbox` whose PostProcessor writes `vars.put("outbox_miscounted", …)`; an
+  inline `JSR223Sampler` computing I3's `replay_drift` by comparing
+  `SELECT account_id, balance_minor FROM account_balance_report` against a fresh
+  `SELECT account_id, SUM(amount_minor) FROM ledger_entry GROUP BY account_id` and counting
+  field-level mismatches into `vars`; then the `assert-readmodel` `JSR223Sampler` with
+  `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+- [ ] **Step 7: Run the tests**
+
+```bash
+cd qe-harness && make up PROFILES=core
+cd harness && mvn -q -pl jmeter test -Dtest=Tst037ModuleTest
+```
+
+Expected: PASS, 3 tests.
+
+- [ ] **Step 8: Verify the gate accepts a partial module**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep TST-037 || echo "no TST-037 findings"
+python3 scripts/render-harness-coverage.py
+```
+
+Expected: no findings. Check 4 requires `partial` to carry a non-empty `partial_reason`, which
+Step 4 supplied; check 7 validates the emitted fragment against the schema.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add qe-harness/harness/jmeter qe-harness/traceability
+git commit -m "feat(harness): add TST-037 read-model convergence JMeter module"
+```
+
+---
