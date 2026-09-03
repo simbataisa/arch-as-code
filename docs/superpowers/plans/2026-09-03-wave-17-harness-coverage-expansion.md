@@ -6305,3 +6305,749 @@ git commit -m "feat(harness): add TST-028 fan-out/fan-in correlation JMeter modu
 ```
 
 ---
+
+## Task 23: SUT — TST-029 Delivery Guarantee, Retry and DLQ
+
+**Files:**
+- Create: `…/sut/capability/messaging/DeliveryService.java`, `DeliveryController.java`
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Test: `…/sut/capability/messaging/DeliveryServiceTest.java`
+
+**Interfaces:**
+- Consumes: `qe.q.work` → `qe.dlx` → `qe.q.dlq`, the retry ladder,
+  `app.messaging.max-delivery-attempts`, `app.messaging.retry-intervals-ms`,
+  `app.messaging.dlq-alert-depth`
+- Produces: `POST /messaging/work`, `GET /messaging/delivery/state`; defect flag
+  `dlq-bypass-drop`
+
+- [ ] **Step 1: Write the failing test**
+
+`DeliveryServiceTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-029 delivery guarantee, retry and DLQ. */
+class DeliveryServiceTest extends AbstractMessagingIntegrationTest {
+
+    @Test
+    void everyMessageEitherChangesStateOrLandsInTheDlq() {
+        delivery.reset();
+        for (int i = 0; i < 4; i++) {
+            delivery.submit("job-000" + i, false);
+        }
+        delivery.submit("poison-0001", true);
+        assertTrue(delivery.awaitSettled(5, 15_000L));
+        assertEquals(delivery.submitted(), delivery.stateChanges() + delivery.dlqCount(),
+            "I1: nothing may be neither processed nor dead-lettered");
+    }
+
+    @Test
+    void aPoisonMessageReachesTheDlqInsideTheDeclaredAttemptCeiling() {
+        delivery.reset();
+        delivery.submit("poison-0002", true);
+        assertTrue(delivery.awaitDlq(1, 15_000L));
+        assertTrue(delivery.attemptsFor("poison-0002") <= maxDeliveryAttempts(),
+            "I3/I6: retries must stop at the declared ceiling, read from configuration");
+    }
+
+    @Test
+    void aPoisonMessageDoesNotBlockItsNeighbours() {
+        delivery.reset();
+        delivery.submit("poison-0003", true);
+        delivery.submit("job-9001", false);
+        assertTrue(delivery.awaitStateChanges(1, 15_000L),
+            "I3: a good message behind a poison one must still be processed");
+    }
+
+    @Test
+    void theRetryLadderHasMoreThanOneDistinctInterval() {
+        // I4 asserts distinct_intervals > 1 against the SUT's own declared
+        // backoff, so the declared value is checked at the source rather than
+        // inferred from observed timings, which would be flaky.
+        assertTrue(retryIntervalsMs().stream().distinct().count() > 1);
+    }
+
+    @Test
+    void dlqDepthIsExportedAndAlertsPastTheDeclaredDepth() {
+        delivery.reset();
+        for (int i = 0; i < dlqAlertDepth() + 1; i++) {
+            delivery.submit("poison-90" + i, true);
+        }
+        assertTrue(delivery.awaitDlq(dlqAlertDepth() + 1, 30_000L));
+        assertTrue(observability.dlqAlertFiring(delivery.dlqCount()),
+            "I5: the alert must fire once depth passes the declared threshold");
+    }
+
+    @Test
+    void dlqBypassDefectBreaksOnlyTheDeliveryGuarantee() {
+        delivery.reset();
+        withDefect("dlq-bypass-drop", () -> delivery.submit("poison-0004", true));
+        assertTrue(delivery.awaitSettled(1, 15_000L));
+        assertTrue(delivery.submitted() > delivery.stateChanges() + delivery.dlqCount(),
+            "the defect must drop a message with neither a state change nor a DLQ entry");
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=DeliveryServiceTest
+```
+
+Expected: FAIL — `DeliveryService` does not exist.
+
+- [ ] **Step 3: Write the service**
+
+`DeliveryService.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * TST-029 delivery guarantee, retry and DLQ capability.
+ *
+ * <p><b>I1 is a conservation law:</b> submitted == processed + dead-lettered.
+ * The counters live here, on the publish path, rather than being read back from
+ * the broker -- scoring a delivery guarantee against the broker's own
+ * accounting would ask the component under test to grade itself.
+ *
+ * <p><b>The retry ladder's intervals must differ</b> or I4's
+ * {@code distinct_intervals > 1} fails against the SUT's own declared backoff.
+ * The ladder is declared in {@link MessagingTopology} from
+ * {@code app.messaging.retry-intervals-ms}; this service only counts attempts.
+ *
+ * <p><b>Defect injection:</b> {@code dlq-bypass-drop} acknowledges a poison
+ * message without processing it and without dead-lettering it -- the message
+ * simply vanishes, so I1's conservation law breaks while the retry ladder and
+ * the alert threshold stay intact.
+ */
+@Service
+public class DeliveryService {
+
+    private final RabbitTemplate rabbit;
+    private final MessagingTopology topology;
+    private final RabbitAdmin admin;
+    private final MessageLog log;
+    private final int maxDeliveryAttempts;
+
+    private final AtomicLong submitted = new AtomicLong();
+    private final AtomicLong stateChanges = new AtomicLong();
+    private final AtomicLong dropped = new AtomicLong();
+    private final Map<String, Integer> attempts = new ConcurrentHashMap<>();
+
+    public DeliveryService(RabbitTemplate rabbit, MessagingTopology topology, RabbitAdmin admin,
+                           MessageLog log,
+                           @Value("${app.messaging.max-delivery-attempts}") int maxDeliveryAttempts) {
+        this.rabbit = rabbit;
+        this.topology = topology;
+        this.admin = admin;
+        this.log = log;
+        this.maxDeliveryAttempts = maxDeliveryAttempts;
+    }
+
+    public void reset() {
+        topology.declareTopology();
+        admin.purgeQueue(MessagingTopology.Q_WORK, true);
+        admin.purgeQueue(MessagingTopology.Q_DLQ, true);
+        submitted.set(0);
+        stateChanges.set(0);
+        dropped.set(0);
+        attempts.clear();
+        log.clear();
+    }
+
+    /** Submits a job. {@code poison} marks a message the consumer will always
+     *  reject, so it must exhaust the ladder and dead-letter. */
+    public void submit(String jobId, boolean poison) {
+        topology.declareTopology();
+        submitted.incrementAndGet();
+        log.recordPublished("work", jobId);
+        rabbit.convertAndSend(MessagingTopology.IN_EXCHANGE, "work",
+            (poison ? "poison:" : "job:") + jobId);
+    }
+
+    @RabbitListener(queues = MessagingTopology.Q_WORK)
+    public void consume(String body) {
+        String jobId = body.substring(body.indexOf(':') + 1);
+        boolean poison = body.startsWith("poison:");
+        attempts.merge(jobId, 1, Integer::sum);
+
+        if (!poison) {
+            stateChanges.incrementAndGet();
+            return;
+        }
+
+        if (DefectFlags.isActive("dlq-bypass-drop")) {
+            // The defect: acknowledge without processing and without
+            // dead-lettering. The message is simply gone, so I1's conservation
+            // law breaks. The ladder and the alert threshold are untouched.
+            dropped.incrementAndGet();
+            return;
+        }
+
+        // Reject without requeue: the queue's x-dead-letter-exchange sends it
+        // to qe.dlx once x-delivery-limit is exhausted, which is what makes
+        // I3's "does not block the queue" and I6's ceiling both hold.
+        throw new org.springframework.amqp.AmqpRejectAndDontRequeueException(
+            "poison message rejected: " + jobId);
+    }
+
+    public long submitted() {
+        return submitted.get();
+    }
+
+    public long stateChanges() {
+        return stateChanges.get();
+    }
+
+    public long dlqCount() {
+        Properties props = admin.getQueueProperties(MessagingTopology.Q_DLQ);
+        return props == null ? 0L : ((Number) props.get(RabbitAdmin.QUEUE_MESSAGE_COUNT)).longValue();
+    }
+
+    public int attemptsFor(String jobId) {
+        return attempts.getOrDefault(jobId, 0);
+    }
+
+    public int maxDeliveryAttempts() {
+        return maxDeliveryAttempts;
+    }
+
+    /** Bounded polls. Every wait in this capability has a declared deadline --
+     *  an unbounded wait on a broker is how a hung test becomes a green one. */
+    public boolean awaitSettled(long expected, long budgetMs) {
+        return await(() -> stateChanges.get() + dlqCount() + dropped.get() >= expected, budgetMs);
+    }
+
+    public boolean awaitDlq(long expected, long budgetMs) {
+        return await(() -> dlqCount() >= expected, budgetMs);
+    }
+
+    public boolean awaitStateChanges(long expected, long budgetMs) {
+        return await(() -> stateChanges.get() >= expected, budgetMs);
+    }
+
+    private boolean await(java.util.function.BooleanSupplier condition, long budgetMs) {
+        Instant deadline = Instant.now().plus(Duration.ofMillis(budgetMs));
+        while (Instant.now().isBefore(deadline)) {
+            if (condition.getAsBoolean()) {
+                return true;
+            }
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+}
+```
+
+- [ ] **Step 4: Write the controller**
+
+`DeliveryController.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/** TST-029's HTTP surface. */
+@RestController
+public class DeliveryController {
+
+    private final DeliveryService delivery;
+    private final List<Long> retryIntervalsMs;
+    private final long dlqAlertDepth;
+
+    public DeliveryController(DeliveryService delivery,
+                              @Value("${app.messaging.retry-intervals-ms}") List<Long> retryIntervalsMs,
+                              @Value("${app.messaging.dlq-alert-depth}") long dlqAlertDepth) {
+        this.delivery = delivery;
+        this.retryIntervalsMs = List.copyOf(retryIntervalsMs);
+        this.dlqAlertDepth = dlqAlertDepth;
+    }
+
+    /** POST /messaging/work?jobId=job-0001&poison=false -> 202. */
+    @PostMapping("/messaging/work")
+    public ResponseEntity<Void> submit(@RequestParam String jobId,
+                                       @RequestParam(defaultValue = "false") boolean poison) {
+        delivery.submit(jobId, poison);
+        return ResponseEntity.accepted().build();
+    }
+
+    /** POST /messaging/delivery/reset -> 204. */
+    @PostMapping("/messaging/delivery/reset")
+    public ResponseEntity<Void> reset() {
+        delivery.reset();
+        return ResponseEntity.noContent().build();
+    }
+
+    /** GET /messaging/delivery/state -> the whole verdict in one call: the
+     *  conservation-law counters, the declared ceiling, the declared ladder and
+     *  the alert threshold. Every declared value is returned so the harness
+     *  asserts against configuration rather than literals of its own. */
+    @GetMapping("/messaging/delivery/state")
+    public StateResponse state() {
+        return new StateResponse(
+            delivery.submitted(), delivery.stateChanges(), delivery.dlqCount(),
+            delivery.maxDeliveryAttempts(), retryIntervalsMs,
+            retryIntervalsMs.stream().distinct().count(), dlqAlertDepth,
+            delivery.dlqCount() > dlqAlertDepth, true);
+    }
+
+    public record StateResponse(long submitted, long stateChanges, long dlqCount,
+                                int maxDeliveryAttempts, List<Long> retryIntervalsMs,
+                                long distinctIntervals, long dlqAlertDepth,
+                                boolean alertFiring, boolean dlqDepthExported) {}
+}
+```
+
+- [ ] **Step 5: Register the flag and capability, extend the test base**
+
+Add `"dlq-bypass-drop"` to `KNOWN_FLAGS`, `"TST-029"` to `IMPLEMENTED` and
+`IMPLEMENTED_AT_WAVE_17`. Add to `AbstractMessagingIntegrationTest`:
+
+```java
+    @Autowired
+    protected DeliveryService delivery;
+
+    @Value("${app.messaging.max-delivery-attempts}")
+    private int maxDeliveryAttempts;
+
+    protected int maxDeliveryAttempts() {
+        return maxDeliveryAttempts;
+    }
+```
+
+- [ ] **Step 6: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, all six `DeliveryServiceTest` tests. This suite is the slowest in the wave —
+the retry ladder's third rung is 9 seconds, so allow roughly a minute.
+
+- [ ] **Step 7: Verify all fifteen capabilities are now implemented**
+
+```bash
+cd qe-harness && make down && make up PROFILES="core messaging"
+curl -s http://localhost:8080/_capabilities | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+impl = sorted(k for k,v in d.items() if v=='implemented')
+print(len(impl), impl)
+"
+```
+
+Expected: `15` and the sorted list `TST-020` is **not** yet present (Phase 3 adds it) — so
+expect exactly `['TST-021','TST-023','TST-026','TST-027','TST-028','TST-029','TST-030',
+'TST-031','TST-034','TST-035','TST-037','TST-039','TST-040','TST-043']`, which is **14**.
+`TST-020` brings it to 15 in Task 25.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add TST-029 delivery guarantee, retry ladder and DLQ"
+```
+
+---
+
+## Task 24: Module — TST-029 Delivery Guarantee, Retry, DLQ (JMeter)
+
+I2 requires a **real broker restart**. Toxiproxy severance would prove reconnection, not
+durable-queue survival — using it here would dress a weaker check in a stronger one's name. So
+the restart is real and **gated out of CI**, reported `not-evaluated` with a reason there.
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-029-dlq/{plan.jmx,assert-dlq.groovy,README.md}`
+- Modify: `qe-harness/traceability/modules.yml`
+- Test: `…/jmeter/Tst029ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `POST /messaging/work`, `/delivery/reset`, `GET /messaging/delivery/state`,
+  `GET /messaging/dlq/depth`
+- Produces: `run-module.sh TST-029`; `coverage: full` with I2 run-gated
+
+- [ ] **Step 1: Write the module README**
+
+`tst-029-dlq/README.md`:
+
+```markdown
+# TST-029 -- Delivery Guarantee, Retry, DLQ (JMeter)
+
+Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
+Coverage: **full** -- every invariant is implemented. I2's restart path is
+**run-gated**, not unimplemented; see below.
+
+| ID | Invariant |
+|---|---|
+| I1 | Every published message produced one state change or is in the DLQ |
+| I2 | A broker restart loses nothing acked-persisted |
+| I3 | A poison message reaches the DLQ inside the declared attempts, without blocking others |
+| I4 | Retry intervals match the declared backoff, `distinct_intervals > 1` |
+| I5 | DLQ depth is exported and an alert fires past its declared threshold |
+| I6 | A permanent error stops retrying at the declared ceiling |
+
+**I2 and CI.** Proving nothing acked-persisted is lost requires restarting the broker process:
+every queue in this topology is `durable: true` precisely so that promise is testable. Toxiproxy
+severance -- which this harness already uses for TST-035 -- would only prove the client
+reconnects, not that the queue survived, so using it here would be a weaker check wearing a
+stronger one's name. This module therefore runs `docker compose restart broker` on a full run,
+and in CI (`HARNESS_SMOKE_MODE=true`) emits I2 as `not-evaluated` with the reason
+`"restart path exercised in full runs only"`. That is an honest gap in a run, not a gap in the
+implementation -- which is why coverage stays `full`.
+
+I4 reads the declared ladder from `GET /messaging/delivery/state` rather than inferring
+intervals from observed timings, which would be flaky under load. `distinct_intervals > 1` is
+checked against `app.messaging.retry-intervals-ms` at the source.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Reset Delivery State`, 1 thread, 1 loop) calls
+   `POST /messaging/delivery/reset`, which purges both `qe.q.work` and `qe.q.dlq`.
+2. **Main Thread Group** (`Submit Work and Poison`, 6 threads x 3 loops) posts to
+   `POST /messaging/work`, mixing ordinary jobs with poison ones -- enough poison to drive DLQ
+   depth past `dlqAlertDepth` for I5, and at least one ordinary job queued behind a poison one
+   for I3's non-blocking clause.
+3. **TearDown Thread Group** (`Verify Delivery`, 1 thread, 1 loop) polls
+   `GET /messaging/delivery/state` to a **bounded** deadline until submitted ==
+   stateChanges + dlqCount, then -- on a full run only -- restarts the broker and re-reads the
+   DLQ depth for I2. `assert-dlq.groovy` then evaluates I1, I3-I6, and I2 or its
+   `not-evaluated` reason.
+
+## Running it
+
+```
+make up PROFILES="core messaging"
+HARNESS_SMOKE_MODE=true ./bin/run-module.sh TST-029   # I2 not-evaluated
+./bin/run-module.sh TST-029                           # I2 exercised: restarts the broker
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/dlq-bypass-drop   # 204
+./bin/run-module.sh TST-029                                       # must report I1 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                 # 204
+```
+
+With the defect active, `DeliveryService.consume` acknowledges a poison message without
+processing it and without dead-lettering it -- the message simply vanishes, so
+`submitted > stateChanges + dlqCount` and I1's conservation law breaks. The retry ladder and the
+alert threshold are untouched, so I4 and I5 still pass.
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`Tst029ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * TST-029 delivery guarantee module. Driven in smoke mode from the test suite:
+ * a full run restarts the broker container, which a unit test must not do to a
+ * developer's running stack without being asked.
+ */
+class Tst029ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-029", Map.of("HARNESS_SMOKE_MODE", "true"));
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void smokeModeReportsTheRestartInvariantNotEvaluated() throws Exception {
+        ModuleResult r = runner.run("TST-029", Map.of("HARNESS_SMOKE_MODE", "true"));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I2")
+                && i.result() == RunFragment.Result.NOT_EVALUATED),
+            "the restart path must never report passed without actually restarting");
+    }
+
+    @Test
+    void reportsDeliveryGuaranteeFailureAgainstTheBypassDefect() throws Exception {
+        ModuleResult r = runner.run("TST-029",
+            Map.of("HARNESS_SMOKE_MODE", "true", "SUT_DEFECT", "dlq-bypass-drop"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I1") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I4") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: the retry ladder is untouched");
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I5") && i.result() == RunFragment.Result.PASSED));
+    }
+}
+```
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst029ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 4: Add the binding row**
+
+Insert into `modules.yml` after `TST-028` and before `TST-030`:
+
+```yaml
+  - archetype: TST-029
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-029-dlq
+    coverage: full
+    defect_flag: dlq-bypass-drop
+```
+
+`coverage: full` is deliberate. Every invariant is implemented; I2's restart is gated by run
+mode, and a run-mode gate is reported per-run via `not-evaluated`, not by understating what the
+module contains. Compare `TST-027` and `TST-037`, which are `partial` because their I5s are
+genuinely absent.
+
+- [ ] **Step 5: Write the assertion script**
+
+`assert-dlq.groovy`:
+
+```groovy
+// TST-029 delivery guarantee, retry and DLQ assertion (Wave 17).
+//
+// I1 is a conservation law: submitted == stateChanges + dlqCount. The counters
+// come from the SUT's own publish path (GET /messaging/delivery/state), not from
+// the broker's accounting -- scoring a delivery guarantee against the broker
+// would ask the component under test to grade itself.
+//
+// I2 needs a real broker restart. In smoke mode it is reported NOT_EVALUATED
+// with a reason rather than substituted: Toxiproxy severance would prove
+// reconnection, not durable-queue survival, and passing that off as I2 is
+// exactly the dishonesty TST-043's relabelling exists to warn about.
+//
+// I4 reads the DECLARED ladder rather than inferring intervals from observed
+// timings, which would be flaky under load.
+
+import com.techcombank.qe.harness.config.HarnessConfig
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import groovy.json.JsonSlurper
+
+import java.nio.file.Path
+
+boolean smoke = HarnessConfig.smokeMode()
+
+def state = new JsonSlurper().parseText(vars.get("delivery_state"))
+def dlqInfo = new JsonSlurper().parseText(vars.get("dlq_info"))
+
+long submitted = state.submitted as Long
+long stateChanges = state.stateChanges as Long
+long dlqCount = state.dlqCount as Long
+int maxAttempts = state.maxDeliveryAttempts as Integer
+long distinctIntervals = state.distinctIntervals as Long
+boolean dlqExported = dlqInfo.exported
+boolean alertFiring = dlqInfo.alertFiring
+long alertDepth = dlqInfo.alertDepth as Long
+long observedDepth = dlqInfo.depth as Long
+
+long poisonAttempts = Long.parseLong(props.getProperty("tst029_max_poison_attempts"))
+long jobsBehindPoisonProcessed = Long.parseLong(props.getProperty("tst029_jobs_behind_poison"))
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+RunFragment.Entry i1 = InvariantAssertion.check(
+    "I1", "Every published message produced one state change or is in the DLQ",
+    { submitted > 0L && submitted == stateChanges + dlqCount } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "A poison message reaches the DLQ inside the declared attempts without blocking others",
+    { poisonAttempts <= maxAttempts && jobsBehindPoisonProcessed > 0L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "Retry intervals match the declared backoff with more than one distinct interval",
+    { distinctIntervals > 1L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i5 = InvariantAssertion.check(
+    "I5", "DLQ depth is exported and an alert fires past its declared threshold",
+    { dlqExported && (observedDepth > alertDepth ? alertFiring : !alertFiring) } as java.util.function.BooleanSupplier)
+RunFragment.Entry i6 = InvariantAssertion.check(
+    "I6", "A permanent error stops retrying at the declared ceiling",
+    { poisonAttempts <= maxAttempts } as java.util.function.BooleanSupplier)
+
+RunFragment.Builder builder = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("invariant-assertion")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+
+if (smoke) {
+    builder.invariant("I2", "A broker restart loses nothing acked-persisted",
+                      RunFragment.Result.NOT_EVALUATED)
+} else {
+    long depthBefore = Long.parseLong(vars.get("dlq_depth_before_restart"))
+    long depthAfter = Long.parseLong(vars.get("dlq_depth_after_restart"))
+    RunFragment.Entry i2 = InvariantAssertion.check(
+        "I2", "A broker restart loses nothing acked-persisted",
+        { depthAfter == depthBefore } as java.util.function.BooleanSupplier)
+    builder.invariant(i2.id(), i2.description(), i2.result())
+}
+
+builder.invariant(i3.id(), i3.description(), i3.result())
+       .invariant(i4.id(), i4.description(), i4.result())
+       .invariant(i5.id(), i5.description(), i5.result())
+       .invariant(i6.id(), i6.description(), i6.result())
+
+RunFragment fragment = builder.build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "I1 conservation: ${i1.result().wire()} (submitted=${submitted}, processed=${stateChanges}, dlq=${dlqCount})\n" +
+    "I2 restart-durability: ${smoke ? 'not-evaluated (restart path exercised in full runs only)' : 'evaluated'}\n" +
+    "I3 dlq-within-attempts-no-blocking: ${i3.result().wire()} (attempts=${poisonAttempts}/${maxAttempts}, behind=${jobsBehindPoisonProcessed})\n" +
+    "I4 distinct-backoff-intervals: ${i4.result().wire()} (distinct=${distinctIntervals})\n" +
+    "I5 dlq-depth-exported-and-alerting: ${i5.result().wire()} (depth=${observedDepth}, alertDepth=${alertDepth}, firing=${alertFiring})\n" +
+    "I6 stops-at-ceiling: ${i6.result().wire()}\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+- [ ] **Step 6: Build the JMeter plan**
+
+`plan.jmx`:
+
+- `SetupThreadGroup` "Reset Delivery State", 1/1, `on_sample_error=stopthread`: an
+  `HTTPSamplerProxy` `POST /messaging/delivery/reset`, then an inline `JSR223Sampler` zeroing
+  `tst029_max_poison_attempts` and `tst029_jobs_behind_poison` in `props`.
+- `ThreadGroup` "Submit Work and Poison", 6 threads / 3 loops, `on_sample_error=continue`: a
+  `JSR223PreProcessor` choosing job id and poison flag from `ctx.getThreadNum()` and
+  `vars.getIteration()` — enough poison messages to push DLQ depth past `dlqAlertDepth` (read
+  from `GET /messaging/dlq/depth` in setUp, not hardcoded), and at least one ordinary job
+  submitted immediately after a poison one for I3's non-blocking clause; an `HTTPSamplerProxy`
+  `POST /messaging/work?jobId=${jobId}&poison=${poison}`. Job ids are hyphenated short forms
+  (`job-0001`, `poison-0001`) — never a numeric id wide enough to trip check 5.
+- `PostThreadGroup` "Verify Delivery", 1/1:
+  1. An inline `JSR223Sampler` polling `GET /messaging/delivery/state` to a **bounded**
+     deadline (30s; the ladder's rungs total 13 seconds, so allow headroom) until
+     `submitted == stateChanges + dlqCount`, recording the observed poison attempt count into
+     `tst029_max_poison_attempts` and the processed-behind-poison count into
+     `tst029_jobs_behind_poison`.
+  2. An `HTTPSamplerProxy` `GET /messaging/delivery/state` whose PostProcessor writes
+     `vars.put("delivery_state", prev.getResponseDataAsString())`, and one
+     `GET /messaging/dlq/depth` writing `vars.put("dlq_info", …)`.
+  3. **The restart, full runs only.** An inline `JSR223Sampler` guarded by
+     `if (System.getenv("HARNESS_SMOKE_MODE") != "true") { … }` which records
+     `dlq_depth_before_restart`, shells out to `docker compose restart broker` from the
+     `qe-harness` directory, waits for the broker healthcheck to pass on a bounded deadline,
+     then re-reads `GET /messaging/dlq/depth` into `dlq_depth_after_restart`. In smoke mode the
+     block is skipped entirely and both vars stay unset — the assertion script only reads them
+     on the non-smoke branch.
+  4. The `assert-dlq` `JSR223Sampler` with
+     `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+- [ ] **Step 7: Run the tests in smoke mode**
+
+```bash
+cd qe-harness && make down && make up PROFILES="core messaging"
+cd harness && mvn -q -pl jmeter test -Dtest=Tst029ModuleTest
+```
+
+Expected: PASS, 3 tests. `smokeModeReportsTheRestartInvariantNotEvaluated` is the guard that
+stops I2 ever being reported as passed without a real restart.
+
+- [ ] **Step 8: Exercise the restart path once, manually**
+
+The gated branch must be proven at least once or it is untested code:
+
+```bash
+cd qe-harness && ./bin/run-module.sh TST-029
+python3 -c "
+import json, pathlib
+f = sorted(pathlib.Path('traceability/runs').glob('*-TST-029.json'))[-1]
+d = json.loads(f.read_text())
+i2 = [i for i in d['invariants'] if i['id'] == 'I2'][0]
+print('I2:', i2['result'])
+"
+```
+
+Expected: `I2: passed` (not `not-evaluated`) — the broker was genuinely restarted and the
+durable queue survived. Record this in the task report; CI will never do it.
+
+- [ ] **Step 9: Verify the gate**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep -E "TST-029|check5|check7" || echo "no findings"
+python3 scripts/render-harness-coverage.py
+```
+
+Expected: no findings.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add qe-harness/harness/jmeter qe-harness/traceability
+git commit -m "feat(harness): add TST-029 delivery guarantee module with a gated broker restart"
+```
+
+---
+
+Phase 2 is complete. Family B is 5/5 — `TST-026`, `027`, `028`, `029` join `TST-030` — and the
+broker topology is now the substrate any future messaging archetype reuses. Phase 3 collects
+the one archetype that needed it.
+
+---
