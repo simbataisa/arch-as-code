@@ -3583,7 +3583,10 @@ class MessagingTopologyTest extends AbstractMessagingIntegrationTest {
         // TST-026 I2 asserts zero messages reach a default route. A '#' binding
         // would make that trivially true and the invariant worthless, so its
         // absence is asserted here rather than left to reviewer vigilance.
-        rabbit.convertAndSend("qe.in", "pay.unknown.type", "probe");
+        // Published to qe.route, the exchange whose bindings the invariant is
+        // actually about -- publishing to qe.in would exercise a different
+        // exchange and pass for the wrong reason.
+        rabbit.convertAndSend(MessagingTopology.ROUTE_EXCHANGE, "pay.unknown.type", "probe");
         assertTrue(awaitQueueDepth("qe.q.unroutable", 1),
             "an unmatched key must divert to quarantine, not vanish and not match a catch-all");
         assertEquals(0L, queueDepth("qe.q.route.domestic"));
@@ -3706,8 +3709,14 @@ public class MessagingTopology {
     public Declarables declarables() {
         List<org.springframework.amqp.core.Declarable> objects = new ArrayList<>();
 
-        DirectExchange in = ExchangeBuilderCompat.directWithAlternate(IN_EXCHANGE, UNROUTABLE_EXCHANGE);
-        TopicExchange route = new TopicExchange(ROUTE_EXCHANGE, true, false);
+        DirectExchange in = new DirectExchange(IN_EXCHANGE, true, false);
+        // The alternate exchange belongs on qe.route, NOT on qe.in: TST-026's I2
+        // is about qe.route's bindings, and an unmatched pay.* key would
+        // otherwise be dropped by the broker (or returned to the publisher via
+        // setMandatory) rather than parked somewhere the harness can read a
+        // depth from. Quarantine is what makes "zero messages on the default
+        // route" an observable claim instead of an absence.
+        TopicExchange route = ExchangeBuilderCompat.topicWithAlternate(ROUTE_EXCHANGE, UNROUTABLE_EXCHANGE);
         FanoutExchange fanout = new FanoutExchange(FANOUT_EXCHANGE, true, false);
         DirectExchange dlx = new DirectExchange(DLX, true, false);
         FanoutExchange unroutable = new FanoutExchange(UNROUTABLE_EXCHANGE, true, false);
@@ -3787,14 +3796,14 @@ Add the small helper the alternate-exchange argument needs —
 ```java
 package com.techcombank.qe.sut.capability.messaging;
 
-import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.TopicExchange;
 
 import java.util.Map;
 
 /**
- * The alternate-exchange argument has no first-class setter on
- * {@link DirectExchange}'s constructors, so it is applied here rather than
- * inline, keeping {@link MessagingTopology#declarables()} readable.
+ * The alternate-exchange argument is passed as a raw argument map rather than
+ * through a first-class setter, so it is applied here rather than inline,
+ * keeping {@link MessagingTopology#declarables()} readable.
  *
  * <p>The alternate exchange is what turns an unroutable message into an
  * observable one -- TST-026's I2 reads the quarantine queue's depth as its
@@ -3806,10 +3815,9 @@ final class ExchangeBuilderCompat {
     private ExchangeBuilderCompat() {
     }
 
-    static DirectExchange directWithAlternate(String name, String alternateExchange) {
-        DirectExchange exchange = new DirectExchange(name, true, false,
+    static TopicExchange topicWithAlternate(String name, String alternateExchange) {
+        return new TopicExchange(name, true, false,
             Map.of("alternate-exchange", alternateExchange));
-        return exchange;
     }
 }
 ```
@@ -7815,3 +7823,346 @@ git commit -m "feat(harness): add TST-020 idempotency module with full I1-I7 cov
 ```
 
 ---
+
+## Task 27: Full Gate, Regenerated Coverage, and the 8/8 Defect Proof
+
+The wave's headline claim is not "eight modules exist" but "eight defects each break exactly
+their own invariant". This task proves it.
+
+**Files:**
+- Modify: `qe-harness/traceability/harness-coverage.md` (regenerated)
+- Create: none
+
+**Interfaces:**
+- Consumes: every module from Tasks 8, 10, 13, 18, 20, 22, 24, 26
+- Produces: the 8/8 specificity table this wave is judged on
+
+- [ ] **Step 1: Bring up the full stack and run every module clean**
+
+```bash
+cd qe-harness && make down && make up PROFILES="core resilience messaging"
+export HARNESS_SMOKE_MODE=true
+make run-all
+```
+
+Expected: every module reports `-> passed`. All fifteen, not just the new eight — a Wave 17
+change that broke a Wave 16 module must surface here.
+
+- [ ] **Step 2: Run the defect suite**
+
+```bash
+cd qe-harness && make run-defects
+```
+
+Expected: every module reports `failed` under its own flag. A module that **passes** with its
+defect active is worse than a missing module: it is a test that cannot detect the thing it
+exists to detect.
+
+- [ ] **Step 3: Prove specificity, not merely sensitivity**
+
+Sensitivity is "something failed". Specificity is "exactly the right thing failed". Build the
+table from the emitted evidence rather than by eye:
+
+```bash
+cd qe-harness && python3 - <<'PY'
+import json, pathlib, collections
+
+EXPECTED = {
+    "TST-020": {"failed": {"I1"}, "must_pass": {"I2", "I4"}},
+    "TST-023": {"failed": {"I1", "I2"}, "must_pass": {"I3", "I4"}},
+    "TST-026": {"failed": {"I2"}, "must_pass": {"I1", "I5", "I6"}},
+    "TST-027": {"failed": {"I1"}, "must_pass": {"I3"}},
+    "TST-028": {"failed": {"I1"}, "must_pass": {"I2", "I3"}},
+    "TST-029": {"failed": {"I1"}, "must_pass": {"I4", "I5"}},
+    "TST-034": {"failed": {"I3"}, "must_pass": {"I1", "I4"}},
+    "TST-037": {"failed": {"I4"}, "must_pass": {"I1", "I2"}},
+}
+
+runs = pathlib.Path("traceability/runs")
+latest = {}
+for f in sorted(runs.glob("*.json")):
+    d = json.loads(f.read_text())
+    if d.get("evidence", {}).get("sut_defect"):
+        latest[d["archetype"]] = d
+
+ok = True
+for arch, spec in sorted(EXPECTED.items()):
+    d = latest.get(arch)
+    if d is None:
+        print(f"{arch}: NO DEFECT-ACTIVE FRAGMENT FOUND")
+        ok = False
+        continue
+    results = {i["id"]: i["result"] for i in d.get("invariants", [])}
+    failed = {k for k, v in results.items() if v == "failed"}
+    wrong_fail = failed - spec["failed"]
+    missing_fail = spec["failed"] - failed
+    broke_others = {k for k in spec["must_pass"] if results.get(k) != "passed"}
+    verdict = "SPECIFIC" if not (wrong_fail or missing_fail or broke_others) else "NOT SPECIFIC"
+    if verdict != "SPECIFIC":
+        ok = False
+    print(f"{arch}: {verdict} failed={sorted(failed)} "
+          f"unexpected={sorted(wrong_fail)} missing={sorted(missing_fail)} "
+          f"collateral={sorted(broke_others)}")
+
+print("\n8/8 SPECIFIC" if ok else "\nSPECIFICITY PROOF FAILED")
+PY
+```
+
+Expected: `8/8 SPECIFIC`. Any `collateral` entry means a defect broke an invariant it should not
+have — the defect branch is too broad, or two invariants share an implementation path they
+should not. Fix the SUT branch, not the expectation table.
+
+- [ ] **Step 4: Regenerate the coverage table**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/render-harness-coverage.py
+python3 scripts/render-harness-coverage.py --check; echo "render=$?"
+```
+
+Expected: `render=0`.
+
+- [ ] **Step 5: Run all seven checks plus every corpus gate**
+
+```bash
+python3 scripts/validate-harness-coverage.py;       echo "harness=$?"
+python3 scripts/validate-testing-coverage.py;       echo "cov=$?"
+python3 scripts/render-testing-coverage.py --check;  echo "render-cov=$?"
+python3 scripts/audit-catalog-consistency.py;        echo "audit=$?"
+python3 scripts/validate-internal-links.py;          echo "links=$?"
+```
+
+Expected: all five exit `0`. Compare against Task 0's recorded baseline — nothing that was
+green may have gone red.
+
+- [ ] **Step 6: Confirm every partial carries a reason and no coverage is overstated**
+
+```bash
+cd qe-harness && python3 - <<'PY'
+import yaml, pathlib
+mods = yaml.safe_load(pathlib.Path("traceability/modules.yml").read_text())["modules"]
+print(f"{len(mods)} modules")
+for m in mods:
+    cov = m["coverage"]
+    reason = (m.get("partial_reason") or "").strip()
+    flag = "OK" if cov == "full" or reason else "MISSING REASON"
+    print(f"  {m['archetype']:8} {m['tool']:16} {cov:8} {flag}")
+partials = [m["archetype"] for m in mods if m["coverage"] == "partial"]
+print("partials:", partials)
+assert sorted(partials) == ["TST-027", "TST-037", "TST-043"], partials
+print("full:", len(mods) - len(partials))
+PY
+```
+
+Expected: 15 modules, partials exactly `['TST-027', 'TST-037', 'TST-043']`, 12 full — matching
+the spec's §8 tally.
+
+- [ ] **Step 7: Confirm the registry is truthful**
+
+```bash
+curl -s http://localhost:8080/_capabilities | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+impl=sorted(k for k,v in d.items() if v=='implemented')
+print(len(impl)); print(impl)
+"
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=CapabilityRegistryTest
+```
+
+Expected: `15`, and the set-based guard passes — `IMPLEMENTED` and `IMPLEMENTED_AT_WAVE_17`
+agree, so the registry cannot have drifted from what `modules.yml` ships.
+
+- [ ] **Step 8: Commit**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add qe-harness/traceability
+git commit -m "chore(harness): regenerate coverage table for the fifteen-module harness"
+```
+
+---
+
+## Task 28: CI on a Real Runner, and Handoff
+
+Wave 16's `qe-harness` stage has **never run on a real GitLab runner**. Wave 17 adds a RabbitMQ
+container to it. This task is where that meets reality.
+
+**Files:**
+- Modify: `.gitlab-ci.yml` (messaging profile in `harness:run`)
+- Create: `docs/superpowers/reports/2026-09-03-wave-17-report.md`
+
+**Interfaces:**
+- Consumes: everything above
+- Produces: a green pipeline and the wave's handoff record
+
+- [ ] **Step 1: Add the messaging profile to the CI run job**
+
+`harness:run` currently starts `PROFILES="core resilience"`. Four new modules need the broker:
+
+```yaml
+    - make up PROFILES="core resilience messaging"
+```
+
+The broker's healthcheck must gate module start. Confirm `make up` waits for health rather than
+merely starting containers:
+
+```bash
+/usr/bin/grep -n "wait\|health" qe-harness/Makefile qe-harness/bin/wait-for-sut.sh
+```
+
+If `make up` does not wait on the broker specifically, add a bounded wait to `bin/` following
+`wait-for-sut.sh`'s existing shape — the first messaging module would otherwise race a broker
+still in its 20-second `start_period` and fail for a reason unrelated to the SUT.
+
+- [ ] **Step 2: Confirm the CI rules already cover the new files**
+
+```bash
+python3 -c "
+import yaml
+d = yaml.safe_load(open('.gitlab-ci.yml'))
+rules = d['harness:run']['rules']
+changes = [c for r in rules for c in r.get('changes', [])]
+for needed in ['qe-harness/**/*.java', 'qe-harness/**/*.groovy', 'qe-harness/**/*.jmx',
+               'qe-harness/**/*.sql', 'qe-harness/docker-compose.yml',
+               'qe-harness/**/pom.xml', 'qe-harness/traceability/modules.yml',
+               'qe-harness/profiles/**/*.yml']:
+    print(('OK  ' if needed in changes else 'MISS'), needed)
+"
+```
+
+Expected: every line `OK`. `.qe-harness-code-rules` already lists all eight patterns, so the new
+Java, Groovy, JMX, SQL and YAML files are covered without a rules change.
+
+- [ ] **Step 3: Estimate the CI time cost honestly before pushing**
+
+```bash
+cd qe-harness && make down && make up PROFILES="core resilience messaging"
+export HARNESS_SMOKE_MODE=true
+time make run-all
+time make run-defects
+```
+
+Record both durations. TST-029's retry ladder alone totals 13 seconds per run, and TST-034 holds
+20 seconds in smoke mode. If the combined total materially exceeds Wave 16's, say so in the
+report rather than letting the pipeline discover it.
+
+- [ ] **Step 4: Push and watch the real pipeline**
+
+```bash
+git push -u origin "$(git rev-parse --abbrev-ref HEAD)"
+```
+
+Then watch `harness:build`, `harness:scan`, `harness:verify`, `harness:run` and the new
+`validate:testing-coverage`. **This is the first real exercise of the whole `qe-harness` stage**,
+so treat a failure here as information about the stage, not only about Wave 17.
+
+Watch for, specifically:
+- `harness:run` needs docker-in-docker plus a RabbitMQ container. If the runner cannot start it,
+  report that as an infrastructure finding — do not respond by deleting the messaging modules
+  from the run set.
+- `harness:scan` (Trivy, `--exit-code 1`, blocking) now sees `spring-boot-starter-amqp` and
+  `org.testcontainers:rabbitmq`. A new CRITICAL/HIGH CVE or licence finding blocks the pipeline.
+  If one appears, report the CVE and the affected coordinate; do not add it to `.trivyignore`
+  without DevSecOps sign-off — that allowlist already carries a disclosed residual risk from
+  Wave 16 (it is repo-wide rather than path-scoped).
+
+- [ ] **Step 5: Write the wave report**
+
+`docs/superpowers/reports/2026-09-03-wave-17-report.md`, following Wave 16's report shape:
+
+```markdown
+# Wave 17 — QE Harness Coverage Expansion (Report)
+
+**Status:** <Complete | Complete with disclosed risks>
+**Date:** 2026-09-03
+**Spec:** `docs/superpowers/specs/2026-09-03-wave-17-harness-coverage-expansion-design.md`
+**Plan:** `docs/superpowers/plans/2026-09-03-wave-17-harness-coverage-expansion.md`
+
+## What landed
+
+8 new archetype modules, taking runnable coverage from 7 to 15 of 24 and completing Family B.
+
+| Family | Before | After |
+|---|---|---|
+| A Correctness | 1/6 | 3/6 |
+| B Messaging | 1/5 | **5/5** |
+| C Load | 1/4 | 2/4 |
+| E Data | 1/3 | 2/3 |
+
+Final tally: **12 `full`, 3 `partial`** (TST-027, TST-037, TST-043).
+
+## The defect-specificity proof
+
+<paste Task 27 Step 3's output verbatim>
+
+## What we corrected rather than shipped around
+
+- `TST-043` was in `IMPLEMENTED` while asserting none of its own I1–I6; its `partial_reason`
+  now says so.
+- The `TST-041` archetype document carried a NUL byte that hid its content from grep.
+- `TST-025`'s covering rows disagreed on `primary_tool`.
+- Two threshold-shaped needs had **no** citable NFR anchor. Rather than fabricate citations or
+  amend the governed NFR spine, both are declared as application config — see the spec's §7.1.
+
+## Disclosed residual risks
+
+1. `TST-029` I2's broker restart is exercised in full runs only; CI reports it `not-evaluated`.
+2. `TST-027` I5 covers `per_key` only — RabbitMQ has no partitions.
+3. `TST-037` I5 needs a CDC connector this repository does not contain.
+4. <CI findings from Step 4, if any>
+
+## Follow-ups for the next wave
+
+<carry forward the spec's §11 list, updated>
+```
+
+- [ ] **Step 6: Compare against the wave's stated success criteria**
+
+Walk the spec's §9 list and record each verdict:
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+sed -n '/## 9. Success Criteria/,/## 10. Risks/p' \
+  docs/superpowers/specs/2026-09-03-wave-17-harness-coverage-expansion-design.md
+```
+
+Every criterion must be marked met or explicitly not met with a reason. A criterion quietly
+dropped is the failure mode this whole harness exists to prevent.
+
+- [ ] **Step 7: Commit and open the merge request**
+
+```bash
+git add docs/superpowers/reports .gitlab-ci.yml qe-harness
+git commit -m "docs(wave-17): add implementation report and enable messaging in CI"
+git push
+```
+
+Open the MR against `main`. Do **not** merge it yourself — the spec names
+`@tester-qe` (oracle fidelity, defect specificity) and `@devsecops-engineer` (broker in CI,
+dependency surface) as gating reviewers, and the Trivy surface changed in this wave.
+
+- [ ] **Step 8: Report**
+
+State plainly: the module count, the 8/8 specificity result, every gate's exit code, the CI
+outcome on a real runner, and each disclosed risk. If anything is red, say which and why rather
+than reporting the wave complete.
+
+---
+
+## Appendix: Why Each Partial Is Partial
+
+Recorded here because "partial" is the claim most likely to be quietly upgraded by a future
+change, and the reasons are not recoverable from the code.
+
+| Archetype | Unreached | Why it cannot be reached here |
+|---|---|---|
+| `TST-027` I5 | `per_partition`, `global` ordering scopes | RabbitMQ has no partitions. The declared scope is `per_key`, and asserting the per-key case does not evidence the others. |
+| `TST-037` I5 | No loss or duplication across connector restart | Needs a CDC connector; this repository contains none. A server-side stand-in would be a different invariant wearing I5's name. |
+| `TST-043` I1–I6 | All six client-side invariants | I1/I2/I6 need an offline client, I3/I4 a rendered DOM, I5 `k6/browser` against a real page. The module ships four substitute server-side checks, renumbered — they are **not** the archetype's I1–I4. |
+
+And one that is deliberately **not** partial:
+
+| Archetype | Gated | Why coverage stays `full` |
+|---|---|---|
+| `TST-029` I2 | Broker restart, CI only | The invariant **is** implemented and passes on a full run. A run-mode gate is reported per-run via `not-evaluated`; understating the module's coverage would misdescribe what it contains. |
+

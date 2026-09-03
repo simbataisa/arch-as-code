@@ -186,7 +186,7 @@ Minimal but sufficient for all four Slice B archetypes:
 | `qe.in` | direct exchange | publish entry point |
 | `qe.route` | topic exchange, bindings `pay.domestic.*` / `pay.intl.*` | TST-026 I2 — **no catch-all binding** |
 | `qe.q.route.domestic`, `qe.q.route.intl` | queues | TST-026 |
-| `qe.q.unroutable` | queue on `qe.in` alternate-exchange | TST-026 I2 verdict, TST-029 I1 negative path |
+| `qe.q.unroutable` | queue on **`qe.route`**'s alternate-exchange | TST-026 I2 verdict, TST-029 I1 negative path. The alternate exchange must sit on `qe.route`, not `qe.in`: I2 is about `qe.route`'s bindings, and an unmatched `pay.*` key would otherwise be dropped by the broker rather than parked where a depth can be read |
 | `qe.q.sequence` | queue, `x-single-active-consumer: true` | TST-027, scope declared `per_key` |
 | `qe.fanout` → `qe.q.branch.{a,b,c}` + `qe.q.aggregate` | fanout | TST-028 I1/I3/I4 |
 | `qe.q.work` | `x-dead-letter-exchange: qe.dlx` + delivery limit | TST-029 I1/I3/I6 |
