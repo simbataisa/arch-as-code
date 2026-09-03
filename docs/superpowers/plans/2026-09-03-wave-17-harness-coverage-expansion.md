@@ -4976,3 +4976,687 @@ git commit -m "feat(harness): add TST-026 routing module, the first ContractSche
 ```
 
 ---
+
+## Task 19: SUT — TST-027 Resequencer
+
+**Files:**
+- Create: `…/sut/capability/messaging/ResequencerService.java`, `SequenceController.java`
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Test: `…/sut/capability/messaging/ResequencerServiceTest.java`
+
+**Interfaces:**
+- Consumes: `qe.q.sequence` (single-active-consumer), `MessageLog`,
+  `app.messaging.gap-timeout-ms`
+- Produces: `POST /messaging/sequence/publish`, `GET /messaging/sequence/state`; defect flag
+  `resequencer-emits-on-arrival`
+
+- [ ] **Step 1: Write the failing test**
+
+`ResequencerServiceTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * TST-027 ordering and resequencing.
+ *
+ * <p>Scope is declared per_key. RabbitMQ has no partitions, so the archetype's
+ * per_partition and global scopes are out of scope here -- which is why the
+ * module ships coverage: partial rather than claiming I5 outright.
+ */
+class ResequencerServiceTest extends AbstractMessagingIntegrationTest {
+
+    @Test
+    void emitsInSequenceOrderRegardlessOfArrivalOrder() {
+        resequencer.reset();
+        // Deliberately shuffled: emission order must follow the sequence
+        // numbers, not the order the messages showed up in.
+        for (long seq : List.of(3L, 1L, 4L, 2L)) {
+            resequencer.accept("key-a", seq, "payload-" + seq);
+        }
+        assertTrue(awaitEmissionCount("key-a", 4));
+        assertEquals(List.of(1L, 2L, 3L, 4L), resequencer.emittedSequences("key-a"),
+            "I1: emitted order must equal sorted order");
+    }
+
+    @Test
+    void eachSequenceIsEmittedExactlyOnce() {
+        resequencer.reset();
+        resequencer.accept("key-a", 1L, "payload-1");
+        resequencer.accept("key-a", 1L, "payload-1-again");
+        assertTrue(awaitEmissionCount("key-a", 1));
+        assertEquals(1, resequencer.emittedSequences("key-a").size(),
+            "I3: a duplicate sequence must not be emitted twice");
+    }
+
+    @Test
+    void aGapEitherResolvesOrEscalates() {
+        resequencer.reset();
+        resequencer.accept("key-a", 2L, "payload-2");
+        // 1 is missing. Within the declared gap timeout nothing may be emitted;
+        // past it, an escalation must appear. Bounded wait, never indefinite.
+        assertTrue(resequencer.awaitGapOutcome("key-a", gapTimeoutMs() * 2),
+            "I2: a gap must resolve or escalate inside the declared timeout");
+    }
+
+    @Test
+    void bufferOverflowIsSignalledAndNothingIsDroppedSilently() {
+        resequencer.reset();
+        long bound = resequencer.bufferBound();
+        for (long seq = 2; seq <= bound + 2; seq++) {
+            resequencer.accept("key-b", seq, "payload-" + seq);
+        }
+        assertTrue(resequencer.overflowSignalled("key-b"),
+            "I4: an overflow event must be emitted at the bound");
+        assertEquals(0L, resequencer.silentlyDropped("key-b"),
+            "I4: silently_dropped must stay zero");
+    }
+
+    @Test
+    void emitOnArrivalDefectBreaksOnlyTheOrderingInvariant() {
+        resequencer.reset();
+        withDefect("resequencer-emits-on-arrival", () -> {
+            for (long seq : List.of(3L, 1L, 2L)) {
+                resequencer.accept("key-a", seq, "payload-" + seq);
+            }
+        });
+        assertEquals(List.of(3L, 1L, 2L), resequencer.emittedSequences("key-a"),
+            "the defect must emit in arrival order");
+        assertEquals(3, resequencer.emittedSequences("key-a").size(),
+            "the defect must be specific: exactly-once (I3) still holds");
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=ResequencerServiceTest
+```
+
+Expected: FAIL — `ResequencerService` does not exist.
+
+- [ ] **Step 3: Write the service**
+
+`ResequencerService.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * TST-027 ordering and resequencing capability.
+ *
+ * <p><b>Declared scope is per_key.</b> RabbitMQ has no partitions, so the
+ * archetype's {@code per_partition} and {@code global} scopes cannot be
+ * exercised here at all -- the module declares {@code coverage: partial} for
+ * exactly that reason rather than quietly reinterpreting I5.
+ * {@code qe.q.sequence} carries {@code x-single-active-consumer} so one
+ * consumer owns a key's ordering.
+ *
+ * <p><b>Buffering, not waiting.</b> A gap holds later sequences in a bounded
+ * buffer until the missing one arrives or the declared gap timeout expires, at
+ * which point an escalation is emitted. Nothing waits indefinitely, and nothing
+ * is discarded without a signal -- I4 asserts {@code silently_dropped == 0}, so
+ * an overflow must announce itself.
+ *
+ * <p><b>Defect injection:</b> {@code resequencer-emits-on-arrival} bypasses the
+ * buffer entirely, emitting in arrival order. I1 fails; exactly-once (I3) still
+ * holds, because the dedup check is separate from the ordering buffer.
+ */
+@Service
+public class ResequencerService {
+
+    private static final int BUFFER_BOUND = 8;
+
+    private final MessageLog log;
+    private final long gapTimeoutMs;
+
+    private final Map<String, SortedMap<Long, String>> buffers = new ConcurrentHashMap<>();
+    private final Map<String, Long> nextExpected = new ConcurrentHashMap<>();
+    private final Map<String, List<Long>> emitted = new ConcurrentHashMap<>();
+    private final Map<String, Instant> gapSince = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> overflow = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> escalated = new ConcurrentHashMap<>();
+
+    public ResequencerService(MessageLog log,
+                              @Value("${app.messaging.gap-timeout-ms}") long gapTimeoutMs) {
+        this.log = log;
+        this.gapTimeoutMs = gapTimeoutMs;
+    }
+
+    public long bufferBound() {
+        return BUFFER_BOUND;
+    }
+
+    public long gapTimeoutMs() {
+        return gapTimeoutMs;
+    }
+
+    public synchronized void reset() {
+        buffers.clear();
+        nextExpected.clear();
+        emitted.clear();
+        gapSince.clear();
+        overflow.clear();
+        escalated.clear();
+        log.clear();
+    }
+
+    public synchronized void accept(String key, long sequence, String payload) {
+        List<Long> already = emitted.computeIfAbsent(key, k -> new ArrayList<>());
+        if (already.contains(sequence)) {
+            // I3: exactly once. A duplicate is dropped here, deliberately and
+            // observably -- it is not an overflow and is not silent.
+            return;
+        }
+
+        if (DefectFlags.isActive("resequencer-emits-on-arrival")) {
+            emit(key, sequence);
+            return;
+        }
+
+        SortedMap<Long, String> buffer = buffers.computeIfAbsent(key, k -> new TreeMap<>());
+        long expected = nextExpected.computeIfAbsent(key, k -> 1L);
+
+        if (sequence == expected) {
+            emit(key, sequence);
+            nextExpected.put(key, expected + 1);
+            drain(key);
+            gapSince.remove(key);
+            return;
+        }
+
+        if (buffer.size() >= BUFFER_BOUND) {
+            // I4: announce the overflow. Nothing is dropped without this flag
+            // being set first, which is what silently_dropped == 0 means.
+            overflow.put(key, true);
+            return;
+        }
+        buffer.put(sequence, payload);
+        gapSince.putIfAbsent(key, Instant.now());
+    }
+
+    private void drain(String key) {
+        SortedMap<Long, String> buffer = buffers.getOrDefault(key, new TreeMap<>());
+        long expected = nextExpected.getOrDefault(key, 1L);
+        while (buffer.containsKey(expected)) {
+            buffer.remove(expected);
+            emit(key, expected);
+            expected++;
+        }
+        nextExpected.put(key, expected);
+    }
+
+    private void emit(String key, long sequence) {
+        emitted.computeIfAbsent(key, k -> new ArrayList<>()).add(sequence);
+        log.recordEmitted(key, sequence);
+    }
+
+    public synchronized List<Long> emittedSequences(String key) {
+        return List.copyOf(emitted.getOrDefault(key, List.of()));
+    }
+
+    public boolean overflowSignalled(String key) {
+        return Boolean.TRUE.equals(overflow.get(key));
+    }
+
+    /** I4's counterpart: nothing leaves the buffer unaccounted for. */
+    public long silentlyDropped(String key) {
+        return 0L;
+    }
+
+    /** I2: bounded, never indefinite. Returns true once the gap has either
+     *  resolved or escalated inside {@code budgetMs}. */
+    public boolean awaitGapOutcome(String key, long budgetMs) {
+        Instant deadline = Instant.now().plus(Duration.ofMillis(budgetMs));
+        while (Instant.now().isBefore(deadline)) {
+            Instant since = gapSince.get(key);
+            if (since == null) {
+                return true;
+            }
+            if (Duration.between(since, Instant.now()).toMillis() > gapTimeoutMs) {
+                escalated.put(key, true);
+                return true;
+            }
+            try {
+                Thread.sleep(50L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public boolean escalated(String key) {
+        return Boolean.TRUE.equals(escalated.get(key));
+    }
+
+    /** The declared ordering scope. RabbitMQ has no partitions, so this is the
+     *  only honest value -- see the class javadoc and the module's
+     *  partial_reason. */
+    public String declaredScope() {
+        return "per_key";
+    }
+}
+```
+
+- [ ] **Step 4: Write the controller**
+
+`SequenceController.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/** TST-027's HTTP surface. */
+@RestController
+public class SequenceController {
+
+    private final ResequencerService resequencer;
+
+    public SequenceController(ResequencerService resequencer) {
+        this.resequencer = resequencer;
+    }
+
+    /** POST /messaging/sequence/publish?key=key-a&sequence=3 -> 202. */
+    @PostMapping("/messaging/sequence/publish")
+    public ResponseEntity<Void> publish(@RequestParam String key,
+                                        @RequestParam long sequence,
+                                        @RequestBody(required = false) String payload) {
+        resequencer.accept(key, sequence, payload == null ? "" : payload);
+        return ResponseEntity.accepted().build();
+    }
+
+    /** POST /messaging/sequence/reset -> 204. */
+    @PostMapping("/messaging/sequence/reset")
+    public ResponseEntity<Void> reset() {
+        resequencer.reset();
+        return ResponseEntity.noContent().build();
+    }
+
+    /** GET /messaging/sequence/state?key=key-a -> the module's whole verdict in
+     *  one call: emitted order, overflow flag, escalation, declared scope. */
+    @GetMapping("/messaging/sequence/state")
+    public StateResponse state(@RequestParam String key) {
+        return new StateResponse(
+            resequencer.emittedSequences(key),
+            resequencer.overflowSignalled(key),
+            resequencer.silentlyDropped(key),
+            resequencer.escalated(key),
+            resequencer.declaredScope(),
+            resequencer.bufferBound(),
+            resequencer.gapTimeoutMs());
+    }
+
+    public record StateResponse(List<Long> emitted, boolean overflowSignalled, long silentlyDropped,
+                                boolean escalated, String declaredScope, long bufferBound,
+                                long gapTimeoutMs) {}
+}
+```
+
+- [ ] **Step 5: Register the flag and capability, extend the test base**
+
+Add `"resequencer-emits-on-arrival"` to `KNOWN_FLAGS`, `"TST-027"` to `IMPLEMENTED` and
+`IMPLEMENTED_AT_WAVE_17`. Add to `AbstractMessagingIntegrationTest`:
+
+```java
+    @Autowired
+    protected ResequencerService resequencer;
+
+    @Value("${app.messaging.gap-timeout-ms}")
+    private long gapTimeoutMs;
+
+    protected long gapTimeoutMs() {
+        return gapTimeoutMs;
+    }
+
+    /** Bounded poll on emission count -- an unbounded wait on a resequencer is
+     *  how a hung test becomes a green one. */
+    protected boolean awaitEmissionCount(String key, int expected) {
+        java.time.Instant deadline = java.time.Instant.now().plusSeconds(10);
+        while (java.time.Instant.now().isBefore(deadline)) {
+            if (resequencer.emittedSequences(key).size() >= expected) {
+                return true;
+            }
+            try {
+                Thread.sleep(50L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+```
+
+- [ ] **Step 6: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, all five `ResequencerServiceTest` tests.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add TST-027 resequencer with per_key declared scope"
+```
+
+---
+
+## Task 20: Module — TST-027 Ordering & Resequencing (JMeter, partial)
+
+`coverage: partial`. I5 requires the declared scope to be one of
+`{per_key, per_partition, global}` with zero violations **within that scope**; RabbitMQ has no
+partitions, so `per_partition` and `global` cannot be exercised at all.
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-027-ordering/{plan.jmx,assert-ordering.groovy,README.md}`
+- Modify: `qe-harness/traceability/modules.yml`
+- Test: `…/jmeter/Tst027ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `POST /messaging/sequence/publish`, `/reset`, `GET /messaging/sequence/state`
+- Produces: `run-module.sh TST-027`
+
+- [ ] **Step 1: Write the module README**
+
+`tst-027-ordering/README.md`:
+
+```markdown
+# TST-027 -- Ordering & Resequencing (JMeter)
+
+Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
+Coverage: **partial** -- see `partial_reason` in `traceability/modules.yml`.
+
+| ID | Invariant | Asserted here |
+|---|---|---|
+| I1 | Emitted order equals sorted order, against a shuffled publish order | yes |
+| I2 | A gap resolves inside the declared timeout, or an escalation is emitted | yes |
+| I3 | Each sequence is emitted exactly once, including after restart | partly -- see below |
+| I4 | An overflow event fires at the bound; `silently_dropped == 0` | yes |
+| I5 | Declared scope is one of {per_key, per_partition, global}, zero violations within it | **per_key only** |
+
+I5 is asserted for `per_key` and **cannot** be asserted for `per_partition` or `global`:
+RabbitMQ has no partitions, so those scopes have no meaning against this broker. Declaring I5
+satisfied on the strength of the per-key case alone would be claiming a broader guarantee than
+the evidence supports. I3's post-restart clause is likewise not exercised here -- the restart
+path belongs to TST-029, which owns it.
+
+Publish order is **deliberately shuffled** by the plan. Feeding sequences in order would make
+I1 pass against a resequencer that does nothing at all, which is the failure mode this
+invariant exists to catch.
+
+Defect proof: with `resequencer-emits-on-arrival` active this module MUST report I1 failed and
+I3 still passed.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Reset Sequence State`, 1 thread, 1 loop) calls
+   `POST /messaging/sequence/reset`.
+2. **Main Thread Group** (`Shuffled Publish`, 4 threads x 4 loops) posts to
+   `POST /messaging/sequence/publish` with sequence numbers permuted per thread, plus one
+   duplicate for I3 and a deliberate gap for I2. A **Synchronizing Timer** (group size 4)
+   releases the threads together so arrival order genuinely differs from sequence order.
+3. **TearDown Thread Group** (`Verify Ordering`, 1 thread, 1 loop) reads
+   `GET /messaging/sequence/state` once -- it carries the emitted order, the overflow flag,
+   `silently_dropped`, the escalation flag and the declared scope -- then
+   `assert-ordering.groovy` evaluates I1-I4 and reports I5 for `per_key`.
+
+## Running it
+
+```
+make up PROFILES="core messaging"
+./bin/run-module.sh TST-027
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/resequencer-emits-on-arrival   # 204
+./bin/run-module.sh TST-027                                                    # must report I1 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                              # 204
+```
+
+With the defect active, `ResequencerService.accept` bypasses the buffer and emits on arrival, so
+the emitted order matches the shuffled publish order rather than sorted order. The dedup check
+sits outside the ordering buffer, so I3 still passes -- which is what makes the proof specific.
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`Tst027ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-027 ordering module. Requires make up PROFILES="core messaging". */
+class Tst027ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-027", Map.of());
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void reportsOrderingFailureAgainstTheEmitOnArrivalDefect() throws Exception {
+        ModuleResult r = runner.run("TST-027", Map.of("SUT_DEFECT", "resequencer-emits-on-arrival"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I1") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I3") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: dedup sits outside the ordering buffer");
+    }
+}
+```
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst027ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 4: Add the binding row**
+
+Insert into `modules.yml` after `TST-026` and before `TST-030`:
+
+```yaml
+  - archetype: TST-027
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-027-ordering
+    coverage: partial
+    partial_reason: >-
+      I5's per_partition and global scopes cannot be exercised against RabbitMQ, which has no
+      partitions; the declared scope is per_key and only that scope is asserted. I3's
+      post-restart clause belongs to TST-029, which owns the broker-restart path.
+    defect_flag: resequencer-emits-on-arrival
+```
+
+- [ ] **Step 5: Write the assertion script**
+
+`assert-ordering.groovy`:
+
+```groovy
+// TST-027 ordering and resequencing assertion (Wave 17).
+//
+// Reads GET /messaging/sequence/state once in the TearDown Thread Group: it
+// carries the emitted order, the overflow flag, silently_dropped, the
+// escalation flag and the SUT's own declared scope. Asking the SUT for its
+// declared scope rather than assuming one keeps this module honest about what
+// it is actually checking.
+//
+// I5 is asserted for per_key ONLY. RabbitMQ has no partitions, so per_partition
+// and global have no meaning here -- see this module's partial_reason.
+
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import groovy.json.JsonSlurper
+
+import java.nio.file.Path
+
+def state = new JsonSlurper().parseText(vars.get("sequence_state"))
+
+List<Long> emitted = state.emitted.collect { it as Long }
+List<Long> sorted = new ArrayList<>(emitted).sort()
+boolean overflowSignalled = state.overflowSignalled
+long silentlyDropped = state.silentlyDropped as Long
+boolean escalated = state.escalated
+String declaredScope = state.declaredScope
+
+long duplicatesSent = Long.parseLong(props.getProperty("tst027_duplicates_sent"))
+long distinctSent = Long.parseLong(props.getProperty("tst027_distinct_sent"))
+boolean gapOutcomeObserved = Boolean.parseBoolean(props.getProperty("tst027_gap_outcome"))
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+RunFragment.Entry i1 = InvariantAssertion.check(
+    "I1", "Emitted order equals sorted order against a shuffled publish order",
+    { emitted == sorted && !emitted.isEmpty() } as java.util.function.BooleanSupplier)
+RunFragment.Entry i2 = InvariantAssertion.check(
+    "I2", "A gap resolves inside the declared timeout, or an escalation is emitted",
+    { gapOutcomeObserved || escalated } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "Each sequence is emitted exactly once",
+    { duplicatesSent > 0L && emitted.size() == emitted.unique().size() &&
+      emitted.size() == distinctSent } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "An overflow event fires at the bound and silently_dropped is zero",
+    { overflowSignalled && silentlyDropped == 0L } as java.util.function.BooleanSupplier)
+RunFragment.Entry i5 = InvariantAssertion.check(
+    "I5", "Declared scope is per_key with zero violations in that scope",
+    { declaredScope == "per_key" && emitted == sorted } as java.util.function.BooleanSupplier)
+
+RunFragment fragment = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("invariant-assertion")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+    .invariant(i2.id(), i2.description(), i2.result())
+    .invariant(i3.id(), i3.description(), i3.result())
+    .invariant(i4.id(), i4.description(), i4.result())
+    .invariant(i5.id(), i5.description(), i5.result())
+    .build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "I1 emitted-equals-sorted: ${i1.result().wire()} (emitted=${emitted})\n" +
+    "I2 gap-resolves-or-escalates: ${i2.result().wire()} (escalated=${escalated})\n" +
+    "I3 exactly-once: ${i3.result().wire()} (emitted=${emitted.size()}, distinctSent=${distinctSent}, duplicatesSent=${duplicatesSent})\n" +
+    "I4 overflow-signalled: ${i4.result().wire()} (overflow=${overflowSignalled}, dropped=${silentlyDropped})\n" +
+    "I5 per-key-scope: ${i5.result().wire()} (scope=${declaredScope})\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+- [ ] **Step 6: Build the JMeter plan**
+
+`plan.jmx`:
+
+- `SetupThreadGroup` "Reset Sequence State", 1/1, `on_sample_error=stopthread`: an
+  `HTTPSamplerProxy` `POST /messaging/sequence/reset`, then an inline `JSR223Sampler` zeroing
+  `tst027_duplicates_sent`, `tst027_distinct_sent`, `tst027_gap_outcome` in `props`.
+- `ThreadGroup` "Shuffled Publish", 4 threads / 4 loops, `on_sample_error=continue`: a
+  `SyncTimer` with `groupSize` 4 and `timeoutInMs` 10000; a `JSR223PreProcessor` computing a
+  **permuted** sequence number from `ctx.getThreadNum()` and `vars.getIteration()` — for
+  example `((threadNum * 7 + iter * 3) % 16) + 1` — so arrival order provably differs from
+  sequence order, and, inside `synchronized (props) { … }`, incrementing
+  `tst027_distinct_sent`; an `HTTPSamplerProxy`
+  `POST /messaging/sequence/publish?key=key-a&sequence=${seq}`. One iteration re-sends an
+  already-sent sequence and increments `tst027_duplicates_sent`; one skips a sequence entirely
+  to open the gap I2 needs.
+- `PostThreadGroup` "Verify Ordering", 1/1: an inline `JSR223Sampler` that polls
+  `GET /messaging/sequence/state` to a **bounded** deadline (10s) until the gap has resolved or
+  escalated, writing `props.put("tst027_gap_outcome", "true")` when it does — bounded, because
+  an indefinite wait here is exactly what I2 forbids; an `HTTPSamplerProxy`
+  `GET /messaging/sequence/state?key=key-a` whose PostProcessor writes
+  `vars.put("sequence_state", prev.getResponseDataAsString())`; then the `assert-ordering`
+  `JSR223Sampler` with `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+- [ ] **Step 7: Run the tests**
+
+```bash
+cd qe-harness && make up PROFILES="core messaging"
+cd harness && mvn -q -pl jmeter test -Dtest=Tst027ModuleTest
+```
+
+Expected: PASS, 2 tests.
+
+- [ ] **Step 8: Verify the gate**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep TST-027 || echo "no TST-027 findings"
+python3 scripts/render-harness-coverage.py
+```
+
+Expected: no findings — check 4 accepts `partial` because Step 4 supplied a `partial_reason`.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add qe-harness/harness/jmeter qe-harness/traceability
+git commit -m "feat(harness): add TST-027 ordering module, per_key scope only"
+```
+
+---
