@@ -3208,3 +3208,1026 @@ Phase 1 is complete: three archetypes land on the existing SUT, the profile syst
 first reader, and `/_capabilities` reports 10. Phase 2 begins, and with it the wave's real risk.
 
 ---
+
+## Task 14: AMQP Dependency, Lazy Connection, and Compose Wiring
+
+The `broker` service already exists in `docker-compose.yml` under the `messaging` profile, with
+a healthcheck and no `environment` block. Nothing consumes it. This task connects the SUT to it
+**without breaking the `core` profile** — the single most dangerous change in the wave.
+
+**Files:**
+- Modify: `qe-harness/reference-sut/pom.xml`
+- Modify: `qe-harness/docker-compose.yml`
+- Modify: `qe-harness/reference-sut/src/main/resources/application.properties`
+- Create: `…/sut/capability/messaging/MessagingConnectionConfig.java`
+- Test: `…/sut/capability/messaging/CoreProfileBootTest.java`
+
+**Interfaces:**
+- Consumes: `spring-boot-starter-amqp` (BOM-managed), the existing `broker` compose service
+- Produces: a lazily-connected `RabbitTemplate`/`ConnectionFactory`; `make up PROFILES=core`
+  still boots with no broker present
+
+- [ ] **Step 1: Write the failing test — the core profile must still boot**
+
+`CoreProfileBootTest.java`. This is the regression guard for the whole phase:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+/**
+ * The application context MUST start with no broker reachable.
+ *
+ * <p>This is the guard for Wave 17's most dangerous change. reference-sut is in
+ * compose profile ["core"]; broker is in ["messaging"]. Its container
+ * healthcheck hits /_capabilities, so if a missing broker failed the context at
+ * startup, `make up PROFILES=core` would report an unhealthy SUT and every one
+ * of the seven pre-existing modules would break. The AMQP connection is
+ * therefore lazy: beans exist, no socket is opened until first use.
+ *
+ * <p>No RabbitMQ container is started here, deliberately -- the absence is the
+ * test.
+ */
+@SpringBootTest
+class CoreProfileBootTest {
+
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    static {
+        POSTGRES.start();
+    }
+
+    @DynamicPropertySource
+    static void datasourceProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.flyway.connect-retries", () -> 10);
+        // Point at a port nothing is listening on: proof the context does not
+        // need the broker to exist.
+        registry.add("spring.rabbitmq.host", () -> "127.0.0.1");
+        registry.add("spring.rabbitmq.port", () -> 1);
+    }
+
+    @Autowired
+    private ConnectionFactory connectionFactory;
+
+    @Test
+    void contextStartsWithNoBrokerReachable() {
+        assertNotNull(connectionFactory, "the bean must exist without a live connection");
+    }
+}
+```
+
+- [ ] **Step 2: Run it and confirm it fails**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=CoreProfileBootTest
+```
+
+Expected: FAIL — `org.springframework.amqp` is not on the classpath.
+
+- [ ] **Step 3: Add the dependency**
+
+In `reference-sut/pom.xml`, after `spring-boot-starter-security`, following the
+`spring-boot-starter-aop` precedent — **no explicit `<version>`**, because
+`spring-boot-dependencies` 3.5.16 manages it:
+
+```xml
+    <!-- TST-026/027/028/029 messaging (Wave 17, Tasks 14-24). Version managed
+         by spring-boot-dependencies, so no explicit <version> -- same pattern
+         as spring-boot-starter-web/-jdbc/-aop above, and unlike jjwt-*/
+         springdoc/resilience4j which are not BOM-managed. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
+    </dependency>
+```
+
+And alongside the existing Testcontainers test dependencies — also BOM-managed, via
+testcontainers-bom 1.21.4:
+
+```xml
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>rabbitmq</artifactId>
+      <scope>test</scope>
+    </dependency>
+```
+
+- [ ] **Step 4: Make the connection lazy**
+
+`MessagingConnectionConfig.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Broker connection wiring for the messaging capability (Wave 17).
+ *
+ * <p><b>Why every bean here is lazy about its socket:</b> reference-sut is in
+ * compose profile {@code ["core"]} and broker is in {@code ["messaging"]}, so
+ * the overwhelmingly common case -- {@code make up PROFILES=core}, which every
+ * pre-Wave-17 module uses -- has no broker at all. A connection attempt at
+ * context startup would fail the container's {@code /_capabilities}
+ * healthcheck and break seven working modules. {@code CoreProfileBootTest}
+ * pins this.
+ *
+ * <p>{@code RabbitAdmin.setAutoStartup(false)} is the load-bearing line: the
+ * default {@code RabbitAdmin} declares every {@code Declarables} bean during
+ * context refresh, which opens a connection. With auto-startup off, the
+ * topology is declared on first use instead -- see
+ * {@link MessagingTopology#declareTopology()}.
+ *
+ * <p>Connection retry is capped rather than infinite so a module run against a
+ * genuinely absent broker fails fast with a legible error instead of hanging:
+ * Spring AMQP's default is to retry indefinitely.
+ */
+@Configuration
+public class MessagingConnectionConfig {
+
+    @Bean
+    public ConnectionFactory rabbitConnectionFactory(
+            @Value("${spring.rabbitmq.host:localhost}") String host,
+            @Value("${spring.rabbitmq.port:5672}") int port,
+            @Value("${spring.rabbitmq.username:guest}") String username,
+            @Value("${spring.rabbitmq.password:guest}") String password,
+            @Value("${app.messaging.connection-timeout-ms}") int connectionTimeoutMs) {
+        CachingConnectionFactory factory = new CachingConnectionFactory(host, port);
+        factory.setUsername(username);
+        factory.setPassword(password);
+        factory.setConnectionTimeout(connectionTimeoutMs);
+        return factory;
+    }
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+        admin.setAutoStartup(false);
+        return admin;
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMandatory(true);
+        return template;
+    }
+}
+```
+
+`setMandatory(true)` matters for TST-026's I2: an unroutable message must be returned rather
+than silently dropped, or the alternate-exchange quarantine cannot be observed.
+
+- [ ] **Step 5: Declare the messaging properties**
+
+Append to `application.properties`:
+
+```properties
+# TST-026/027/028/029 messaging (Wave 17). Connection timeout is capped so a run
+# against an absent broker fails fast and legibly instead of hanging on Spring
+# AMQP's default indefinite retry -- see MessagingConnectionConfig.
+app.messaging.connection-timeout-ms=3000
+
+# TST-029 I5: the DLQ depth past which an alert must fire. Deliberately NOT
+# projected into profiles/_nfr-thresholds.yml and carrying no NFR-* citation:
+# the entire NFR corpus contains exactly one DLQ mention (NFR-004's operational
+# runbook prose) and it states no threshold, so a citation would be fabricated.
+# Same convention as app.recon.freshness-window-seconds and
+# app.readmodel.convergence-bound-ms: one declared value, read by both the
+# service and its tests, never duplicated as a literal.
+app.messaging.dlq-alert-depth=5
+
+# TST-029 I4: retry backoff ladder, in milliseconds. Three DISTINCT intervals --
+# I4 asserts distinct_intervals > 1, so a flat ladder fails the invariant
+# against its own declared backoff.
+app.messaging.retry-intervals-ms=1000,3000,9000
+
+# TST-029 I3/I6: attempts before a poison message is dead-lettered.
+app.messaging.max-delivery-attempts=3
+
+# TST-027 I2: how long a sequence gap may persist before escalation is emitted.
+app.messaging.gap-timeout-ms=4000
+
+# TST-028 I1: how long fan-in waits for all branches before emitting a partial
+# marker instead of an aggregate.
+app.messaging.aggregate-timeout-ms=4000
+```
+
+- [ ] **Step 6: Wire the broker in compose — and add no `depends_on`**
+
+In `docker-compose.yml`, give `broker` an explicit `environment` block (it currently has none,
+so it runs on default guest/guest and vhost `/` — make that a declared choice rather than an
+accident):
+
+```yaml
+  broker:
+    image: rabbitmq:3.13-management-alpine
+    profiles: ["messaging"]
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: sut
+      RABBITMQ_DEFAULT_PASS: sut
+      RABBITMQ_DEFAULT_VHOST: /
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+```
+
+Add the matching env to `reference-sut`'s existing `environment` block — **but do not touch its
+`profiles` or `depends_on`**:
+
+```yaml
+      # Broker coordinates for the messaging capability (Wave 17). Deliberately
+      # NO depends_on for broker: reference-sut is in the `core` profile and
+      # broker is in `messaging`, so a depends_on would make
+      # `docker compose --profile core up` fail outright. The AMQP connection is
+      # lazy (see MessagingConnectionConfig), so `core` alone boots unchanged and
+      # only the messaging modules require PROFILES="core messaging".
+      SPRING_RABBITMQ_HOST: broker
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: sut
+      SPRING_RABBITMQ_PASSWORD: sut
+```
+
+Finally, update the file's header comment, which still says the messaging profile is "declared
+for a later wave's archetype; not started by default":
+
+```yaml
+#   messaging     a broker (RabbitMQ) serving TST-026/027/028/029's topology.
+#                 Not started by default -- the SUT's AMQP connection is lazy,
+#                 so `core` alone boots without it. Messaging modules need
+#                 `make up PROFILES="core messaging"`.
+```
+
+- [ ] **Step 7: Run the guard test**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=CoreProfileBootTest
+```
+
+Expected: PASS — the context starts pointing at a dead port.
+
+- [ ] **Step 8: Prove the `core` profile still boots end to end**
+
+This is the step that matters. A regression here breaks seven working modules:
+
+```bash
+cd qe-harness && make down
+make up PROFILES=core
+docker compose ps
+curl -s -o /dev/null -w 'capabilities=%{http_code}\n' http://localhost:8080/_capabilities
+./bin/run-module.sh TST-021
+```
+
+Expected: `reference-sut` reports **healthy** (not `starting` indefinitely, not `unhealthy`),
+`capabilities=200`, and TST-021 still passes with no broker running anywhere. If the SUT is
+unhealthy, the connection is not lazy — revisit Step 4 before going further.
+
+- [ ] **Step 9: Prove the messaging profile brings the broker up healthy**
+
+```bash
+cd qe-harness && make up PROFILES="core messaging"
+docker compose ps broker
+```
+
+Expected: `broker` reports healthy within its 20s `start_period` plus retries.
+
+- [ ] **Step 10: Run the whole SUT suite**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS. No archetype is registered by this task — it is pure infrastructure, so
+`/_capabilities` still reports 10.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add qe-harness/reference-sut qe-harness/docker-compose.yml
+git commit -m "feat(sut): connect lazily to RabbitMQ without breaking the core profile"
+```
+
+---
+
+## Task 15: SUT — The Messaging Topology
+
+Nine objects, declared as Spring `@Bean Declarables` rather than a mounted `definitions.json`:
+less compose surface, and it lands in code where it is unit-testable.
+
+**Files:**
+- Create: `…/sut/capability/messaging/MessagingTopology.java`
+- Test: `…/sut/capability/messaging/AbstractMessagingIntegrationTest.java`, `MessagingTopologyTest.java`
+
+**Interfaces:**
+- Consumes: `RabbitAdmin` (Task 14, `autoStartup=false`)
+- Produces: `qe.in`, `qe.route`, `qe.fanout`, `qe.dlx`, the queues and the retry ladder;
+  `declareTopology()` as the first-use hook
+
+- [ ] **Step 1: Write the failing test**
+
+`MessagingTopologyTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * The topology's shape is itself load-bearing for two invariants, so it is
+ * asserted directly rather than only implied by the modules.
+ */
+class MessagingTopologyTest extends AbstractMessagingIntegrationTest {
+
+    @Test
+    void declaresEveryObjectTheFourArchetypesNeed() {
+        topology.declareTopology();
+        for (String queue : new String[] {
+                "qe.q.route.domestic", "qe.q.route.intl", "qe.q.unroutable",
+                "qe.q.sequence", "qe.q.branch.a", "qe.q.branch.b", "qe.q.branch.c",
+                "qe.q.aggregate", "qe.q.work", "qe.q.dlq" }) {
+            assertNotNull(admin.getQueueProperties(queue), "missing queue: " + queue);
+        }
+    }
+
+    @Test
+    void theRouteExchangeHasNoCatchAllBinding() {
+        topology.declareTopology();
+        // TST-026 I2 asserts zero messages reach a default route. A '#' binding
+        // would make that trivially true and the invariant worthless, so its
+        // absence is asserted here rather than left to reviewer vigilance.
+        rabbit.convertAndSend("qe.in", "pay.unknown.type", "probe");
+        assertTrue(awaitQueueDepth("qe.q.unroutable", 1),
+            "an unmatched key must divert to quarantine, not vanish and not match a catch-all");
+        assertEquals(0L, queueDepth("qe.q.route.domestic"));
+        assertEquals(0L, queueDepth("qe.q.route.intl"));
+    }
+
+    @Test
+    void theRetryLadderHasDistinctIntervals() {
+        // TST-029 I4 asserts distinct_intervals > 1. A flat ladder fails that
+        // invariant against the SUT's own declared backoff, so the declared
+        // property is checked here at the source.
+        assertTrue(retryIntervalsMs().size() > 1);
+        assertEquals(retryIntervalsMs().size(), retryIntervalsMs().stream().distinct().count(),
+            "every configured retry interval must differ");
+    }
+
+    @Test
+    void everyQueueIsDurable() {
+        topology.declareTopology();
+        // TST-029 I2: nothing acked-persisted may be lost across a broker
+        // restart, which a transient queue cannot promise.
+        assertTrue(topology.declarables().getDeclarablesByType(org.springframework.amqp.core.Queue.class)
+            .stream().allMatch(org.springframework.amqp.core.Queue::isDurable));
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=MessagingTopologyTest
+```
+
+Expected: FAIL — `MessagingTopology` does not exist.
+
+- [ ] **Step 3: Write the topology**
+
+`MessagingTopology.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Declarables;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.FanoutExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * The messaging topology for TST-026/027/028/029.
+ *
+ * <p>Declared as {@link Declarables} in code rather than a mounted
+ * {@code definitions.json}: less compose surface, and the shape becomes
+ * unit-testable -- which matters, because two of its properties ARE invariants.
+ *
+ * <p><b>No catch-all binding on {@code qe.route}.</b> Only
+ * {@code pay.domestic.*} and {@code pay.intl.*} are bound, with an
+ * alternate-exchange path sending everything else to {@code qe.q.unroutable}.
+ * A {@code #} binding would make TST-026's I2 ("zero messages on the default
+ * route") trivially true and therefore worthless. The quarantine queue is what
+ * makes an unmatched key observable rather than merely absent.
+ *
+ * <p><b>Single active consumer on {@code qe.q.sequence}.</b> TST-027's ordering
+ * scope is declared {@code per_key}: RabbitMQ has no partitions, so the
+ * archetype's per-partition scope is out of scope here and the module reports
+ * {@code coverage: partial} for that reason.
+ *
+ * <p><b>Every queue is durable</b> so TST-029's I2 (nothing acked-persisted is
+ * lost across a broker restart) is possible at all.
+ *
+ * <p>Declaration happens on first use, not at context refresh: the
+ * {@link RabbitAdmin} is {@code autoStartup=false} precisely so an absent
+ * broker cannot fail the {@code core} profile's startup (Task 14).
+ */
+@Component
+public class MessagingTopology {
+
+    static final String IN_EXCHANGE = "qe.in";
+    static final String ROUTE_EXCHANGE = "qe.route";
+    static final String FANOUT_EXCHANGE = "qe.fanout";
+    static final String DLX = "qe.dlx";
+    static final String UNROUTABLE_EXCHANGE = "qe.unroutable";
+
+    static final String Q_DOMESTIC = "qe.q.route.domestic";
+    static final String Q_INTL = "qe.q.route.intl";
+    static final String Q_UNROUTABLE = "qe.q.unroutable";
+    static final String Q_SEQUENCE = "qe.q.sequence";
+    static final String Q_BRANCH_A = "qe.q.branch.a";
+    static final String Q_BRANCH_B = "qe.q.branch.b";
+    static final String Q_BRANCH_C = "qe.q.branch.c";
+    static final String Q_AGGREGATE = "qe.q.aggregate";
+    static final String Q_WORK = "qe.q.work";
+    static final String Q_DLQ = "qe.q.dlq";
+
+    private final RabbitAdmin admin;
+    private final int maxDeliveryAttempts;
+    private final List<Long> retryIntervalsMs;
+    private volatile boolean declared;
+
+    public MessagingTopology(RabbitAdmin admin,
+                             @Value("${app.messaging.max-delivery-attempts}") int maxDeliveryAttempts,
+                             @Value("${app.messaging.retry-intervals-ms}") List<Long> retryIntervalsMs) {
+        this.admin = admin;
+        this.maxDeliveryAttempts = maxDeliveryAttempts;
+        this.retryIntervalsMs = List.copyOf(retryIntervalsMs);
+    }
+
+    public List<Long> retryIntervalsMs() {
+        return retryIntervalsMs;
+    }
+
+    public Declarables declarables() {
+        List<org.springframework.amqp.core.Declarable> objects = new ArrayList<>();
+
+        DirectExchange in = ExchangeBuilderCompat.directWithAlternate(IN_EXCHANGE, UNROUTABLE_EXCHANGE);
+        TopicExchange route = new TopicExchange(ROUTE_EXCHANGE, true, false);
+        FanoutExchange fanout = new FanoutExchange(FANOUT_EXCHANGE, true, false);
+        DirectExchange dlx = new DirectExchange(DLX, true, false);
+        FanoutExchange unroutable = new FanoutExchange(UNROUTABLE_EXCHANGE, true, false);
+        objects.add(in);
+        objects.add(route);
+        objects.add(fanout);
+        objects.add(dlx);
+        objects.add(unroutable);
+
+        Queue domestic = QueueBuilder.durable(Q_DOMESTIC).build();
+        Queue intl = QueueBuilder.durable(Q_INTL).build();
+        Queue quarantine = QueueBuilder.durable(Q_UNROUTABLE).build();
+        Queue sequence = QueueBuilder.durable(Q_SEQUENCE)
+            .withArgument("x-single-active-consumer", true)
+            .build();
+        Queue branchA = QueueBuilder.durable(Q_BRANCH_A).build();
+        Queue branchB = QueueBuilder.durable(Q_BRANCH_B).build();
+        Queue branchC = QueueBuilder.durable(Q_BRANCH_C).build();
+        Queue aggregate = QueueBuilder.durable(Q_AGGREGATE).build();
+        Queue work = QueueBuilder.durable(Q_WORK)
+            .withArgument("x-dead-letter-exchange", DLX)
+            .withArgument("x-delivery-limit", maxDeliveryAttempts)
+            .build();
+        Queue dlq = QueueBuilder.durable(Q_DLQ).build();
+        objects.addAll(List.of(domestic, intl, quarantine, sequence,
+            branchA, branchB, branchC, aggregate, work, dlq));
+
+        // Only real conditions are bound. No '#' -- see the class javadoc.
+        objects.add(BindingBuilder.bind(domestic).to(route).with("pay.domestic.*"));
+        objects.add(BindingBuilder.bind(intl).to(route).with("pay.intl.*"));
+        objects.add(BindingBuilder.bind(quarantine).to(unroutable));
+        objects.add(BindingBuilder.bind(sequence).to(in).with("sequence"));
+        objects.add(BindingBuilder.bind(work).to(in).with("work"));
+        objects.add(BindingBuilder.bind(dlq).to(dlx).with(Q_WORK));
+        objects.add(BindingBuilder.bind(branchA).to(fanout));
+        objects.add(BindingBuilder.bind(branchB).to(fanout));
+        objects.add(BindingBuilder.bind(branchC).to(fanout));
+
+        // Retry ladder: one queue per interval, each dead-lettering back to
+        // qe.in's work binding once its TTL expires. Distinct TTLs are what
+        // make TST-029 I4's distinct_intervals > 1 satisfiable.
+        for (int i = 0; i < retryIntervalsMs.size(); i++) {
+            String name = "qe.q.retry." + (i + 1);
+            Queue retry = QueueBuilder.durable(name)
+                .withArgument("x-message-ttl", retryIntervalsMs.get(i))
+                .withArgument("x-dead-letter-exchange", IN_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", "work")
+                .build();
+            objects.add(retry);
+            objects.add(BindingBuilder.bind(retry).to(dlx).with(name));
+        }
+
+        return new Declarables(objects);
+    }
+
+    /** Declares the topology on first use. Idempotent: RabbitMQ's declare
+     *  operations are themselves idempotent, and the flag keeps repeat calls
+     *  from re-walking the object list on every publish. */
+    public void declareTopology() {
+        if (declared) {
+            return;
+        }
+        synchronized (this) {
+            if (declared) {
+                return;
+            }
+            declarables().getDeclarables().forEach(admin::declareDeclarable);
+            declared = true;
+        }
+    }
+}
+```
+
+Add the small helper the alternate-exchange argument needs —
+`ExchangeBuilderCompat.directWithAlternate` — in the same package:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.amqp.core.DirectExchange;
+
+import java.util.Map;
+
+/**
+ * The alternate-exchange argument has no first-class setter on
+ * {@link DirectExchange}'s constructors, so it is applied here rather than
+ * inline, keeping {@link MessagingTopology#declarables()} readable.
+ *
+ * <p>The alternate exchange is what turns an unroutable message into an
+ * observable one -- TST-026's I2 reads the quarantine queue's depth as its
+ * verdict, which is only possible because the broker parks it instead of
+ * discarding it.
+ */
+final class ExchangeBuilderCompat {
+
+    private ExchangeBuilderCompat() {
+    }
+
+    static DirectExchange directWithAlternate(String name, String alternateExchange) {
+        DirectExchange exchange = new DirectExchange(name, true, false,
+            Map.of("alternate-exchange", alternateExchange));
+        return exchange;
+    }
+}
+```
+
+- [ ] **Step 4: Write the test base class**
+
+`AbstractMessagingIntegrationTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.RabbitMQContainer;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * Postgres + RabbitMQ via Testcontainers for the messaging capability.
+ *
+ * <p>Both containers are singletons in a static initialiser, deliberately not
+ * {@code @Testcontainers}/{@code @Container} -- see
+ * {@code AbstractLedgerIntegrationTest}'s javadoc for the stale-DataSource
+ * failure that pattern causes under Spring's context caching. The same hazard
+ * applies to the broker: a per-class container lifecycle would tear the broker
+ * down while a second cached context still pointed at its port.
+ */
+@SpringBootTest
+abstract class AbstractMessagingIntegrationTest {
+
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final RabbitMQContainer BROKER = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+
+    static {
+        POSTGRES.start();
+        BROKER.start();
+    }
+
+    @DynamicPropertySource
+    static void containerProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.flyway.connect-retries", () -> 10);
+        registry.add("spring.rabbitmq.host", BROKER::getHost);
+        registry.add("spring.rabbitmq.port", BROKER::getAmqpPort);
+        registry.add("spring.rabbitmq.username", BROKER::getAdminUsername);
+        registry.add("spring.rabbitmq.password", BROKER::getAdminPassword);
+    }
+
+    @Autowired
+    protected RabbitTemplate rabbit;
+
+    @Autowired
+    protected RabbitAdmin admin;
+
+    @Autowired
+    protected MessagingTopology topology;
+
+    @Value("${app.messaging.retry-intervals-ms}")
+    private List<Long> retryIntervalsMs;
+
+    protected List<Long> retryIntervalsMs() {
+        return retryIntervalsMs;
+    }
+
+    @BeforeEach
+    void resetMessagingFixture() {
+        DefectFlags.clear();
+        topology.declareTopology();
+        for (String q : new String[] {
+                MessagingTopology.Q_DOMESTIC, MessagingTopology.Q_INTL,
+                MessagingTopology.Q_UNROUTABLE, MessagingTopology.Q_SEQUENCE,
+                MessagingTopology.Q_BRANCH_A, MessagingTopology.Q_BRANCH_B,
+                MessagingTopology.Q_BRANCH_C, MessagingTopology.Q_AGGREGATE,
+                MessagingTopology.Q_WORK, MessagingTopology.Q_DLQ }) {
+            admin.purgeQueue(q, true);
+        }
+    }
+
+    protected long queueDepth(String queue) {
+        java.util.Properties props = admin.getQueueProperties(queue);
+        return props == null ? 0L : ((Number) props.get(RabbitAdmin.QUEUE_MESSAGE_COUNT)).longValue();
+    }
+
+    /** Polls to a bounded deadline, then gives up. Every wait in this suite is
+     *  bounded and declared -- an unbounded wait on a broker is how a hung test
+     *  becomes a green one. */
+    protected boolean awaitQueueDepth(String queue, long expected) {
+        Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
+        while (Instant.now().isBefore(deadline)) {
+            if (queueDepth(queue) >= expected) {
+                return true;
+            }
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    protected void withDefect(String flag, Runnable action) {
+        DefectFlags.activate(flag);
+        try {
+            action.run();
+        } finally {
+            DefectFlags.clear();
+        }
+    }
+}
+```
+
+- [ ] **Step 5: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=MessagingTopologyTest
+```
+
+Expected: PASS, 4 tests. `theRouteExchangeHasNoCatchAllBinding` is the important one — it fails
+loudly if anyone later adds a `#` binding for convenience.
+
+- [ ] **Step 6: Confirm the core profile is still unaffected**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=CoreProfileBootTest
+cd .. && make down && make up PROFILES=core && ./bin/run-module.sh TST-021
+```
+
+Expected: both PASS. The topology beans exist but nothing declared them, so no connection was
+attempted.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): declare the messaging topology with no catch-all binding"
+```
+
+---
+
+## Task 16: SUT — Messaging Observability Endpoints
+
+The harness must not trust the broker's own accounting. These three endpoints are the
+harness-side ground truth for TST-027's I1/I3 and TST-029's I1/I5.
+
+**Files:**
+- Create: `…/sut/capability/messaging/MessagingObservabilityController.java`, `MessageLog.java`
+- Test: `…/sut/capability/messaging/MessageLogTest.java`
+
+**Interfaces:**
+- Consumes: `RabbitAdmin`, `MessagingTopology`, `app.messaging.dlq-alert-depth`
+- Produces: `GET /messaging/published-log`, `GET /messaging/emissions`,
+  `GET /messaging/dlq/depth`
+
+- [ ] **Step 1: Write the failing test**
+
+`MessageLogTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** Harness-side ground truth for the messaging invariants. */
+class MessageLogTest extends AbstractMessagingIntegrationTest {
+
+    @Test
+    void recordsEveryPublicationWithAShortCorrelationId() {
+        log.clear();
+        String id = log.recordPublished("pay.domestic.credit", "corr-a1b2-c3d4");
+        assertEquals(1, log.published().size());
+        // Gate check 5 rejects any run of 13-19 digits anywhere under
+        // qe-harness/, and epoch-millis is exactly 13. Correlation ids are
+        // therefore hyphenated short forms, and this test pins that shape.
+        assertFalse(id.matches(".*(?<!\\d)\\d{13,19}(?!\\d).*"),
+            "a correlation id must not contain a 13-19 digit run: " + id);
+    }
+
+    @Test
+    void emissionOrderIsRecordedSeparatelyFromPublishOrder() {
+        log.clear();
+        log.recordPublished("sequence", "corr-0003");
+        log.recordPublished("sequence", "corr-0001");
+        log.recordEmitted("corr-0001", 1L);
+        log.recordEmitted("corr-0003", 3L);
+        assertEquals(2, log.emissions().size());
+        assertTrue(log.emissions().get(0).sequence() < log.emissions().get(1).sequence(),
+            "TST-027 I1 compares emission order against sorted order, so both must be kept");
+    }
+
+    @Test
+    void dlqAlertFiresOnlyPastTheDeclaredDepth() {
+        assertFalse(observability.dlqAlertFiring(dlqAlertDepth() - 1));
+        assertTrue(observability.dlqAlertFiring(dlqAlertDepth() + 1));
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=MessageLogTest
+```
+
+Expected: FAIL — `MessageLog` does not exist.
+
+- [ ] **Step 3: Write the log**
+
+`MessageLog.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * In-memory record of what this SUT published and emitted.
+ *
+ * <p><b>Why not read the broker's counters:</b> TST-029's I1 is "every
+ * published message either produced one state change or is in the DLQ". Scoring
+ * that against the broker's own accounting would be asking the component under
+ * test to grade itself. This log is written by the publish path, so the harness
+ * compares two independent records.
+ *
+ * <p><b>Identifier shape is load-bearing.</b> Gate check 5 fails the build on
+ * any run of 13-19 consecutive digits anywhere under {@code qe-harness/}, and an
+ * epoch-millis timestamp is exactly 13. Correlation ids are therefore
+ * hyphenated short forms and timestamps are ISO-8601, truncated to
+ * milliseconds. {@code MessageLogTest} pins this.
+ */
+@Component
+public class MessageLog {
+
+    public record Published(String routingKey, String correlationId, String publishedAt) {}
+
+    public record Emitted(String correlationId, long sequence, String emittedAt) {}
+
+    private final List<Published> published = new CopyOnWriteArrayList<>();
+    private final List<Emitted> emissions = new CopyOnWriteArrayList<>();
+    private final AtomicLong counter = new AtomicLong();
+
+    /** Records a publication and returns the correlation id actually used. */
+    public String recordPublished(String routingKey, String correlationId) {
+        String id = correlationId != null ? correlationId : nextCorrelationId();
+        published.add(new Published(routingKey, id, now()));
+        return id;
+    }
+
+    public void recordEmitted(String correlationId, long sequence) {
+        emissions.add(new Emitted(correlationId, sequence, now()));
+    }
+
+    public List<Published> published() {
+        return List.copyOf(published);
+    }
+
+    public List<Emitted> emissions() {
+        return List.copyOf(emissions);
+    }
+
+    public void clear() {
+        published.clear();
+        emissions.clear();
+        counter.set(0);
+    }
+
+    /** Hyphenated short form -- never a bare counter wide enough to look like a
+     *  PAN to gate check 5. */
+    private String nextCorrelationId() {
+        long n = counter.incrementAndGet();
+        return "corr-%04d-%04d".formatted(n / 10000, n % 10000);
+    }
+
+    /** ISO-8601, not epoch millis: 13 digits would fail gate check 5. */
+    private static String now() {
+        return Instant.now().truncatedTo(ChronoUnit.MILLIS).toString();
+    }
+}
+```
+
+- [ ] **Step 4: Write the controller**
+
+`MessagingObservabilityController.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Properties;
+
+/** Observability surface the four messaging modules read as ground truth. */
+@RestController
+public class MessagingObservabilityController {
+
+    private final MessageLog log;
+    private final RabbitAdmin admin;
+    private final MessagingTopology topology;
+    private final long dlqAlertDepth;
+
+    public MessagingObservabilityController(MessageLog log, RabbitAdmin admin,
+                                            MessagingTopology topology,
+                                            @Value("${app.messaging.dlq-alert-depth}") long dlqAlertDepth) {
+        this.log = log;
+        this.admin = admin;
+        this.topology = topology;
+        this.dlqAlertDepth = dlqAlertDepth;
+    }
+
+    /** GET /messaging/published-log -> every publication this SUT recorded. */
+    @GetMapping("/messaging/published-log")
+    public List<MessageLog.Published> publishedLog() {
+        return log.published();
+    }
+
+    /** GET /messaging/emissions -> emission order, for TST-027's I1/I3. */
+    @GetMapping("/messaging/emissions")
+    public List<MessageLog.Emitted> emissions() {
+        return log.emissions();
+    }
+
+    /** GET /messaging/dlq/depth -> {depth, alertDepth, alertFiring, exported}.
+     *  `exported` is literally TST-029 I5's first clause: the metric must be
+     *  observable at all, not merely correct. */
+    @GetMapping("/messaging/dlq/depth")
+    public DlqDepthResponse dlqDepth() {
+        topology.declareTopology();
+        long depth = depthOf(MessagingTopology.Q_DLQ);
+        return new DlqDepthResponse(depth, dlqAlertDepth, dlqAlertFiring(depth), true);
+    }
+
+    /** I5's alert predicate, kept public so the SUT's own test can assert the
+     *  boundary without going through HTTP. */
+    public boolean dlqAlertFiring(long depth) {
+        return depth > dlqAlertDepth;
+    }
+
+    private long depthOf(String queue) {
+        Properties props = admin.getQueueProperties(queue);
+        return props == null ? 0L : ((Number) props.get(RabbitAdmin.QUEUE_MESSAGE_COUNT)).longValue();
+    }
+
+    public record DlqDepthResponse(long depth, long alertDepth, boolean alertFiring, boolean exported) {}
+}
+```
+
+- [ ] **Step 5: Wire the test base to the new beans**
+
+Add to `AbstractMessagingIntegrationTest`:
+
+```java
+    @Autowired
+    protected MessageLog log;
+
+    @Autowired
+    protected MessagingObservabilityController observability;
+
+    @Value("${app.messaging.dlq-alert-depth}")
+    private long dlqAlertDepth;
+
+    protected long dlqAlertDepth() {
+        return dlqAlertDepth;
+    }
+```
+
+and add `log.clear();` to `resetMessagingFixture()` so no test inherits another's publications.
+
+- [ ] **Step 6: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, including the whole existing suite.
+
+- [ ] **Step 7: Verify the endpoints and check the digit rule**
+
+```bash
+cd qe-harness && make up PROFILES="core messaging"
+curl -s http://localhost:8080/messaging/dlq/depth | python3 -m json.tool
+cd "$(git rev-parse --show-toplevel)" && python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep check5 || echo "no check5 findings"
+```
+
+Expected: a body with `depth: 0`, `alertDepth: 5`, `alertFiring: false`, `exported: true`, and
+no check-5 findings.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add messaging observability endpoints as harness ground truth"
+```
+
+---
