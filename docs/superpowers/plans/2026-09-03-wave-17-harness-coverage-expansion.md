@@ -2349,3 +2349,862 @@ git commit -m "feat(harness): add TST-037 read-model convergence JMeter module"
 ```
 
 ---
+
+## Task 11: Harness Common — ProfileResolver and the Declared Blend
+
+**No code in this repository reads a profile file today.** `mixed.yml` and `soak.yml` exist and
+are parsed by nothing; only `_nfr-thresholds.yml` is machine-consumed, via `ThresholdResolver`.
+TST-034 is the first module to need a profile, so this is new plumbing, not a lookup.
+
+**Files:**
+- Create: `…/harness/common/src/main/java/com/techcombank/qe/harness/config/ProfileResolver.java`
+- Create: `…/harness/common/src/test/java/com/techcombank/qe/harness/config/ProfileResolverTest.java`
+- Modify: `qe-harness/profiles/mixed.yml` (populate `blend_ref`)
+- Modify: `qe-harness/profiles/_nfr-thresholds.yml` (per-journey p95 entries)
+
+**Interfaces:**
+- Consumes: `qe-harness/profiles/*.yml`, `snakeyaml` (already a `qe-harness-common` dependency)
+- Produces: `ProfileResolver.load(String)` → `Profile`; `Profile.blend()` → the declared
+  journey mix; per-journey threshold names for TST-034's assertion
+
+- [ ] **Step 1: Read what the profile actually contains**
+
+```bash
+cat qe-harness/profiles/mixed.yml
+/usr/bin/grep -rn "mixed.yml\|blend_ref" qe-harness/ --include=*.java --include=*.sh --include=*.groovy || echo "no code reads it"
+```
+
+Expected: `blend_ref: null` with the comment naming TST-034 as its owner, and confirmation that
+no code reads it.
+
+- [ ] **Step 2: Write the failing test**
+
+`ProfileResolverTest.java`:
+
+```java
+package com.techcombank.qe.harness.config;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * First reader of a TST-002 performance profile in this repository. Mirrors
+ * ThresholdResolver's contract deliberately: locate the real profiles
+ * directory by walking up, and throw on an unknown name rather than
+ * defaulting -- a silently-defaulted workload shape is a fabricated test.
+ */
+class ProfileResolverTest {
+
+    @Test
+    void resolvesTheDeclaredBlendFromMixedProfile() {
+        ProfileResolver.Profile mixed = new ProfileResolver().load("mixed");
+        assertEquals("open", mixed.workloadModel());
+        assertTrue(mixed.blend().size() >= 2, "a blend needs at least two journeys");
+        long total = mixed.blend().values().stream().mapToLong(Long::longValue).sum();
+        assertEquals(100L, total, "declared journey shares must sum to 100");
+    }
+
+    @Test
+    void smokeModeOverridesTheHoldDuration() {
+        ProfileResolver.Profile mixed = new ProfileResolver().load("mixed");
+        assertTrue(mixed.smokeHoldSeconds() < mixed.holdSeconds(),
+            "smoke mode must be shorter than the full hold");
+    }
+
+    @Test
+    void anUnknownProfileThrowsRatherThanDefaulting() {
+        assertThrows(IllegalArgumentException.class, () -> new ProfileResolver().load("nonesuch"));
+    }
+}
+```
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl common test -Dtest=ProfileResolverTest
+```
+
+Expected: FAIL — `ProfileResolver` does not exist.
+
+- [ ] **Step 4: Populate `blend_ref` in `mixed.yml`**
+
+Replace `blend_ref: null` and its comment with a declared blend. Shares sum to 100 so I2's
+tolerance check has a denominator, and every journey names an endpoint that already exists:
+
+```yaml
+  # Named journey blend, owned by TST-034 (blended-journey-workload.md). Shares
+  # are percentages of total arrivals and MUST sum to 100 -- ProfileResolver
+  # rejects any other total, since a blend that does not sum to a whole cannot
+  # have per-journey share tolerances checked against it (invariant I2).
+  # Each journey's tier determines which NFR-002 budget its p95 is asserted
+  # against (invariant I1): never a single blended figure.
+  blend_ref: wave17-core-mix
+  blend:
+    transfer:       { share: 40, tier: T0, endpoint: "POST /transfers" }
+    trial_balance:  { share: 25, tier: T1, endpoint: "GET /ledger/trial-balance" }
+    catalogue:      { share: 20, tier: T2, endpoint: "GET /catalogue" }
+    rate_limited:   { share: 15, tier: T1, endpoint: "GET /rate-limited/ping" }
+```
+
+- [ ] **Step 5: Add the per-journey threshold entries**
+
+Append to `_nfr-thresholds.yml`, under the existing latency banner. All four cite the **already
+resolving** `NFR-002#end-to-end-budgets-per-tier-customer-facing` anchor — the same one three
+existing entries use — with values read straight from that table's tier rows:
+
+```yaml
+  # --- Per-journey latency for TST-034's blend (NFR-002 Latency Budget Model) ---
+  # Source table: "End-to-end budgets per tier (customer-facing)". One entry per
+  # tier the wave17-core-mix blend touches, because TST-034's I1 asserts every
+  # journey against its OWN tier budget and never against a single blended
+  # figure. Same anchor as p50/p95/p99_latency_ms above -- no new NFR section is
+  # needed, and none is created.
+  - name: p95_latency_t0_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 200
+    unit: ms
+    applies_to: [mixed]
+
+  - name: p95_latency_t1_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 500
+    unit: ms
+    applies_to: [mixed]
+
+  - name: p95_latency_t2_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 2000
+    unit: ms
+    applies_to: [mixed]
+```
+
+- [ ] **Step 6: Write the resolver**
+
+`ProfileResolver.java`:
+
+```java
+package com.techcombank.qe.harness.config;
+
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * Loads a TST-002 performance profile from {@code qe-harness/profiles/}.
+ *
+ * <p>Sibling of {@link ThresholdResolver} and deliberately the same shape: a
+ * no-arg constructor that locates the real profiles directory by walking up
+ * from the working directory, an explicit-path constructor for fixtures, and a
+ * resolve method that <b>throws on an unknown name and never defaults</b>. A
+ * silently-defaulted workload shape would make a run's own parameters
+ * unfalsifiable.
+ *
+ * <p>This is the first code in the repository to read a profile file at all --
+ * before Wave 17, {@code mixed.yml} and {@code soak.yml} were parsed by
+ * nothing. Only the fields TST-034 actually asserts against are surfaced;
+ * profile shape parameters this harness does not consume stay unread rather
+ * than being exposed speculatively.
+ */
+public final class ProfileResolver {
+
+    /** One journey in a declared blend. */
+    public record Journey(String name, long share, String tier, String endpoint) {}
+
+    /** The subset of a profile this harness consumes. */
+    public record Profile(
+        String name,
+        String workloadModel,
+        String blendRef,
+        Map<String, Long> blend,
+        Map<String, Journey> journeys,
+        long holdSeconds,
+        long smokeHoldSeconds
+    ) {}
+
+    private final Path profilesDir;
+
+    public ProfileResolver() {
+        this(locateDefaultProfilesDir());
+    }
+
+    public ProfileResolver(Path profilesDir) {
+        this.profilesDir = profilesDir;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Profile load(String name) {
+        Path path = profilesDir.resolve(name + ".yml");
+        if (!Files.isRegularFile(path)) {
+            throw new IllegalArgumentException("unknown profile: " + name + " (looked in " + profilesDir + ")");
+        }
+
+        Map<String, Object> raw;
+        try {
+            raw = new Yaml().load(Files.readString(path));
+        } catch (IOException e) {
+            throw new IllegalStateException("cannot read profile " + path, e);
+        }
+        if (raw == null) {
+            throw new IllegalStateException("profile " + path + " is empty");
+        }
+
+        String blendRef = (String) raw.get("blend_ref");
+        if (blendRef == null || blendRef.isBlank()) {
+            throw new IllegalStateException(
+                "profile " + name + " declares no blend_ref; a blended run needs a declared mix");
+        }
+
+        Map<String, Object> blendRaw = (Map<String, Object>) raw.get("blend");
+        if (blendRaw == null || blendRaw.isEmpty()) {
+            throw new IllegalStateException("profile " + name + " declares blend_ref but no blend");
+        }
+
+        Map<String, Long> shares = new LinkedHashMap<>();
+        Map<String, Journey> journeys = new LinkedHashMap<>();
+        long total = 0;
+        for (Map.Entry<String, Object> entry : blendRaw.entrySet()) {
+            Map<String, Object> j = (Map<String, Object>) entry.getValue();
+            long share = ((Number) j.get("share")).longValue();
+            shares.put(entry.getKey(), share);
+            journeys.put(entry.getKey(), new Journey(
+                entry.getKey(), share, (String) j.get("tier"), (String) j.get("endpoint")));
+            total += share;
+        }
+        if (total != 100L) {
+            throw new IllegalStateException(
+                "profile " + name + " blend shares sum to " + total + ", not 100");
+        }
+
+        long holdSeconds = ((Number) raw.get("hold_seconds")).longValue();
+        long smokeHold = holdSeconds;
+        Map<String, Object> overrides = (Map<String, Object>) raw.get("smoke_mode_overrides");
+        if (overrides != null && overrides.get("hold_seconds") != null) {
+            smokeHold = ((Number) overrides.get("hold_seconds")).longValue();
+        }
+
+        return new Profile(name, (String) raw.get("workload_model"), blendRef,
+            Map.copyOf(shares), Map.copyOf(journeys), holdSeconds, smokeHold);
+    }
+
+    private static Path locateDefaultProfilesDir() {
+        Path cursor = Path.of("").toAbsolutePath();
+        while (cursor != null) {
+            Path candidate = cursor.resolve("qe-harness/profiles");
+            if (Files.isDirectory(candidate)) {
+                return candidate;
+            }
+            Path direct = cursor.resolve("profiles");
+            if (Files.isDirectory(direct) && Files.isRegularFile(direct.resolve("mixed.yml"))) {
+                return direct;
+            }
+            cursor = cursor.getParent();
+        }
+        throw new IllegalStateException("cannot locate qe-harness/profiles from " + Path.of("").toAbsolutePath());
+    }
+}
+```
+
+- [ ] **Step 7: Run the tests**
+
+```bash
+cd qe-harness/harness && mvn -q -pl common test
+```
+
+Expected: PASS, including the three new tests and every existing `qe-harness-common` test.
+
+- [ ] **Step 8: Verify the new thresholds resolve**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep check6 || echo "no check6 findings"
+```
+
+Expected: no findings. All three new entries cite an anchor that already resolves — if check 6
+complains, the anchor slug was mistyped (it is
+`end-to-end-budgets-per-tier-customer-facing`, computed by lowercasing, deleting every
+character outside `[\w\- ]`, then replacing spaces with hyphens).
+
+- [ ] **Step 9: Check for digit runs in the new YAML**
+
+```bash
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep check5 || echo "no check5 findings"
+```
+
+Expected: no findings — `2000` and `500` are far short of thirteen digits.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add qe-harness/harness/common qe-harness/profiles
+git commit -m "feat(harness): add ProfileResolver and declare the wave17-core-mix blend"
+```
+
+---
+
+## Task 12: SUT — Seed Endpoint and Blend Fixtures
+
+`SyntheticDataSeeder` has no HTTP trigger; only its own test calls it. A blended run needs more
+accounts than the ledger fixture's two, and needs to reseed without restarting the container.
+
+**Files:**
+- Create: `…/sut/TestSeedController.java`
+- Modify: `…/sut/data/SyntheticDataSeeder.java` (parameterise the account count)
+- Test: `…/sut/data/SyntheticDataSeederTest.java` (extend, do not replace)
+
+**Interfaces:**
+- Consumes: `SyntheticDataSeeder.seed(long)`, `SeedSummary`
+- Produces: `POST /_test/seed?seed=42&accounts=20` → 201 `{accounts, entries}`
+
+- [ ] **Step 1: Confirm the seeder has no HTTP trigger**
+
+```bash
+/usr/bin/grep -rn "SyntheticDataSeeder" qe-harness/reference-sut/src/main/java/
+```
+
+Expected: only its own file. `ReconController` calls the separate `recon.DefectSeeder`, not this.
+
+- [ ] **Step 2: Write the failing test**
+
+Append to `SyntheticDataSeederTest.java`:
+
+```java
+    @Test
+    void seedsTheRequestedNumberOfAccounts() {
+        SeedSummary summary = seeder.seed(42L, 12);
+        assertEquals(12, summary.accounts());
+        assertEquals(60, summary.entries(), "transfer count is fixed at 30 pairs");
+    }
+
+    @Test
+    void requestingMoreAccountsThanNamesIsRejected() {
+        assertThrows(IllegalArgumentException.class,
+            () -> seeder.seed(42L, SyntheticNames.NAMES.length + 1));
+    }
+```
+
+`SyntheticNames.NAMES.length` is 20, so a clean default seed still produces 20 accounts and 60
+ledger entries — the existing test's expectations are unchanged.
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=SyntheticDataSeederTest
+```
+
+Expected: FAIL — no two-argument `seed` overload.
+
+- [ ] **Step 4: Add the overload**
+
+In `SyntheticDataSeeder.java`, keep `seed(long)` delegating so every existing caller is
+untouched:
+
+```java
+    /** Seeds with one account per synthetic name -- the original contract. */
+    public SeedSummary seed(long seed) {
+        return seed(seed, ACCOUNT_COUNT);
+    }
+
+    /** Seeds {@code accountCount} accounts. A blended workload (TST-034) needs
+     *  more contention surface than the two-account ledger fixture provides,
+     *  but can never exceed the fixed synthetic-name pool -- requesting more
+     *  throws rather than inventing a name, since a generated party name could
+     *  not be guaranteed non-PII. */
+    public SeedSummary seed(long seed, int accountCount) {
+        if (accountCount < 1 || accountCount > SyntheticNames.NAMES.length) {
+            throw new IllegalArgumentException(
+                "accountCount must be 1.." + SyntheticNames.NAMES.length + ", got " + accountCount);
+        }
+        Random random = new Random(seed);
+
+        List<Long> accountIds = seedAccounts(random, accountCount);
+        int entries = seedLedger(random, accountIds);
+
+        return new SeedSummary(accountIds.size(), entries);
+    }
+```
+
+Change `seedAccounts(Random random)` to `seedAccounts(Random random, int accountCount)` and use
+that parameter in place of `ACCOUNT_COUNT` in its loop bound and list capacity.
+
+- [ ] **Step 5: Write the controller**
+
+`TestSeedController.java`:
+
+```java
+package com.techcombank.qe.sut;
+
+import com.techcombank.qe.sut.data.SeedSummary;
+import com.techcombank.qe.sut.data.SyntheticDataSeeder;
+import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Meta/test-control endpoint for seeding synthetic data over HTTP (Wave 17).
+ *
+ * <p>{@code _test}-prefixed, matching {@link DefectController} and
+ * {@code RateLimitResetController}. Harness modules run as separate tool
+ * processes against an already-running container, so they can only reach
+ * {@link SyntheticDataSeeder} -- which had no HTTP trigger at all before this
+ * -- over HTTP. TST-034's blended run needs a wider account set than the
+ * two-account ledger fixture, and needs to reseed between runs without a
+ * container restart, exactly as TST-031 needed
+ * {@code POST /_test/reset/ratelimit}.
+ *
+ * <p>{@code @Profile("!prod")} -- see {@link DefectController}'s javadoc.
+ */
+@RestController
+@Profile("!prod")
+public class TestSeedController {
+
+    private final SyntheticDataSeeder seeder;
+
+    public TestSeedController(SyntheticDataSeeder seeder) {
+        this.seeder = seeder;
+    }
+
+    /** POST /_test/seed?seed=42&accounts=20 -> 201 {accounts, entries}.
+     *  Both parameters are explicit so a run's fixture is reproducible from its
+     *  own request line; the seed defaults to the same fixed 42 ReconController
+     *  uses, for the same reason -- a known set, not a fresh random one. */
+    @PostMapping("/_test/seed")
+    public ResponseEntity<?> seed(@RequestParam(defaultValue = "42") long seed,
+                                  @RequestParam(defaultValue = "20") int accounts) {
+        try {
+            SeedSummary summary = seeder.seed(seed, accounts);
+            return ResponseEntity.status(HttpStatus.CREATED).body(summary);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}
+```
+
+- [ ] **Step 6: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, including the pre-existing `seed(long)` tests unchanged.
+
+- [ ] **Step 7: Verify the endpoint**
+
+```bash
+cd qe-harness && make down && make up PROFILES=core
+curl -s -X POST 'http://localhost:8080/_test/seed?seed=42&accounts=12' | python3 -m json.tool
+curl -s -o /dev/null -w '%{http_code}\n' -X POST 'http://localhost:8080/_test/seed?accounts=99'
+```
+
+Expected: `{"accounts": 12, "entries": 60}`, then `400` for the over-large request.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add POST /_test/seed and a parameterised account count"
+```
+
+---
+
+## Task 13: Module — TST-034 Blended Journey Workload (JMeter)
+
+The first module to consume a profile file. It needs no new SUT endpoints — it blends journeys
+that already exist — but it does need per-journey tagged metrics, which no existing module
+produces.
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-034-blend/{plan.jmx,assert-blend.groovy,README.md}`
+- Modify: `qe-harness/traceability/modules.yml`
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Modify: `…/sut/capability/ledger/TransferService.java` (the `journey-starved` branch)
+- Test: `…/jmeter/Tst034ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `ProfileResolver` (Task 11), `POST /_test/seed` (Task 12), `ThresholdResolver`,
+  `HarnessConfig.smokeMode()`, and the four blended endpoints
+- Produces: `run-module.sh TST-034`; defect flag `journey-starved`
+
+- [ ] **Step 1: Add the defect flag and its branch**
+
+Add `"journey-starved"` to `DefectFlags.KNOWN_FLAGS`. In `TransferService.transfer`, add a
+branch that starves the lowest-volume journey without breaking the ledger:
+
+```java
+    @Transactional
+    public UUID transfer(String from, String to, long amountMinor) {
+        // TST-034 I3: with journey-starved active, the transfer journey is
+        // deliberately delayed so its observed share collapses below its
+        // declared tolerance. The ledger stays balanced throughout -- this
+        // starves a journey, it does not corrupt state, so I1/I2 hold and I3
+        // alone fails.
+        if (DefectFlags.isActive("journey-starved")) {
+            try {
+                Thread.sleep(250L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        AccountPair pair = lockPair(from, to);
+        ...
+```
+
+Add `"TST-034"` to `CapabilityRegistry.IMPLEMENTED` and to `IMPLEMENTED_AT_WAVE_17`.
+
+- [ ] **Step 2: Write the module README**
+
+`tst-034-blend/README.md`:
+
+```markdown
+# TST-034 -- Blended Journey Workload (JMeter)
+
+Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
+
+| ID | Invariant |
+|---|---|
+| I1 | Every constituent journey meets its **own** tier budget, never a blended figure |
+| I2 | Each journey's actual share is within tolerance of its declared share |
+| I3 | No journey is starved -- every journey keeps a non-zero count in every sub-window |
+| I4 | Errors are attributed per journey, not pooled |
+| I5 | Steady state is reached before measurement begins |
+
+Defect proof: with `journey-starved` active this module MUST report I3 failed and I1 passed.
+
+This is the **first module in the repository to read a profile file**. The blend comes from
+`profiles/mixed.yml`'s `blend_ref: wave17-core-mix` via `ProfileResolver` (Wave 17), not from
+literals in `plan.jmx` -- so the declared mix and the asserted mix cannot drift apart. Per
+invariant I1, each journey's p95 is asserted against **its own tier's** NFR-002 budget
+(`p95_latency_t0_ms`, `p95_latency_t1_ms`, `p95_latency_t2_ms`), resolved through
+`ThresholdResolver`, never against a single blended number.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Seed Blend Fixture`, 1 thread, 1 loop) calls
+   `POST /_test/seed?seed=42&accounts=20` (Wave 17) so the blend has real contention surface
+   rather than the two-account ledger fixture, and zeroes the per-journey tallies in `props`.
+2. **Main Thread Group** (`Blended Load`, 20 threads, duration-scheduled) drives all four
+   journeys through a **Throughput Controller** per journey, its percentage taken from the
+   declared blend. A `JSR223 PreProcessor` selects the journey for each iteration; each
+   sampler's `JSR223 PostProcessor` records latency and outcome **tagged by journey name** into
+   `props` -- the cross-thread aggregation pattern `tst-031-ratelimit` established. I5's
+   steady-state window is skipped by discarding samples from the first sub-window.
+   `HARNESS_SMOKE_MODE=true` selects `smoke_mode_overrides.hold_seconds` (20s) instead of
+   `hold_seconds` (14,400s): a four-hour blend can never run in an MR pipeline.
+3. **TearDown Thread Group** (`Verify Blend`, 1 thread, 1 loop) runs `assert-blend.groovy`,
+   which resolves the declared blend and the three tier thresholds, then evaluates I1-I5.
+
+## Running it
+
+```
+make up PROFILES=core
+HARNESS_SMOKE_MODE=true ./bin/run-module.sh TST-034   # 20s hold, thresholds not-evaluated
+./bin/run-module.sh TST-034                           # full 4h hold -- never in CI
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/journey-starved   # 204
+HARNESS_SMOKE_MODE=true ./bin/run-module.sh TST-034               # must report I3 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                 # 204
+```
+
+With `journey-starved` active, `TransferService.transfer` sleeps before taking its locks, so the
+transfer journey's throughput collapses and its observed share falls below tolerance. The ledger
+stays balanced and per-journey latency attribution keeps working, so I1 and I4 still pass --
+which is what makes the proof specific.
+```
+
+- [ ] **Step 3: Write the failing test**
+
+`Tst034ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * TST-034 blended journey module. Always driven in smoke mode from the test
+ * suite -- the full profile holds for 14,400 seconds, which no test may wait on.
+ */
+class Tst034ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-034", Map.of("HARNESS_SMOKE_MODE", "true"));
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void smokeModeReportsTierThresholdsNotEvaluatedWithAReason() throws Exception {
+        ModuleResult r = runner.run("TST-034", Map.of("HARNESS_SMOKE_MODE", "true"));
+        assertTrue(r.fragment().thresholds().stream()
+            .allMatch(t -> t.result() == RunFragment.Result.NOT_EVALUATED
+                && t.reason() != null && !t.reason().isBlank()),
+            "a not-evaluated threshold without a reason is rejected by RunFragment itself");
+        assertTrue(r.fragment().thresholds().stream()
+            .anyMatch(t -> t.thresholdRef().equals(
+                "NFR-002#end-to-end-budgets-per-tier-customer-facing")));
+    }
+
+    @Test
+    void reportsStarvationAgainstTheStarvedJourneyDefect() throws Exception {
+        ModuleResult r = runner.run("TST-034",
+            Map.of("HARNESS_SMOKE_MODE", "true", "SUT_DEFECT", "journey-starved"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I3") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I4") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: per-journey error attribution still works");
+    }
+}
+```
+
+`HARNESS_SMOKE_MODE` is passed through to the subprocess as a literal environment variable —
+`ModuleRunner` strips only `SUT_DEFECT`.
+
+- [ ] **Step 4: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst034ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 5: Add the binding row**
+
+Insert into `modules.yml` after `TST-031` and before `TST-035`:
+
+```yaml
+  - archetype: TST-034
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-034-blend
+    coverage: full
+    defect_flag: journey-starved
+```
+
+- [ ] **Step 6: Write the assertion script**
+
+`assert-blend.groovy`:
+
+```groovy
+// TST-034 blended journey workload assertion (Wave 17).
+//
+// The first assertion script to read a TST-002 performance profile. The blend
+// comes from profiles/mixed.yml via ProfileResolver, so the declared mix and
+// the asserted mix cannot drift; per-journey tallies arrive through JMeter's
+// cross-thread props map, the same mechanism assert-ratelimit.groovy uses.
+//
+// I1 resolves ONE THRESHOLD PER TIER and asserts each journey against its own,
+// never against a single blended figure -- that distinction is the invariant.
+
+import com.techcombank.qe.harness.config.HarnessConfig
+import com.techcombank.qe.harness.config.ProfileResolver
+import com.techcombank.qe.harness.config.ThresholdResolver
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import java.nio.file.Path
+
+boolean smoke = HarnessConfig.smokeMode()
+ProfileResolver.Profile profile = new ProfileResolver().load("mixed")
+ThresholdResolver thresholds = new ThresholdResolver()
+
+// Share tolerance is a profile shape parameter, owned by TST-002, so it stays
+// a literal here rather than being projected into _nfr-thresholds.yml -- see
+// that file's own header comment.
+final double SHARE_TOLERANCE = 0.20
+
+long totalSamples = Long.parseLong(props.getProperty("tst034_total_samples"))
+int subWindows = Integer.parseInt(props.getProperty("tst034_sub_windows"))
+
+boolean everyJourneyWithinBudget = true
+boolean everyShareWithinTolerance = true
+boolean noJourneyStarved = true
+boolean errorsAttributed = true
+StringBuilder detail = new StringBuilder()
+
+profile.journeys().each { name, journey ->
+    long count = Long.parseLong(props.getProperty("tst034_${name}_count", "0"))
+    long p95 = Long.parseLong(props.getProperty("tst034_${name}_p95", "0"))
+    long errors = Long.parseLong(props.getProperty("tst034_${name}_errors", "-1"))
+    long minPerWindow = Long.parseLong(props.getProperty("tst034_${name}_min_window_count", "0"))
+
+    ThresholdResolver.Threshold tierBudget =
+        thresholds.resolve("p95_latency_" + journey.tier().toLowerCase() + "_ms")
+
+    double actualShare = totalSamples == 0 ? 0d : (double) count / totalSamples
+    double declaredShare = journey.share() / 100.0d
+    boolean shareOk = Math.abs(actualShare - declaredShare) <= declaredShare * SHARE_TOLERANCE
+    boolean budgetOk = smoke ? true : p95 <= tierBudget.value()
+
+    if (!budgetOk) everyJourneyWithinBudget = false
+    if (!shareOk) everyShareWithinTolerance = false
+    if (count == 0 || minPerWindow == 0) noJourneyStarved = false
+    if (errors < 0) errorsAttributed = false
+
+    detail.append("  ${name} (${journey.tier()}): count=${count} share=${String.format('%.3f', actualShare)} " +
+                  "declared=${String.format('%.3f', declaredShare)} p95=${p95}ms " +
+                  "budget=${(long) tierBudget.value()}ms errors=${errors} minWindow=${minPerWindow}\n")
+}
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+RunFragment.Entry i1 = InvariantAssertion.check(
+    "I1", "Every journey meets its own tier budget, never a blended figure",
+    { everyJourneyWithinBudget } as java.util.function.BooleanSupplier)
+RunFragment.Entry i2 = InvariantAssertion.check(
+    "I2", "Each journey's actual share is within tolerance of its declared share",
+    { everyShareWithinTolerance } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "No journey is starved in any sub-window",
+    { noJourneyStarved } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "Errors are attributed per journey, not pooled",
+    { errorsAttributed } as java.util.function.BooleanSupplier)
+RunFragment.Entry i5 = InvariantAssertion.check(
+    "I5", "Steady state is reached before measurement begins",
+    { subWindows >= 2 } as java.util.function.BooleanSupplier)
+
+RunFragment.Builder builder = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("invariant-assertion")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+    .invariant(i2.id(), i2.description(), i2.result())
+    .invariant(i3.id(), i3.description(), i3.result())
+    .invariant(i4.id(), i4.description(), i4.result())
+    .invariant(i5.id(), i5.description(), i5.result())
+
+// One threshold row per tier the blend touches. In smoke mode the hold is 20s
+// against a declared 14,400s, so a latency budget cannot be honestly evaluated
+// -- each row is emitted not-evaluated WITH a reason, which RunFragment
+// enforces (a blank reason throws).
+["t0", "t1", "t2"].each { tier ->
+    ThresholdResolver.Threshold t = thresholds.resolve("p95_latency_${tier}_ms")
+    if (smoke) {
+        builder.threshold("p95_latency_${tier}_ms", t.thresholdRef(),
+            RunFragment.Result.NOT_EVALUATED, "smoke-mode: 20s hold against a declared 14400s")
+    } else {
+        long worst = Long.parseLong(props.getProperty("tst034_worst_p95_${tier}", "0"))
+        builder.threshold("p95_latency_${tier}_ms", t.thresholdRef(),
+            worst <= t.value() ? RunFragment.Result.PASSED : RunFragment.Result.FAILED, null)
+    }
+}
+
+RunFragment fragment = builder.build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "blend=${profile.blendRef()} smoke=${smoke} totalSamples=${totalSamples}\n" +
+    detail.toString() +
+    "I1 per-journey-tier-budget: ${i1.result().wire()}\n" +
+    "I2 share-within-tolerance: ${i2.result().wire()}\n" +
+    "I3 no-journey-starved: ${i3.result().wire()}\n" +
+    "I4 errors-attributed: ${i4.result().wire()}\n" +
+    "I5 steady-state-reached: ${i5.result().wire()}\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+- [ ] **Step 7: Build the JMeter plan**
+
+`plan.jmx`. This is the most involved plan in the wave; take the structure from
+`tst-031-ratelimit/plan.jmx`, which already does cross-thread `props` aggregation.
+
+- `SetupThreadGroup` "Seed Blend Fixture", 1/1, `on_sample_error=stopthread`: an
+  `HTTPSamplerProxy` `POST /_test/seed?seed=42&accounts=20`, then an inline `JSR223Sampler`
+  zeroing `tst034_total_samples`, `tst034_sub_windows`, and per journey
+  `tst034_<name>_count`, `_p95`, `_errors`, `_min_window_count`.
+- `ThreadGroup` "Blended Load", 20 threads, `scheduler=true` with `duration` read from a
+  `__groovy` expression selecting the smoke or full hold — the plan must not hardcode either:
+  `${__groovy(System.getenv("HARNESS_SMOKE_MODE") == "true" ? 20 : 14400,)}`. Inside, one
+  `ThroughputController` per journey (`percentThroughput` = that journey's declared share,
+  `style=percent`), each containing the journey's `HTTPSamplerProxy` and a
+  `JSR223PostProcessor` that, inside `synchronized (props) { … }`, increments
+  `tst034_<name>_count`, updates a p95 reservoir, increments `_errors` on a non-2xx, and
+  tracks the per-sub-window minimum count. Sub-windows come from an inline timestamp bucket
+  (ISO-8601 or a plain second counter — **never epoch millis**, which are 13 digits and fail
+  check 5). Discard the first sub-window's samples for I5.
+- `PostThreadGroup` "Verify Blend", 1/1: the `assert-blend` `JSR223Sampler` with
+  `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+The four journey endpoints are `POST /transfers`, `GET /ledger/trial-balance`,
+`GET /catalogue`, `GET /rate-limited/ping` — all pre-existing. Confirm `/catalogue` exists
+before wiring it:
+
+```bash
+/usr/bin/grep -rn "catalogue" qe-harness/reference-sut/src/main/java/ | head -5
+```
+
+If it does not, substitute another existing T2 endpoint and update `mixed.yml`'s blend to match
+— the profile and the plan must agree.
+
+- [ ] **Step 8: Run the tests**
+
+```bash
+cd qe-harness && make down && make up PROFILES=core
+cd harness && mvn -q -pl jmeter test -Dtest=Tst034ModuleTest
+```
+
+Expected: PASS, 3 tests. Each run holds 20 seconds, so the suite takes about two minutes.
+
+- [ ] **Step 9: Verify the gate and the emitted thresholds**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep -E "TST-034|check5|check6|check7" || echo "no findings"
+python3 scripts/render-harness-coverage.py
+```
+
+Expected: no findings. Check 7 in particular validates that every `not-evaluated` threshold in
+the emitted fragment carries a `reason`.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add qe-harness/harness/jmeter qe-harness/traceability qe-harness/reference-sut
+git commit -m "feat(harness): add TST-034 blended journey JMeter module"
+```
+
+---
+
+Phase 1 is complete: three archetypes land on the existing SUT, the profile system has its
+first reader, and `/_capabilities` reports 10. Phase 2 begins, and with it the wave's real risk.
+
+---
