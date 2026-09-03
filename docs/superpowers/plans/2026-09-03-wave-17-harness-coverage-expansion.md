@@ -5660,3 +5660,648 @@ git commit -m "feat(harness): add TST-027 ordering module, per_key scope only"
 ```
 
 ---
+
+## Task 21: SUT — TST-028 Fan-out / Fan-in Aggregator
+
+**Files:**
+- Create: `…/sut/capability/messaging/AggregatorService.java`, `FanoutController.java`
+- Modify: `…/sut/DefectFlags.java`, `CapabilityRegistry.java`, `CapabilityRegistryTest.java`
+- Test: `…/sut/capability/messaging/AggregatorServiceTest.java`
+
+**Interfaces:**
+- Consumes: `qe.fanout` → three branch queues, `MessageLog`,
+  `app.messaging.aggregate-timeout-ms`
+- Produces: `POST /messaging/fanout`, `GET /messaging/aggregate`; defect flag
+  `aggregate-emitted-incomplete`
+
+- [ ] **Step 1: Write the failing test**
+
+`AggregatorServiceTest.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-028 fan-out / fan-in correlation. */
+class AggregatorServiceTest extends AbstractMessagingIntegrationTest {
+
+    @Test
+    void emitsAnAggregateOnlyWhenEveryBranchHasReplied() {
+        aggregator.reset();
+        String corr = aggregator.fanOut("corr-0001");
+        aggregator.branchReply(corr, "a", "one");
+        aggregator.branchReply(corr, "b", "two");
+        assertFalse(aggregator.aggregateFor(corr).isPresent(),
+            "I1: an incomplete set must not emit an aggregate");
+        aggregator.branchReply(corr, "c", "three");
+        assertTrue(aggregator.aggregateFor(corr).isPresent());
+        assertFalse(aggregator.aggregateFor(corr).orElseThrow().partial(),
+            "a complete aggregate must not carry the partial marker");
+    }
+
+    @Test
+    void aTimedOutSetEmitsAPartialMarkerRatherThanSilence() {
+        aggregator.reset();
+        String corr = aggregator.fanOut("corr-0002");
+        aggregator.branchReply(corr, "a", "one");
+        assertTrue(aggregator.awaitAggregate(corr, aggregateTimeoutMs() * 2),
+            "I1: past the timeout an aggregate must appear, marked partial");
+        assertTrue(aggregator.aggregateFor(corr).orElseThrow().partial());
+    }
+
+    @Test
+    void correlationIdsAreUniqueWithinTheWindow() {
+        aggregator.reset();
+        Set<String> ids = Set.of(
+            aggregator.fanOut(null), aggregator.fanOut(null), aggregator.fanOut(null));
+        assertEquals(3, ids.size(), "I2: correlation ids must be unique in the window");
+    }
+
+    @Test
+    void theAggregateIsTheUnionOfBranchRepliesWithNoDuplicates() {
+        aggregator.reset();
+        String corr = aggregator.fanOut("corr-0003");
+        aggregator.branchReply(corr, "a", "one");
+        aggregator.branchReply(corr, "a", "one-again");
+        aggregator.branchReply(corr, "b", "two");
+        aggregator.branchReply(corr, "c", "three");
+        assertEquals(3, aggregator.aggregateFor(corr).orElseThrow().parts().size(),
+            "I3: a repeated branch must not add a duplicate part");
+    }
+
+    @Test
+    void incompleteEmitDefectBreaksOnlyTheCompletenessInvariant() {
+        aggregator.reset();
+        String corr = aggregator.fanOut("corr-0004");
+        withDefect("aggregate-emitted-incomplete", () -> aggregator.branchReply(corr, "a", "one"));
+        assertTrue(aggregator.aggregateFor(corr).isPresent(),
+            "the defect must emit on the first reply");
+        assertFalse(aggregator.aggregateFor(corr).orElseThrow().partial(),
+            "and must do so without the partial marker -- that is the violation");
+    }
+}
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test -Dtest=AggregatorServiceTest
+```
+
+Expected: FAIL — `AggregatorService` does not exist.
+
+- [ ] **Step 3: Write the service**
+
+`AggregatorService.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import com.techcombank.qe.sut.DefectFlags;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * TST-028 fan-out / fan-in correlation capability.
+ *
+ * <p><b>The partial marker is the point.</b> I1 permits an aggregate to be
+ * emitted incomplete only when it is timed out AND carries a partial marker.
+ * Emitting an incomplete set without that marker, or silently emitting nothing
+ * at all past the timeout, are both violations -- so the timeout path produces
+ * a marked aggregate rather than silence.
+ *
+ * <p><b>Parts are keyed by branch, not appended.</b> I3 requires the aggregate
+ * to be the union of branch responses with no duplicates, so a branch replying
+ * twice overwrites its own slot instead of adding a second part.
+ *
+ * <p><b>Correlation ids are hyphenated short forms</b> -- gate check 5 fails
+ * the build on any run of 13-19 digits under {@code qe-harness/}, and an
+ * epoch-millis suffix would be exactly 13.
+ *
+ * <p><b>Defect injection:</b> {@code aggregate-emitted-incomplete} emits on the
+ * first branch reply with no partial marker. I1 fails; correlation uniqueness
+ * (I2) and union semantics (I3) are untouched.
+ */
+@Service
+public class AggregatorService {
+
+    private static final Set<String> BRANCHES = Set.of("a", "b", "c");
+
+    /** An emitted aggregate. {@code partial} is true only for a timed-out set. */
+    public record Aggregate(String correlationId, Map<String, String> parts, boolean partial,
+                            String emittedAt) {}
+
+    private final RabbitTemplate rabbit;
+    private final MessagingTopology topology;
+    private final MessageLog log;
+    private final long aggregateTimeoutMs;
+
+    private final Map<String, Map<String, String>> pending = new ConcurrentHashMap<>();
+    private final Map<String, Instant> startedAt = new ConcurrentHashMap<>();
+    private final Map<String, Aggregate> emitted = new ConcurrentHashMap<>();
+    private final AtomicLong counter = new AtomicLong();
+
+    public AggregatorService(RabbitTemplate rabbit, MessagingTopology topology, MessageLog log,
+                             @Value("${app.messaging.aggregate-timeout-ms}") long aggregateTimeoutMs) {
+        this.rabbit = rabbit;
+        this.topology = topology;
+        this.log = log;
+        this.aggregateTimeoutMs = aggregateTimeoutMs;
+    }
+
+    public long aggregateTimeoutMs() {
+        return aggregateTimeoutMs;
+    }
+
+    public synchronized void reset() {
+        pending.clear();
+        startedAt.clear();
+        emitted.clear();
+        counter.set(0);
+        log.clear();
+    }
+
+    /** Sprays the fanout exchange and opens a correlation window. */
+    public String fanOut(String correlationId) {
+        topology.declareTopology();
+        String corr = correlationId != null ? correlationId : nextCorrelationId();
+        pending.put(corr, new LinkedHashMap<>());
+        startedAt.put(corr, Instant.now());
+        log.recordPublished("fanout", corr);
+        rabbit.convertAndSend(MessagingTopology.FANOUT_EXCHANGE, "", corr);
+        return corr;
+    }
+
+    public synchronized void branchReply(String correlationId, String branch, String payload) {
+        Map<String, String> parts = pending.get(correlationId);
+        if (parts == null) {
+            return;
+        }
+        // Keyed, not appended: a branch replying twice overwrites its own slot,
+        // so the union stays duplicate-free (I3).
+        parts.put(branch, payload);
+
+        if (DefectFlags.isActive("aggregate-emitted-incomplete")) {
+            emit(correlationId, parts, false);
+            return;
+        }
+        if (parts.keySet().containsAll(BRANCHES)) {
+            emit(correlationId, parts, false);
+        }
+    }
+
+    /** I1's timeout arm: past the window an aggregate is emitted WITH the
+     *  partial marker. Bounded, never an indefinite wait. */
+    public boolean awaitAggregate(String correlationId, long budgetMs) {
+        Instant deadline = Instant.now().plus(Duration.ofMillis(budgetMs));
+        while (Instant.now().isBefore(deadline)) {
+            if (emitted.containsKey(correlationId)) {
+                return true;
+            }
+            Instant since = startedAt.get(correlationId);
+            if (since != null
+                    && Duration.between(since, Instant.now()).toMillis() > aggregateTimeoutMs) {
+                synchronized (this) {
+                    Map<String, String> parts = pending.get(correlationId);
+                    if (parts != null && !emitted.containsKey(correlationId)) {
+                        emit(correlationId, parts, true);
+                    }
+                }
+                return true;
+            }
+            try {
+                Thread.sleep(50L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private void emit(String correlationId, Map<String, String> parts, boolean partial) {
+        Aggregate aggregate = new Aggregate(correlationId, Map.copyOf(parts), partial,
+            Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS).toString());
+        emitted.put(correlationId, aggregate);
+        rabbit.convertAndSend(MessagingTopology.IN_EXCHANGE, "aggregate", correlationId);
+    }
+
+    public Optional<Aggregate> aggregateFor(String correlationId) {
+        return Optional.ofNullable(emitted.get(correlationId));
+    }
+
+    public int branchCount() {
+        return BRANCHES.size();
+    }
+
+    /** Hyphenated short form -- never a 13-digit epoch suffix. */
+    private String nextCorrelationId() {
+        return "corr-%04d".formatted(counter.incrementAndGet());
+    }
+}
+```
+
+- [ ] **Step 4: Write the controller**
+
+`FanoutController.java`:
+
+```java
+package com.techcombank.qe.sut.capability.messaging;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/** TST-028's HTTP surface. */
+@RestController
+public class FanoutController {
+
+    private final AggregatorService aggregator;
+
+    public FanoutController(AggregatorService aggregator) {
+        this.aggregator = aggregator;
+    }
+
+    /** POST /messaging/fanout -> 201 {correlationId}. */
+    @PostMapping("/messaging/fanout")
+    public ResponseEntity<FanoutResponse> fanOut(
+            @RequestParam(required = false) String correlationId) {
+        String corr = aggregator.fanOut(correlationId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new FanoutResponse(corr));
+    }
+
+    /** POST /messaging/fanout/reply?correlationId=corr-0001&branch=a -> 204. */
+    @PostMapping("/messaging/fanout/reply")
+    public ResponseEntity<Void> reply(@RequestParam String correlationId,
+                                      @RequestParam String branch) {
+        aggregator.branchReply(correlationId, branch, "reply-" + branch);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** POST /messaging/fanout/reset -> 204. */
+    @PostMapping("/messaging/fanout/reset")
+    public ResponseEntity<Void> reset() {
+        aggregator.reset();
+        return ResponseEntity.noContent().build();
+    }
+
+    /** GET /messaging/aggregate?correlationId=corr-0001 -> the aggregate's
+     *  state, or 404 while the window is still open. */
+    @GetMapping("/messaging/aggregate")
+    public ResponseEntity<?> aggregate(@RequestParam String correlationId) {
+        return aggregator.aggregateFor(correlationId)
+            .<ResponseEntity<?>>map(a -> ResponseEntity.ok(new AggregateResponse(
+                a.correlationId(), a.parts().size(), a.partial(), aggregator.branchCount(),
+                aggregator.aggregateTimeoutMs())))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    public record FanoutResponse(String correlationId) {}
+
+    public record AggregateResponse(String correlationId, int partCount, boolean partial,
+                                    int branchCount, long aggregateTimeoutMs) {}
+}
+```
+
+- [ ] **Step 5: Register the flag and capability, extend the test base**
+
+Add `"aggregate-emitted-incomplete"` to `KNOWN_FLAGS`, `"TST-028"` to `IMPLEMENTED` and
+`IMPLEMENTED_AT_WAVE_17`. Add to `AbstractMessagingIntegrationTest`:
+
+```java
+    @Autowired
+    protected AggregatorService aggregator;
+
+    @Value("${app.messaging.aggregate-timeout-ms}")
+    private long aggregateTimeoutMs;
+
+    protected long aggregateTimeoutMs() {
+        return aggregateTimeoutMs;
+    }
+```
+
+- [ ] **Step 6: Run the tests**
+
+```bash
+cd qe-harness/reference-sut && mvn -q -B test
+```
+
+Expected: PASS, all five `AggregatorServiceTest` tests.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add qe-harness/reference-sut
+git commit -m "feat(sut): add TST-028 fan-out/fan-in aggregator with a partial marker"
+```
+
+---
+
+## Task 22: Module — TST-028 Fan-out / Fan-in Correlation (JMeter)
+
+**Files:**
+- Create: `qe-harness/harness/jmeter/tst-028-fanout/{plan.jmx,assert-fanout.groovy,README.md}`
+- Modify: `qe-harness/traceability/modules.yml`
+- Test: `…/jmeter/Tst028ModuleTest.java`
+
+**Interfaces:**
+- Consumes: `POST /messaging/fanout`, `/reply`, `/reset`, `GET /messaging/aggregate`
+- Produces: `run-module.sh TST-028`
+
+- [ ] **Step 1: Write the module README**
+
+`tst-028-fanout/README.md`:
+
+```markdown
+# TST-028 -- Fan-out / Fan-in Correlation (JMeter)
+
+Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
+
+| ID | Invariant |
+|---|---|
+| I1 | An aggregate is emitted only when complete, or when timed out **and** marked partial |
+| I2 | Correlation IDs are unique within the window |
+| I3 | The aggregate is the union of branch responses, with no duplicates |
+| I4 | Fan-in latency approximates max(branch), and is below sum(branch) |
+| I5 | A claim-check reference resolves through its retention boundary |
+
+Defect proof: with `aggregate-emitted-incomplete` active this module MUST report I1 failed and
+I2/I3 still passed.
+
+I4 is the invariant most easily faked: a sequential fan-out would still produce a correct
+aggregate, so the module measures elapsed fan-in time against the **sum** of the individual
+branch latencies. If fan-in took as long as the sum, the branches ran in series and the
+"fan-out" is a fan-out in name only.
+
+Correlation IDs are hyphenated short forms (`corr-0001`), never epoch-millis suffixes -- gate
+check 5 fails the build on any run of 13-19 digits anywhere under `qe-harness/`.
+
+## What this module drives
+
+1. **setUp Thread Group** (`Reset Aggregator`, 1 thread, 1 loop) calls
+   `POST /messaging/fanout/reset`.
+2. **Main Thread Group** (`Fan Out and Reply`, 5 threads x 2 loops) posts
+   `POST /messaging/fanout`, records the returned correlation ID into `props` for I2's
+   uniqueness check, then replies from all three branches -- except on one deliberate
+   iteration, which replies from only one branch so I1's timeout-and-marked-partial arm is
+   exercised. Per-branch and whole-fan-in elapsed times are tallied for I4.
+3. **TearDown Thread Group** (`Verify Correlation`, 1 thread, 1 loop) reads
+   `GET /messaging/aggregate` for both the complete and the timed-out correlation, then
+   `assert-fanout.groovy` evaluates I1-I5.
+
+## Running it
+
+```
+make up PROFILES="core messaging"
+./bin/run-module.sh TST-028
+```
+
+## Defect proof
+
+```
+curl -X POST http://localhost:8080/_test/defect/aggregate-emitted-incomplete   # 204
+./bin/run-module.sh TST-028                                                    # must report I1 FAILED
+curl -X DELETE http://localhost:8080/_test/defect                              # 204
+```
+
+With the defect active, `AggregatorService.branchReply` emits on the first reply and does **not**
+set the partial marker -- an incomplete aggregate presented as complete, which is precisely I1's
+violation. Correlation allocation and union semantics are untouched, so I2 and I3 still pass.
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`Tst028ModuleTest.java`:
+
+```java
+package com.techcombank.qe.harness.jmeter;
+
+import com.techcombank.qe.harness.evidence.RunFragment;
+import com.techcombank.qe.harness.jmeter.support.ModuleResult;
+import com.techcombank.qe.harness.jmeter.support.ModuleRunner;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** TST-028 fan-out/fan-in module. Requires make up PROFILES="core messaging". */
+class Tst028ModuleTest {
+
+    private final ModuleRunner runner = new ModuleRunner();
+
+    @Test
+    void passesAgainstTheCleanSut() throws Exception {
+        ModuleResult r = runner.run("TST-028", Map.of());
+        assertEquals(RunFragment.Result.PASSED, r.fragment().result());
+    }
+
+    @Test
+    void reportsCompletenessFailureAgainstTheIncompleteEmitDefect() throws Exception {
+        ModuleResult r = runner.run("TST-028", Map.of("SUT_DEFECT", "aggregate-emitted-incomplete"));
+        assertEquals(RunFragment.Result.FAILED, r.fragment().result());
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I1") && i.result() == RunFragment.Result.FAILED));
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I2") && i.result() == RunFragment.Result.PASSED),
+            "the defect must be specific: correlation allocation is untouched");
+        assertTrue(r.fragment().invariants().stream()
+            .anyMatch(i -> i.id().equals("I3") && i.result() == RunFragment.Result.PASSED));
+    }
+}
+```
+
+- [ ] **Step 3: Run and confirm failure**
+
+```bash
+cd qe-harness/harness && mvn -q -pl jmeter test -Dtest=Tst028ModuleTest
+```
+
+Expected: FAIL — no `modules.yml` entry.
+
+- [ ] **Step 4: Add the binding row**
+
+Insert into `modules.yml` after `TST-027` and before `TST-030`:
+
+```yaml
+  - archetype: TST-028
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-028-fanout
+    coverage: full
+    defect_flag: aggregate-emitted-incomplete
+```
+
+- [ ] **Step 5: Write the assertion script**
+
+`assert-fanout.groovy`:
+
+```groovy
+// TST-028 fan-out / fan-in correlation assertion (Wave 17).
+//
+// I4 is the invariant most easily faked: a sequential fan-out still produces a
+// correct aggregate. So fan-in elapsed time is compared against the SUM of the
+// branch latencies -- if fan-in took as long as the sum, the branches ran in
+// series and this is a fan-out in name only.
+
+import com.techcombank.qe.harness.evidence.EvidenceEmitter
+import com.techcombank.qe.harness.evidence.RunFragment
+import com.techcombank.qe.harness.oracle.InvariantAssertion
+
+import groovy.json.JsonSlurper
+
+import java.nio.file.Path
+
+def slurper = new JsonSlurper()
+def complete = slurper.parseText(vars.get("aggregate_complete"))
+def timedOut = slurper.parseText(vars.get("aggregate_timedout"))
+
+long correlationsIssued = Long.parseLong(props.getProperty("tst028_correlations_issued"))
+long correlationsDistinct = Long.parseLong(props.getProperty("tst028_correlations_distinct"))
+long duplicateBranchReplies = Long.parseLong(props.getProperty("tst028_duplicate_branch_replies"))
+long fanInElapsedMs = Long.parseLong(props.getProperty("tst028_fanin_elapsed_ms"))
+long branchSumMs = Long.parseLong(props.getProperty("tst028_branch_sum_ms"))
+long branchMaxMs = Long.parseLong(props.getProperty("tst028_branch_max_ms"))
+boolean claimCheckResolved = Boolean.parseBoolean(props.getProperty("tst028_claim_check_resolved"))
+
+String sutDefect = System.getenv("QE_SUT_DEFECT")
+if (sutDefect != null && sutDefect.trim().isEmpty()) {
+    sutDefect = null
+}
+
+// I1 has two legal shapes and one illegal one: complete-and-unmarked is fine,
+// timed-out-and-marked is fine, incomplete-and-unmarked is the violation.
+boolean completeIsWhole = complete.partCount == complete.branchCount && !complete.partial
+boolean timedOutIsMarked = timedOut.partCount < timedOut.branchCount && timedOut.partial
+
+RunFragment.Entry i1 = InvariantAssertion.check(
+    "I1", "An aggregate is emitted only when complete, or timed out and marked partial",
+    { completeIsWhole && timedOutIsMarked } as java.util.function.BooleanSupplier)
+RunFragment.Entry i2 = InvariantAssertion.check(
+    "I2", "Correlation IDs are unique within the window",
+    { correlationsIssued > 0L && correlationsDistinct == correlationsIssued } as java.util.function.BooleanSupplier)
+RunFragment.Entry i3 = InvariantAssertion.check(
+    "I3", "The aggregate is the union of branch responses, with no duplicates",
+    { duplicateBranchReplies > 0L && complete.partCount == complete.branchCount } as java.util.function.BooleanSupplier)
+RunFragment.Entry i4 = InvariantAssertion.check(
+    "I4", "Fan-in latency approximates max(branch) and is below sum(branch)",
+    { branchSumMs > branchMaxMs && fanInElapsedMs < branchSumMs } as java.util.function.BooleanSupplier)
+RunFragment.Entry i5 = InvariantAssertion.check(
+    "I5", "A claim-check reference resolves through its retention boundary",
+    { claimCheckResolved } as java.util.function.BooleanSupplier)
+
+RunFragment fragment = RunFragment.builder()
+    .archetype(System.getenv("QE_ARCHETYPE"))
+    .module("jmeter")
+    .serviceName("reference-sut")
+    .tier("T0")
+    .oracle("invariant-assertion")
+    .environment(System.getenv().getOrDefault("QE_ENVIRONMENT", "local-compose"))
+    .sutDefect(sutDefect)
+    .invariant(i1.id(), i1.description(), i1.result())
+    .invariant(i2.id(), i2.description(), i2.result())
+    .invariant(i3.id(), i3.description(), i3.result())
+    .invariant(i4.id(), i4.description(), i4.result())
+    .invariant(i5.id(), i5.description(), i5.result())
+    .build()
+
+Path outputDir = Path.of(System.getenv("EVIDENCE_OUTPUT_DIR"))
+new EvidenceEmitter(outputDir).emit(fragment)
+
+boolean passed = fragment.result() == RunFragment.Result.PASSED
+SampleResult.setSuccessful(passed)
+SampleResult.setResponseData((
+    "I1 complete-or-marked-partial: ${i1.result().wire()} (complete=${complete.partCount}/${complete.branchCount} partial=${complete.partial}; timedOut=${timedOut.partCount}/${timedOut.branchCount} partial=${timedOut.partial})\n" +
+    "I2 correlation-unique: ${i2.result().wire()} (${correlationsDistinct}/${correlationsIssued})\n" +
+    "I3 union-no-duplicates: ${i3.result().wire()} (duplicateReplies=${duplicateBranchReplies})\n" +
+    "I4 fanin-below-sum: ${i4.result().wire()} (elapsed=${fanInElapsedMs}ms max=${branchMaxMs}ms sum=${branchSumMs}ms)\n" +
+    "I5 claim-check-resolves: ${i5.result().wire()}\n"
+    ).toString(), "UTF-8")
+SampleResult.setResponseCode(passed ? "200" : "500")
+SampleResult.setResponseMessage(fragment.result().wire())
+```
+
+- [ ] **Step 6: Build the JMeter plan**
+
+`plan.jmx`:
+
+- `SetupThreadGroup` "Reset Aggregator", 1/1, `on_sample_error=stopthread`: an
+  `HTTPSamplerProxy` `POST /messaging/fanout/reset`, then an inline `JSR223Sampler` zeroing
+  `tst028_correlations_issued`, `tst028_correlations_distinct`,
+  `tst028_duplicate_branch_replies`, `tst028_fanin_elapsed_ms`, `tst028_branch_sum_ms`,
+  `tst028_branch_max_ms`, `tst028_claim_check_resolved`, and creating an empty
+  `props.put("tst028_seen_correlations", "")` accumulator.
+- `ThreadGroup` "Fan Out and Reply", 5 threads / 2 loops, `on_sample_error=continue`: an
+  `HTTPSamplerProxy` `POST /messaging/fanout` whose `JSR223PostProcessor`, inside
+  `synchronized (props) { … }`, increments `tst028_correlations_issued`, appends the returned
+  `correlationId` to the accumulator and recomputes the distinct count for I2; three
+  `HTTPSamplerProxy` `POST /messaging/fanout/reply?correlationId=${corr}&branch=a|b|c`
+  samplers, each recording `prev.getTime()` into `tst028_branch_sum_ms` and raising
+  `tst028_branch_max_ms`; and the whole three-reply span timed into `tst028_fanin_elapsed_ms`
+  by a preceding/following `JSR223` pair using a plain second/millisecond **difference** — a
+  duration, never an absolute epoch value, so no 13-digit literal reaches disk.
+
+  One iteration (`vars.getIteration() == 1 && ctx.getThreadNum() == 0`) replies from branch `a`
+  only, and writes its correlation id to `vars`/`props` as the timed-out case. Another sends
+  branch `a` twice, incrementing `tst028_duplicate_branch_replies` for I3.
+- `PostThreadGroup` "Verify Correlation", 1/1: an inline `JSR223Sampler` polling
+  `GET /messaging/aggregate` for the timed-out correlation to a **bounded** deadline
+  (`aggregateTimeoutMs * 2`, read from the complete aggregate's own
+  `aggregateTimeoutMs` field) until it appears; two `HTTPSamplerProxy`
+  `GET /messaging/aggregate?correlationId=…` calls whose PostProcessors write
+  `vars.put("aggregate_complete", …)` and `vars.put("aggregate_timedout", …)`; then the
+  `assert-fanout` `JSR223Sampler` with
+  `filename=${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}`.
+
+For I5, set `tst028_claim_check_resolved` from a `GET /messaging/aggregate` call issued after
+the retention window on a correlation whose aggregate has already been emitted — the reference
+must still resolve.
+
+- [ ] **Step 7: Run the tests**
+
+```bash
+cd qe-harness && make up PROFILES="core messaging"
+cd harness && mvn -q -pl jmeter test -Dtest=Tst028ModuleTest
+```
+
+Expected: PASS, 2 tests.
+
+- [ ] **Step 8: Verify the gate**
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/validate-harness-coverage.py 2>&1 | /usr/bin/grep -E "TST-028|check5" || echo "no findings"
+python3 scripts/render-harness-coverage.py
+```
+
+Expected: no findings. Check 5 is the one to watch here — a stray epoch-millis timestamp in a
+correlation id or a README example is a 13-digit run.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add qe-harness/harness/jmeter qe-harness/traceability
+git commit -m "feat(harness): add TST-028 fan-out/fan-in correlation JMeter module"
+```
+
+---
