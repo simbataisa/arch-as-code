@@ -18,7 +18,8 @@ class DefectFlagsTest {
         "breaker-disabled", "recon-false-clean", "authz-missing-marker",
         "cache-headers-absent", "reservation-overcommit",
         "outbox-published-count-stale", "journey-starved",
-        "route-default-fallthrough", "resequencer-emits-on-arrival"
+        "route-default-fallthrough", "resequencer-emits-on-arrival",
+        "aggregate-emitted-incomplete"
     );
 
     @AfterEach

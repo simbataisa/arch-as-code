@@ -70,6 +70,12 @@ abstract class AbstractMessagingIntegrationTest {
     @Autowired
     protected ResequencerService resequencer;
 
+    @Autowired
+    protected AggregatorService aggregator;
+
+    @Value("${app.messaging.aggregate-timeout-ms}")
+    private long aggregateTimeoutMs;
+
     @Value("${app.messaging.retry-intervals-ms}")
     private List<Long> retryIntervalsMs;
 
@@ -89,6 +95,10 @@ abstract class AbstractMessagingIntegrationTest {
 
     protected long gapTimeoutMs() {
         return gapTimeoutMs;
+    }
+
+    protected long aggregateTimeoutMs() {
+        return aggregateTimeoutMs;
     }
 
     @BeforeEach
