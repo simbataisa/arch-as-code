@@ -33,6 +33,23 @@ import java.util.function.Supplier;
  * action} makes the constraint the actual arbiter of execution, not just of
  * bookkeeping.
  *
+ * <p><b>The reservation is deleted ONLY if {@code action} itself throws.</b>
+ * {@code action} (a call into {@code TransferService}, its own separate
+ * {@code @Transactional} boundary) either committed a real transfer or it
+ * did not -- there is no third state. If it threw, nothing real happened, so
+ * the reservation is safe to drop and a retry with the same key can start
+ * fresh. But if {@code action} committed and only the SUBSEQUENT {@code
+ * UPDATE} that records its response fails, the reservation must never be
+ * deleted: an idempotent-endpoint client is told to retry on an ambiguous
+ * error, and a retry that finds no row would run {@code action} a second
+ * time, silently duplicating a real transfer -- exactly the property
+ * idempotency exists to prevent. {@link #storeResponse} retries that
+ * {@code UPDATE} a bounded number of times and, if every attempt still
+ * fails, leaves the row pending rather than deleting it: any caller for that
+ * key (a retry included) then lands in {@link #awaitWinner}, which times
+ * out after {@link #AWAIT_TIMEOUT_NANOS} with an exception rather than
+ * hanging forever or re-running {@code action}.
+ *
  * <p><b>Responses are stored verbatim (I2).</b> A replay must be byte-identical,
  * so re-serialising is not an option -- key order or whitespace could drift.
  *
@@ -56,10 +73,25 @@ public class IdempotencyService {
     private static final long AWAIT_TIMEOUT_NANOS = 10_000_000_000L;
     private static final long AWAIT_POLL_MILLIS = 2L;
 
+    /** Bounded retries for persisting the winner's response after action has
+     *  already committed -- see {@link #storeResponse}. */
+    private static final int STORE_MAX_ATTEMPTS = 3;
+    private static final long STORE_RETRY_BACKOFF_MILLIS = 20L;
+
     /** Thrown when a key is reused with a different payload (I4). */
     public static class PayloadConflict extends RuntimeException {
         public PayloadConflict(String key) {
             super("idempotency key reused with a different payload: " + key);
+        }
+    }
+
+    /** Thrown when {@code action} committed successfully but, after
+     *  {@link #STORE_MAX_ATTEMPTS} tries, its response still could not be
+     *  persisted. The reservation is deliberately left pending (never
+     *  deleted) when this is thrown -- see this class's javadoc. */
+    public static class ResponsePersistenceFailure extends RuntimeException {
+        public ResponsePersistenceFailure(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
@@ -136,17 +168,61 @@ public class IdempotencyService {
     }
 
     /** Runs {@code action} for the caller that just won the reservation, and
-     *  stores its rendered result verbatim (I2). If action throws, the
-     *  reservation is removed rather than left permanently pending, so a
-     *  later retry with the same key is not stuck waiting forever. */
+     *  stores its rendered result verbatim (I2).
+     *
+     *  <p>Only {@code action} itself throwing removes the reservation -- see
+     *  this class's javadoc for why persisting the response afterwards must
+     *  never trigger that same deletion. */
     private Outcome runReservedAction(String key, String hash, Supplier<Object> action) {
+        Object result;
         try {
-            String body = render(action.get());
-            jdbc.update("UPDATE idempotency_key SET response_body = ? WHERE idempotency_key = ?", body, key);
-            return new Outcome(body, false);
+            result = action.get();
         } catch (RuntimeException e) {
+            // action never committed (or its own @Transactional boundary
+            // rolled back) -- nothing real happened, so the reservation is
+            // safe to drop and a retry with this key can start fresh.
             jdbc.update("DELETE FROM idempotency_key WHERE idempotency_key = ?", key);
             throw e;
+        }
+
+        String body = render(result);
+        storeResponse(key, body);
+        return new Outcome(body, false);
+    }
+
+    /** Persists the winner's rendered response for {@code key}. {@code
+     *  action} has ALREADY committed by the time this runs, so a failure
+     *  here must NEVER delete the reservation -- see this class's javadoc.
+     *  Retries a bounded number of times to absorb a transient failure
+     *  (this environment has observed transient infra noise); if every
+     *  attempt still fails, the row is left pending rather than deleted, and
+     *  {@link ResponsePersistenceFailure} is thrown so the caller sees an
+     *  explicit error instead of a fabricated success. */
+    private void storeResponse(String key, String body) {
+        RuntimeException last = null;
+        for (int attempt = 1; attempt <= STORE_MAX_ATTEMPTS; attempt++) {
+            try {
+                jdbc.update("UPDATE idempotency_key SET response_body = ? WHERE idempotency_key = ?", body, key);
+                return;
+            } catch (RuntimeException e) {
+                last = e;
+                if (attempt < STORE_MAX_ATTEMPTS) {
+                    sleepBackoff(STORE_RETRY_BACKOFF_MILLIS * attempt);
+                }
+            }
+        }
+        throw new ResponsePersistenceFailure(
+            "action for idempotency key " + key + " committed, but its response could not be persisted after "
+                + STORE_MAX_ATTEMPTS + " attempts; the reservation is left pending, not deleted, so a client "
+                + "retry cannot re-run action -- it will instead time out waiting for this row to resolve",
+            last);
+    }
+
+    private static void sleepBackoff(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
         }
     }
 

@@ -479,6 +479,23 @@ is what actually black-holes/restores traffic to it in that setup — `BreakerBe
 needs neither, using a hand-rolled in-process JDK `HttpServer` stub instead (see that test's
 Javadoc).
 
+## TST-020 Idempotency Content-Type Handling
+
+`LedgerController.transfer` (Wave 17) accepts an optional `Idempotency-Key` header on
+`POST /transfers`. Spring cannot bind two `@RequestBody` parameters on one handler method, so the
+controller reads the body once as a raw `String` and parses it itself (via the shared
+`ObjectMapper` bean) instead of letting Spring bind a typed `@RequestBody TransferRequest`
+parameter directly, as it did before this task.
+
+This is a narrow, deliberate divergence from "byte-identical": the pre-Wave-17 typed binding
+required a JSON-compatible `Content-Type` and returned `415 Unsupported Media Type` for anything
+else. Reading the body as a raw string accepts any `Content-Type` as long as the body itself is
+JSON-shaped — a request Spring's binder would have rejected with `415` now succeeds instead. Every
+caller in this corpus — TST-021's own JMeter module and TST-034's blended-journey module included —
+sends `Content-Type: application/json`, so no existing behaviour actually changes; this is
+recorded here so a future reader isn't surprised if they ever probe the endpoint with a
+deliberately wrong `Content-Type`.
+
 ## Related
 
 - [TST-001 Test Strategy Standard](../knowledge-base/testing/strategy/test-strategy-standard.md)

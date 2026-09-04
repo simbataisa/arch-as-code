@@ -18,7 +18,20 @@
 -- NOTE: this table has NO foreign key to account, so it is NOT reached by
 -- AbstractLedgerIntegrationTest's TRUNCATE ... CASCADE. It must be added to
 -- that TRUNCATE list explicitly or keys leak between tests.
-
+--
+-- idempotency_key_format's CHECK constrains keys to the declared hyphenated
+-- short form used throughout this suite's fixtures (e.g. "idem-0001"): a
+-- literal "idem-" prefix followed by 1-58 characters from
+-- [A-Za-z0-9-]. What this DOES guarantee: the key cannot be, say, a bare
+-- UUID or an arbitrary client-supplied string outside that shape. What it
+-- does NOT guarantee: the character class still permits long digit runs
+-- inside the suffix (e.g. "idem-1234567890123"), so this constraint alone
+-- does not enforce this corpus's separate "gate check 5" convention (no
+-- 13-19-digit run that could be mistaken for an epoch-millis timestamp or a
+-- PAN -- see AggregatorService/MessageLog for that convention applied to
+-- correlation ids). No key written by this SUT today violates gate check 5,
+-- but that is a property of what callers happen to send, not one this CHECK
+-- constraint enforces on their behalf.
 CREATE TABLE idempotency_key (
     id             BIGSERIAL PRIMARY KEY,
     idempotency_key VARCHAR(64) NOT NULL UNIQUE,

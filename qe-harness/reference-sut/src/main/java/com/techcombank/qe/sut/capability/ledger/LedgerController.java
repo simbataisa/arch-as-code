@@ -28,6 +28,16 @@ import java.util.UUID;
  * sends no header -- TST-021's own JMeter module and TST-034's
  * blended-journey module -- sees exactly the same 201/{@code transferRef}
  * response as before this task.
+ *
+ * <p><b>One narrow, deliberate divergence:</b> the pre-Wave-17 {@code
+ * @RequestBody TransferRequest} binding required a JSON-compatible {@code
+ * Content-Type} and returned 415 otherwise. Reading the body as a raw {@code
+ * String} accepts any {@code Content-Type} for a JSON-shaped payload, so a
+ * request with a non-JSON {@code Content-Type} that Spring's binder would
+ * have rejected with 415 now succeeds instead. Every existing caller sends
+ * {@code Content-Type: application/json}, so this does not change behaviour
+ * for TST-021's module, TST-034's module, or any other caller today -- see
+ * qe-harness/README.md's "TST-020 Idempotency" section for the full note.
  */
 @RestController
 public class LedgerController {
