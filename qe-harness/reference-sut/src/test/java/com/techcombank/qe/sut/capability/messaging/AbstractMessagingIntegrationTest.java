@@ -73,6 +73,9 @@ abstract class AbstractMessagingIntegrationTest {
     @Autowired
     protected AggregatorService aggregator;
 
+    @Autowired
+    protected DeliveryService delivery;
+
     @Value("${app.messaging.aggregate-timeout-ms}")
     private long aggregateTimeoutMs;
 
@@ -85,8 +88,15 @@ abstract class AbstractMessagingIntegrationTest {
     @Value("${app.messaging.gap-timeout-ms}")
     private long gapTimeoutMs;
 
+    @Value("${app.messaging.max-delivery-attempts}")
+    private int maxDeliveryAttempts;
+
     protected List<Long> retryIntervalsMs() {
         return retryIntervalsMs;
+    }
+
+    protected int maxDeliveryAttempts() {
+        return maxDeliveryAttempts;
     }
 
     protected long dlqAlertDepth() {

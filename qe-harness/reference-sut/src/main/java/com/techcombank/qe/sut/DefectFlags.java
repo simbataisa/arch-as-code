@@ -38,7 +38,8 @@ public final class DefectFlags {
         "journey-starved",
         "route-default-fallthrough",
         "resequencer-emits-on-arrival",
-        "aggregate-emitted-incomplete"
+        "aggregate-emitted-incomplete",
+        "dlq-bypass-drop"
     );
 
     private static final AtomicReference<String> ACTIVE = new AtomicReference<>();
