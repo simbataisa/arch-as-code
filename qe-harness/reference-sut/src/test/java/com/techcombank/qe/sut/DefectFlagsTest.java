@@ -16,7 +16,8 @@ class DefectFlagsTest {
     private static final Set<String> KNOWN_FLAGS_AT_WAVE_17 = Set.of(
         "ledger-unbalanced", "schema-drift", "ratelimit-leaky",
         "breaker-disabled", "recon-false-clean", "authz-missing-marker",
-        "cache-headers-absent", "reservation-overcommit"
+        "cache-headers-absent", "reservation-overcommit",
+        "outbox-published-count-stale"
     );
 
     @AfterEach

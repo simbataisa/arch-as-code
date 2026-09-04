@@ -33,7 +33,8 @@ public final class DefectFlags {
         "ledger-unbalanced", "schema-drift", "ratelimit-leaky",
         "breaker-disabled", "recon-false-clean", "authz-missing-marker",
         "cache-headers-absent",
-        "reservation-overcommit"
+        "reservation-overcommit",
+        "outbox-published-count-stale"
     );
 
     private static final AtomicReference<String> ACTIVE = new AtomicReference<>();

@@ -11,7 +11,7 @@ class CapabilityRegistryTest {
      *  CapabilityRegistry.IMPLEMENTED -- so this set is the drift guard, and the
      *  suite never runs knowingly red. Wave 16 left seven; Wave 17 adds eight. */
     private static final Set<String> IMPLEMENTED_AT_WAVE_17 = Set.of(
-        "TST-021", "TST-023", "TST-030", "TST-031", "TST-035", "TST-039", "TST-040", "TST-043"
+        "TST-021", "TST-023", "TST-030", "TST-031", "TST-035", "TST-037", "TST-039", "TST-040", "TST-043"
     );
 
     @Test
