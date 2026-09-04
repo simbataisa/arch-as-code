@@ -50,6 +50,22 @@ class MessagingTopologyTest extends AbstractMessagingIntegrationTest {
     }
 
     @Test
+    void theDlqBindingMatchesTheRoutingKeyDeadLetteredMessagesActuallyCarry() {
+        topology.declareTopology();
+        // qe.q.work has no x-dead-letter-routing-key override, so a message
+        // dead-lettered from it arrives at qe.dlx carrying its ORIGINAL
+        // routing key -- "work" (from bind(work).to(in).with("work")) -- not
+        // the queue's own name "qe.q.work". qe.dlx is a DirectExchange
+        // (exact-match), so this proves the qe.q.dlq binding is declared on
+        // the key a dead-lettered message will actually carry, before any
+        // later task's real publish/consume/reject logic exists to exercise
+        // the path end-to-end.
+        rabbit.convertAndSend(MessagingTopology.DLX, "work", "probe");
+        assertTrue(awaitQueueDepth("qe.q.dlq", 1),
+            "a message routed with key \"work\" must land in qe.q.dlq");
+    }
+
+    @Test
     void everyQueueIsDurable() {
         topology.declareTopology();
         // TST-029 I2: nothing acked-persisted may be lost across a broker

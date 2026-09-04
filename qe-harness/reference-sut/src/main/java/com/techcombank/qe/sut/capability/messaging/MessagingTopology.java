@@ -128,7 +128,15 @@ public class MessagingTopology {
         objects.add(BindingBuilder.bind(quarantine).to(unroutable));
         objects.add(BindingBuilder.bind(sequence).to(in).with("sequence"));
         objects.add(BindingBuilder.bind(work).to(in).with("work"));
-        objects.add(BindingBuilder.bind(dlq).to(dlx).with(Q_WORK));
+        // Routing key here is "work" -- the ORIGINAL routing key a message
+        // carries when it entered qe.q.work (via bind(work).to(in).with("work")
+        // above) -- not the queue's own name. qe.q.work's x-dead-letter-exchange
+        // has no x-dead-letter-routing-key override, so RabbitMQ re-publishes a
+        // dead-lettered message to qe.dlx with that ORIGINAL key preserved.
+        // qe.dlx is a DirectExchange (exact-match), so binding on Q_WORK
+        // ("qe.q.work") instead would never match and the message would
+        // silently vanish instead of reaching qe.q.dlq.
+        objects.add(BindingBuilder.bind(dlq).to(dlx).with("work"));
         objects.add(BindingBuilder.bind(branchA).to(fanout));
         objects.add(BindingBuilder.bind(branchB).to(fanout));
         objects.add(BindingBuilder.bind(branchC).to(fanout));
