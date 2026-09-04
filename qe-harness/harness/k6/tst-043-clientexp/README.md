@@ -1,5 +1,11 @@
 # TST-043 -- Client Experience Budget (k6)
 
+> **Substitute invariants.** This module's `I1`-`I4` are server-side HTTP checks of its own
+> devising, not the archetype document's `I1`-`I6`. None of the archetype's own invariants are
+> implemented here — see `partial_reason` in `traceability/modules.yml`. Invariant IDs in a
+> fragment are module-local by design (see `qe-harness/README.md`, "Three names that mean more
+> than one thing").
+
 Oracle: invariant-assertion. Best-fit tool per TST-010: k6. Canonical archetype:
 [client-experience-offline-perf.md](../../../../knowledge-base/testing/archetypes/client-experience-offline-perf.md)
 (TST-043, catalog IDs FE-005/FE-006/FE-001/FE-002/MOB-001/MOB-006).
