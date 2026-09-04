@@ -17,6 +17,15 @@ modules:
     path: qe-harness/harness/jmeter/tst-026-routing
     coverage: full
     defect_flag: route-default-fallthrough
+  - archetype: TST-027
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-027-ordering
+    coverage: partial
+    partial_reason: >-
+      I5's per_partition and global scopes cannot be exercised against RabbitMQ, which has no
+      partitions; the declared scope is per_key and only that scope is asserted. I3's
+      post-restart clause belongs to TST-029, which owns the broker-restart path.
+    defect_flag: resequencer-emits-on-arrival
   - archetype: TST-030
     tool: gatling-karate
     path: qe-harness/harness/gatling-karate/tst-030-contract

@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-027 Ordering and Resequencing" enabled="true">
+      <stringProp name="TestPlan.comments">Task 20 (Wave 17 QE Harness). See README.md for the invariants (I1-I5) this plan asserts, and for why coverage is declared partial (per_key only -- RabbitMQ has no partitions). See assert-ordering.groovy's own header comment for how the ten-value real sequence set, the deliberate overflow, and the TearDown group's own retry-driven gap resolution fit together.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: resets key-a's resequencer state (buffer,
+           nextExpected, emitted, overflow, escalation) before the Shuffled
+           Publish group's first request, and zeroes this run's own tallies
+           in props, same idiom TST-021/TST-023/TST-026/TST-031's own setUp
+           Thread Groups use, necessary for the same reason: a second run in
+           the same SUT process (this module's own JUnit fixture running
+           clean-then-defect) must never mix its counts or its resequencer
+           state with a previous run's leftovers. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset Sequence State" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/sequence/reset" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/sequence/reset</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Zero Tallies" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never adds its tallies on top of a previous run's leftovers -- same idiom
+// TST-023/TST-026/TST-031/TST-040's own setUp Thread Groups use for their
+// own props.
+//
+// tst027_seq_idx is the monotonic arrival counter the Shuffled Publish
+// group's PreProcessor consumes below (idx 0-15, one per publish); it is
+// what actually decides each iteration's role, NOT ctx.getThreadNum() /
+// vars.getIteration() -- see that PreProcessor's own comment for why.
+//
+// tst027_overflow_retry_seq names the one sequence number the Shuffled
+// Publish group deliberately lets the SUT overflow-reject (I4) instead of
+// buffering; the TearDown group's own "Await Gap Resolution" sampler
+// resends exactly this number once Shuffled Publish has fully finished (so
+// there is no concurrent request racing it), which is what lets it still
+// reach "emitted" (I3) despite the rejection.
+props.put("tst027_seq_idx", "0")
+props.put("tst027_distinct_sent", "0")
+props.put("tst027_duplicates_sent", "0")
+props.put("tst027_gap_outcome", "false")
+props.put("tst027_overflow_retry_seq", "10")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("reset key-a resequencer state, zeroed tst027_* tallies", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: 4 threads x 4 loops = 16 publishes to key-a,
+           released in synchronized batches of 4 (SyncTimer groupSize=4, which
+           equals num_threads exactly) so each batch is genuinely concurrent
+           and the PLAN's own send order (idx 0-15, assigned by a synchronized
+           props counter in arrival order, not by thread/loop identity) is
+           what proves arrival order differs from sequence order, not an
+           accident of JMeter's own thread scheduling.
+
+           This run's real target set is the ten sequence numbers 1-10 for
+           key-a. idx 0-7 send eight of them (2-9) genuinely shuffled within
+           two synchronized batches, filling the per-key buffer to exactly
+           ResequencerService.BUFFER_BOUND (8) while nextExpected is still
+           blocked on 1. idx 8 (value 10) arrives once that buffer is
+           already full, so the SAME synchronized accept() call that would
+           otherwise buffer it instead signals the I4 overflow and drops it,
+           deliberately, and this batch is the only new value in its own
+           batch (idx 9-11 are duplicates, not new arrivals racing it), so
+           whether it gets rejected never depends on race timing against
+           anything else. idx 12 (value 1, the lowest, and therefore the one
+           nextExpected is blocked on) is sent in ITS OWN LATER batch, after
+           value 10 has already been rejected, deliberately held back so
+           everything else must sit in the buffer behind it, which is I2's
+           gap, and unblocks the full drain of 1-9. idx 9-11 and 13-15 are
+           genuine duplicates (I3), each safe regardless of the exact order
+           they race in within their own batch. Value 10 itself is
+           deliberately NOT resent here: retrying it in the SAME thread group
+           would race it against value 1's own drain (whichever the SUT's
+           synchronized accept() happens to process first), so the TearDown
+           group below resends it once this thread group has fully finished,
+           see that group's own comment for why that is what makes the
+           retry deterministic rather than racy. See assert-ordering.groovy's
+           own header for how this reconciles I3's exactly-once check with
+           I4's overflow under the resequencer-emits-on-arrival defect too:
+           the dedup check in ResequencerService.accept runs before the
+           buffer logic, so a defect run's duplicates (and the TearDown
+           group's retry) just get deduped instead. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Shuffled Publish" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">4</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">4</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <SyncTimer guiclass="TestBeanGUI" testclass="SyncTimer" testname="Synchronizing Timer" enabled="true">
+          <intProp name="groupSize">4</intProp>
+          <longProp name="timeoutInMs">10000</longProp>
+        </SyncTimer>
+        <hashTree/>
+
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Select Sequence And Role" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// idx is a synchronized, monotonic arrival counter (0-15), not derived from
+// ctx.getThreadNum()/vars.getIteration() -- the SyncTimer above guarantees
+// that each batch of 4 concurrent releases fully completes (every one of the
+// 4 responses received) before the next batch's threads can reach it again,
+// so idx 0-3 / 4-7 / 8-11 / 12-15 are four strictly-ordered batches even
+// though which physical thread grabs which idx WITHIN a batch is arbitrary
+// -- and that is exactly what "genuinely concurrent, but deterministic
+// across batches" requires here.
+synchronized (props) {
+    long counter = Long.parseLong(props.getProperty("tst027_seq_idx", "0"))
+    props.put("tst027_seq_idx", String.valueOf(counter + 1))
+    vars.put("tst027_idx", String.valueOf(counter))
+}
+
+int idx = Integer.parseInt(vars.get("tst027_idx"))
+
+// idx ->  0   1   2   3    4   5   6   7    8    9   10   11   12  13   14   15
+// batch:  |--- batch 0 ---| |--- batch 1 ---| |--- batch 2 ----| |--- batch 3 ---|
+long[] seqs    = [5L, 2L, 4L, 3L,  9L, 6L, 8L, 7L,  10L, 5L,  6L,  7L,  1L, 8L,  9L,  2L]
+String[] roles = ["new","new","new","new", "new","new","new","new", "new","dup","dup","dup", "new","dup","dup","dup"]
+
+long seq = seqs[idx]
+String role = roles[idx]
+
+if (role == "new") {
+    // Counted once per distinct real value this thread group sends (idx
+    // 0-8 and idx 12 cover nine of the ten target sequence numbers 1-10;
+    // the tenth, value 10 itself, is counted here too even though the SUT
+    // will reject it on arrival -- see the TearDown group's own comment for
+    // why its later retry does NOT increment this a second time).
+    synchronized (props) {
+        long distinct = Long.parseLong(props.getProperty("tst027_distinct_sent", "0"))
+        props.put("tst027_distinct_sent", String.valueOf(distinct + 1))
+    }
+} else {
+    // role == "dup": idx 9-11 resend batch 0/1 values (5, 6, 7) already sent
+    // above; idx 13-15 resend batch 0/1 values (8, 9, 2) the same way. Both
+    // groups are safe regardless of the exact order they race in within
+    // their own batch: whichever of 5/6/7/8/9/2 they target is already
+    // safely buffered (or, once idx 12 has drained the buffer, already
+    // emitted) from its own earlier batch, so a duplicate here is always
+    // either a harmless buffer overwrite or a true, correctly-deduped
+    // repeat -- never a second entry in "emitted".
+    synchronized (props) {
+        long dup = Long.parseLong(props.getProperty("tst027_duplicates_sent", "0"))
+        props.put("tst027_duplicates_sent", String.valueOf(dup + 1))
+    }
+}
+
+vars.put("seq", String.valueOf(seq))
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/sequence/publish" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/sequence/publish?key=key-a&amp;sequence=${seq}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Shuffled Publish
+           thread has finished (JMeter guarantees this ordering, and
+           TestPlan.serialize_threadgroups above makes it explicit). By this
+           point every one of the sixteen publishes above has already
+           completed (response received): idx 12 (value 1) has already
+           drained the buffer down to "emitted" = [1..9], and value 10 has
+           already been overflow-rejected. This group's own first sampler
+           below resends value 10 exactly once, now that Shuffled Publish
+           has fully finished and nothing else can race that single
+           request; only then does it poll, bounded, for the drain this
+           resend triggers, since an indefinite wait here is exactly what I2
+           forbids. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Ordering" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <!-- First resends the one sequence number (tst027_overflow_retry_seq,
+             value 10) the Shuffled Publish group deliberately let the SUT
+             overflow-reject: Shuffled Publish has already fully finished by
+             the time this sampler runs (JMeter guarantees TearDown starts
+             only after every other thread group's threads have finished),
+             so nothing else is concurrently touching key-a's resequencer
+             state, and this single request cannot race idx 12's own drain
+             the way retrying it from inside Shuffled Publish itself would
+             have, see that group's own comment. Then polls, bounded to
+             10s / every 200ms: "resolved" means every one of the ten real
+             values this run tracked (tst027_distinct_sent) is present in
+             the SUT's own emitted list, i.e. the buffer fully drained;
+             "escalated" is the SUT's own signal (never actually reachable
+             over this module's HTTP surface today, see
+             ResequencerService.awaitGapOutcome, which nothing here calls,
+             but checked anyway so this poll stays correct if a future task
+             wires an HTTP path to it). Never loops past the deadline: I2
+             forbids an indefinite wait, not just an indefinite SUT-side one. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Await Gap Resolution" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.Instant
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+long expectedDistinct = Long.parseLong(props.getProperty("tst027_distinct_sent", "0"))
+String retrySeq = props.getProperty("tst027_overflow_retry_seq", "10")
+
+// Shuffled Publish has already fully finished (see this sampler's own
+// comment above), so this is the only request touching key-a right now:
+// deterministic, not a race against idx 12's own drain.
+HttpRequest retryRequest = HttpRequest.newBuilder(
+        URI.create(sutBaseUrl + "/messaging/sequence/publish?key=key-a&sequence=" + retrySeq))
+    .timeout(Duration.ofSeconds(5))
+    .POST(HttpRequest.BodyPublishers.noBody())
+    .build()
+http.send(retryRequest, HttpResponse.BodyHandlers.discarding())
+
+Instant deadline = Instant.now().plus(Duration.ofMillis(10000))
+boolean resolved = false
+
+while (Instant.now().isBefore(deadline)) {
+    HttpRequest request = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/sequence/state?key=key-a"))
+        .timeout(Duration.ofSeconds(5))
+        .GET()
+        .build()
+    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    def json = new JsonSlurper().parseText(response.body())
+    List<Long> emittedSoFar = (json.emitted as List).collect { it as Long }
+    if ((json.escalated as boolean) || emittedSoFar.size() >= expectedDistinct) {
+        resolved = true
+        break
+    }
+    Thread.sleep(200L)
+}
+
+props.put("tst027_gap_outcome", String.valueOf(resolved))
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("gap outcome observed=${resolved} within bounded 10s deadline (expectedDistinct=${expectedDistinct})", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/sequence/state" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/sequence/state?key=key-a</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-sequence-state" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("sequence_state", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- assert-ordering.groovy (this task's deliverable) evaluates
+             I1-I5 against the sequence_state var this group's own GET wrote
+             above and the tst027_* props the Shuffled Publish group tallied,
+             then calls the JVM EvidenceEmitter to write one fragment to
+             traceability/runs/. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-ordering" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
