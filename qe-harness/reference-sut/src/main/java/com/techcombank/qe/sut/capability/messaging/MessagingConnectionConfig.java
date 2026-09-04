@@ -28,6 +28,19 @@ import org.springframework.context.annotation.Configuration;
  * <p>Connection retry is capped rather than infinite so a module run against a
  * genuinely absent broker fails fast with a legible error instead of hanging:
  * Spring AMQP's default is to retry indefinitely.
+ *
+ * <p><b>Why {@code RabbitTemplate.setMandatory(true)} is paired with
+ * {@code CachingConnectionFactory.setPublisherReturns(true)}:</b> per Spring
+ * AMQP's own contract, a publisher return is only delivered to the
+ * application when BOTH flags are set -- {@code mandatory} on the template
+ * asks the broker to return (rather than silently drop) a message it cannot
+ * route to any queue, and {@code publisherReturns} on the connection factory
+ * is what makes the underlying channel actually listen for and dispatch that
+ * returned-message callback. Setting only {@code mandatory} compiles and
+ * looks correct, but an unroutable message is still silently dropped from the
+ * application's point of view. This matters beyond this task: TST-026's
+ * alternate-exchange quarantine invariant can only be observed by a later
+ * routing module if a returned/unroutable message is actually visible here.
  */
 @Configuration
 public class MessagingConnectionConfig {
@@ -43,6 +56,7 @@ public class MessagingConnectionConfig {
         factory.setUsername(username);
         factory.setPassword(password);
         factory.setConnectionTimeout(connectionTimeoutMs);
+        factory.setPublisherReturns(true);
         return factory;
     }
 
