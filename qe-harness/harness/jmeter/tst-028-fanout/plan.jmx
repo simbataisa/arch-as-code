@@ -85,9 +85,11 @@ props.put("tst028_fanin_elapsed_ms", "0")
 props.put("tst028_branch_sum_ms", "0")
 props.put("tst028_branch_max_ms", "0")
 props.put("tst028_claim_check_resolved", "false")
+props.put("tst028_dedup_part_count", "0")
 props.put("tst028_seen_correlations", "")
 props.put("tst028_timedout_correlation_id", "")
 props.put("tst028_reference_correlation_id", "")
+props.put("tst028_dedup_correlation_id", "")
 
 SampleResult.setSuccessful(true)
 SampleResult.setResponseData("reset aggregator, zeroed tst028_* tallies", "UTF-8")
@@ -183,10 +185,19 @@ synchronized (props) {
 //     reply, and I1's timeout arm (a partial-marked emission, observed via
 //     the TearDown group's own bounded await) is the only way it can ever
 //     resolve.
-//   thread 1, iteration 1 -> "duplicate": the branch reply sampler below
-//     replies from branch a TWICE (plus b and c once each), so I3's dedup
-//     check has a real repeated reply to dedupe against, on a correlation
-//     that still completes normally.
+//   thread 1, iteration 1 -> "dedup": the branch reply sampler below
+//     replies from branch a TWICE and NEVER b/c, so it can never complete
+//     naturally either -- deliberately, so I3's own check (does a repeated
+//     reply to the SAME branch still leave exactly one entry?) is entirely
+//     decoupled from whether ANY correlation ever reaches completeness.
+//     That independence is why this is its own correlation rather than a
+//     variant of "reference": reusing "reference" for both concerns was
+//     the original design's own mistake -- aggregate-emitted-incomplete
+//     truncates EVERY correlation's own parts to size 1 on its first
+//     reply, which made an I1-shaped completeness check on "reference"
+//     double as (and break) the I3 dedup check too, for a reason that has
+//     nothing to do with dedup at all. Like "timedout", this one is only
+//     ever resolved by the TearDown group's own bounded await.
 //   thread 2, iteration 1 -> "reference": completes normally like every
 //     other slot, but ALSO becomes the one correlation the TearDown group
 //     reads back for I1's complete-and-whole clause, for the
@@ -199,7 +210,8 @@ if (ctx.getThreadNum() == 0 && vars.getIteration() == 1) {
     role = "timedout"
     props.put("tst028_timedout_correlation_id", corr)
 } else if (ctx.getThreadNum() == 1 && vars.getIteration() == 1) {
-    role = "duplicate"
+    role = "dedup"
+    props.put("tst028_dedup_correlation_id", corr)
 } else if (ctx.getThreadNum() == 2 && vars.getIteration() == 1) {
     role = "reference"
     props.put("tst028_reference_correlation_id", corr)
@@ -269,18 +281,28 @@ if (role == "timedout") {
     return
 }
 
-if (role == "duplicate") {
-    // A genuine repeat of an already-sent branch reply, sent and awaited
-    // BEFORE the real concurrent trio below so it can never race branch a's
-    // own reply within that trio -- AggregatorService.branchReply keys
-    // parts by branch (a repeat overwrites its own slot, never adds a
-    // second part), so this is safe regardless of order, but sequencing it
-    // first keeps this tally unambiguous.
+if (role == "dedup") {
+    // Never fires b/c: this correlation exists solely to prove a repeated
+    // reply to the SAME branch does not create a second Map entry (I3),
+    // entirely independent of whether ANY correlation ever reaches
+    // completeness -- see "assign-role-and-tally-correlation"'s own
+    // comment for why that independence matters (it is exactly what the
+    // aggregate-emitted-incomplete defect proof needs). Both replies
+    // target branch a; AggregatorService.branchReply keys parts by branch,
+    // so a correct implementation leaves exactly one entry regardless of
+    // how many times branch a replies. This correlation can never complete
+    // by reply, so the TearDown group's own bounded await (the same
+    // mechanism "timedout" uses) is the only path that can ever resolve it.
     http.send(replyRequest("a"), HttpResponse.BodyHandlers.discarding())
     synchronized (props) {
         long dup = Long.parseLong(props.getProperty("tst028_duplicate_branch_replies", "0"))
         props.put("tst028_duplicate_branch_replies", String.valueOf(dup + 1))
     }
+    http.send(replyRequest("a"), HttpResponse.BodyHandlers.discarding())
+    SampleResult.setSuccessful(true)
+    SampleResult.setResponseData("dedup role: replied branch a twice for ${corr}, never b/c", "UTF-8")
+    SampleResult.setResponseCode("200")
+    return
 }
 
 // Fixed, distinct per-branch pads (10/15/20ms), added after each branch's
@@ -310,12 +332,13 @@ List<Long> branchLatenciesMs = branchFutures.collect { it.join() }
 long sumMs = branchLatenciesMs.sum() as long
 long maxMs = branchLatenciesMs.max() as long
 
-// Overwritten by whichever completing ("duplicate"/"reference"/"normal")
-// iteration happens to run last -- every one of them performs the exact
-// same genuinely-concurrent 3-branch fan-in, so any one of their own
+// Overwritten by whichever completing ("reference"/"normal") iteration
+// happens to run last -- every one of them performs the exact same
+// genuinely-concurrent 3-branch fan-in, so any one of their own
 // (fanInElapsedMs, sumMs, maxMs) triples is an equally valid I4 sample;
 // this just keeps the shared props a scalar rather than needing a running
-// series.
+// series. ("timedout" and "dedup" never reach this point -- both return
+// early above.)
 synchronized (props) {
     props.put("tst028_fanin_elapsed_ms", String.valueOf(fanInElapsedMs))
     props.put("tst028_branch_sum_ms", String.valueOf(sumMs))
@@ -334,11 +357,11 @@ SampleResult.setResponseCode("200")
       <!-- TearDown Thread Group: runs once, after every Fan Out and Reply
            thread has finished (JMeter guarantees this ordering, and
            TestPlan.serialize_threadgroups above makes it explicit). By this
-           point the "reference" and every "normal" slot have already
-           completed their aggregates, "duplicate" has completed with a
-           real repeated reply behind it, and "timedout" has replied from
-           exactly one branch and nothing else: this group's own bounded
-           await is the only remaining path that can resolve it. -->
+           point "reference" and every "normal" slot have already completed
+           their aggregates; "timedout" has replied from exactly one branch
+           and nothing else; "dedup" has replied to branch a twice and
+           nothing else: this group's own bounded await is the only
+           remaining path that can resolve either of the latter two. -->
       <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Correlation" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
@@ -354,8 +377,9 @@ SampleResult.setResponseCode("200")
       <hashTree>
 
         <!-- props (cross-thread) -> vars (this thread's own), once, up
-             front: every sampler below reads ${refCorr}/${timedoutCorr} as
-             plain JMeter variables rather than each carrying its own
+             front: every sampler below reads
+             ${refCorr}/${timedoutCorr}/${dedupCorr} as plain JMeter
+             variables rather than each carrying its own
              ${__property(...)} substitution. -->
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Load Correlation IDs From Props" enabled="true">
           <stringProp name="cacheKey">true</stringProp>
@@ -365,9 +389,10 @@ SampleResult.setResponseCode("200")
           <stringProp name="script"><![CDATA[
 vars.put("refCorr", props.getProperty("tst028_reference_correlation_id"))
 vars.put("timedoutCorr", props.getProperty("tst028_timedout_correlation_id"))
+vars.put("dedupCorr", props.getProperty("tst028_dedup_correlation_id"))
 
 SampleResult.setSuccessful(true)
-SampleResult.setResponseData("loaded refCorr=${vars.get('refCorr')} timedoutCorr=${vars.get('timedoutCorr')}", "UTF-8")
+SampleResult.setResponseData("loaded refCorr=${vars.get('refCorr')} timedoutCorr=${vars.get('timedoutCorr')} dedupCorr=${vars.get('dedupCorr')}", "UTF-8")
 SampleResult.setResponseCode("200")
 ]]></stringProp>
         </JSR223Sampler>
@@ -514,6 +539,61 @@ vars.put("aggregate_timedout", prev.getResponseDataAsString())
           <hashTree/>
 
         </hashTree>
+
+        <!-- I3's own dedicated correlation: "dedup" only ever received two
+             replies to branch a and never b/c (see "Reply From Branches"'
+             own comment), so it can never complete naturally: the same
+             bounded awaitMs mechanism "Await Timeout Aggregate" uses above
+             is the only way to read its partCount back. Its own
+             correctness is entirely about I3 (does a repeated reply to one
+             branch still leave exactly one entry?), never about
+             completeness, which is why this is a SEPARATE correlation from
+             "reference" rather than a re-use of it: aggregate-emitted-
+             incomplete truncates every correlation's own parts to size 1 on
+             its first reply regardless of which correlation, so tying I3 to
+             "reference"'s own partCount==branchCount would fail for a
+             reason that has nothing to do with dedup. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Await And Capture Dedup Aggregate" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+def completeJson = new JsonSlurper().parseText(vars.get("aggregate_complete"))
+long budgetMs = (completeJson.aggregateTimeoutMs as long) * 2
+String dedupCorr = vars.get("dedupCorr")
+
+HttpRequest request = HttpRequest.newBuilder(
+        URI.create(sutBaseUrl + "/messaging/aggregate?correlationId=" + dedupCorr + "&awaitMs=" + budgetMs))
+    .timeout(Duration.ofMillis(budgetMs + 5000L))
+    .GET()
+    .build()
+HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+
+boolean resolved = response.statusCode() == 200
+long dedupPartCount = -1L
+if (resolved) {
+    def json = new JsonSlurper().parseText(response.body())
+    dedupPartCount = json.partCount as long
+    props.put("tst028_dedup_part_count", String.valueOf(dedupPartCount))
+}
+
+SampleResult.setSuccessful(resolved)
+SampleResult.setResponseData("dedup correlation=${dedupCorr} resolved=${resolved} partCount=${dedupPartCount}", "UTF-8")
+SampleResult.setResponseCode(resolved ? "200" : "500")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
 
         <!-- I5: re-reads "reference"'s already-emitted aggregate after an
              explicit, bounded wait standing in for "past the retention
