@@ -39,7 +39,8 @@ public final class DefectFlags {
         "route-default-fallthrough",
         "resequencer-emits-on-arrival",
         "aggregate-emitted-incomplete",
-        "dlq-bypass-drop"
+        "dlq-bypass-drop",
+        "idempotency-key-ignored"
     );
 
     private static final AtomicReference<String> ACTIVE = new AtomicReference<>();

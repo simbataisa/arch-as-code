@@ -19,7 +19,8 @@ class DefectFlagsTest {
         "cache-headers-absent", "reservation-overcommit",
         "outbox-published-count-stale", "journey-starved",
         "route-default-fallthrough", "resequencer-emits-on-arrival",
-        "aggregate-emitted-incomplete", "dlq-bypass-drop"
+        "aggregate-emitted-incomplete", "dlq-bypass-drop",
+        "idempotency-key-ignored"
     );
 
     @AfterEach
