@@ -2,7 +2,7 @@
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-029 Delivery Guarantee, Retry, DLQ" enabled="true">
-      <stringProp name="TestPlan.comments">Task 24 (Wave 17 QE Harness). See README.md for the invariants (I1-I6) this plan asserts, and for why I2's broker restart is real (docker compose restart broker) rather than a Toxiproxy severance, and run-gated to full runs only rather than left unimplemented. The "Restart Broker And Recheck DLQ" JSR223Sampler in the TearDown group is the ONLY step that ever touches the broker container, and it is guarded by System.getenv("HARNESS_SMOKE_MODE") -- Tst029ModuleTest always runs with HARNESS_SMOKE_MODE=true, so that guard is exactly what keeps this module's own automated test from ever restarting a developer's running stack.</stringProp>
+      <stringProp name="TestPlan.comments">Task 24 (Wave 17 QE Harness). See README.md for the invariants (I1-I6) this plan asserts, and for why I2's broker restart is real (docker compose restart broker) rather than a Toxiproxy severance, and run-gated to full runs only rather than left unimplemented. The "Restart Broker And Recheck DLQ" JSR223Sampler in the TearDown group is the ONLY step that ever touches the broker container, and it is guarded by HarnessConfig.smokeMode() (the same single source of truth tst-031/tst-034/tst-035's own plan.jmx and this module's own assert-dlq.groovy already use, not a raw System.getenv comparison of its own) -- Tst029ModuleTest always runs with HARNESS_SMOKE_MODE=true, so that guard is exactly what keeps this module's own automated test from ever restarting a developer's running stack.</stringProp>
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
@@ -410,15 +410,17 @@ vars.put("dlq_info", prev.getResponseDataAsString())
         <!-- The ONLY step in this entire plan that ever touches the broker
              container, and the reason coverage stays "full" rather than
              "partial": I2 is genuinely implemented, just run-gated. Guarded
-             by HARNESS_SMOKE_MODE so Tst029ModuleTest (which always sets
-             that flag) can never restart a developer's running stack; see
-             README.md and this plan's own TestPlan-level comment. -->
+             by HarnessConfig.smokeMode() so Tst029ModuleTest (which always
+             sets HARNESS_SMOKE_MODE=true) can never restart a developer's
+             running stack; see README.md and this plan's own TestPlan-level
+             comment. -->
         <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Restart Broker And Recheck DLQ (full runs only)" enabled="true">
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="script"><![CDATA[
+import com.techcombank.qe.harness.config.HarnessConfig
 import groovy.json.JsonSlurper
 import java.io.File
 import java.net.URI
@@ -431,7 +433,17 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-if (System.getenv("HARNESS_SMOKE_MODE") == "true") {
+// HarnessConfig.smokeMode() -- not a raw System.getenv(...) == "true"
+// comparison -- is this harness's single source of truth for smoke-mode
+// detection (already used inline by tst-031/tst-034/tst-035's own plan.jmx,
+// and by this module's own assert-dlq.groovy): it treats "true"/"1"/"yes"/
+// "on" (case-insensitive, trimmed) as truthy. A raw exact-match check here
+// could disagree with it -- e.g. HARNESS_SMOKE_MODE=1 would read as "not
+// smoke" by a raw == "true" check and let this sampler actually restart
+// the broker, while assert-dlq.groovy would still (correctly) report I2 as
+// not-evaluated, discarding the outcome of a restart that just happened
+// for no reason. Matching the established convention exactly closes that.
+if (HarnessConfig.smokeMode()) {
     // I2 is reported not-evaluated by assert-dlq.groovy in this case --
     // dlq_depth_before_restart/dlq_depth_after_restart deliberately stay
     // unset, and the assertion script only ever reads them on the
