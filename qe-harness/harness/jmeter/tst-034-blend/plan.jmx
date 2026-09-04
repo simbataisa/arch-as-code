@@ -168,10 +168,16 @@ SampleResult.setResponseCode("200")
              thread count is sized (via real, empirical measurement against
              this SUT) to comfortably clear its own pacing target under
              clean latency (single-digit milliseconds, measured directly)
-             while the transfer journey's own two dedicated threads cannot
-             clear its own target once journey-starved adds 4000ms to every
-             call ; a DETERMINISTIC capacity shortfall, not a probabilistic
-             one. percentThroughput's role from the brief's literal
+             while the transfer journey's own three dedicated threads
+             cannot clear its own target once journey-starved adds 4000ms
+             to every call ; the resulting THROUGHPUT shortfall itself is
+             deterministic (Little's Law: threads / latency caps it at
+             ~0.75 requests/second, a ~37x shortfall against its ~28
+             requests/second target, regardless of timing jitter). Turning
+             that shortfall into a per-sub-window zero count, which is what
+             I3 actually checks, is a separate, statistical step ; see the
+             sub-window-width comment below for why, and for the exact
+             arithmetic. percentThroughput's role from the brief's literal
              Throughput Controller design is played here by each journey's
              own target request rate, still derived from ProfileResolver's
              declared share (never a plan.jmx literal) ; see
@@ -199,23 +205,36 @@ ProfileResolver.Profile profile = new ProfileResolver().load("mixed")
 // first version of this plan picked a much tighter window (95-130ms)
 // against a 250ms delay: this test environment's own scheduling jitter
 // turned out to reach as high as ~220ms on a clean run with NO defect
-// active at all (confirmed by a diagnostic max-gap prop this plan tracks
-// per journey), which overlapped the "guaranteed starvation detection"
-// ceiling that a 250ms delay allowed for. Rather than make I3 more
-// sensitive to that noise, the defect's own magnitude was widened instead
-// (250ms -> 4000ms), which is the more honest fix: I3's contract ("every
-// journey keeps a non-zero count in every sub-window") is unchanged, only
-// how hard the defect fixture pushes on it. 900ms sits with a wide margin
-// on both sides of the values that actually matter here: comfortably above
-// every journey's own clean-run pacing interval AND this environment's own
-// observed jitter ceiling (~220ms, so >4x margin), and comfortably below
-// half of the journey-starved-capped transfer journey's own interval
-// (~4000ms+ with its one dedicated thread, so a floor-division window-index
-// jump of at least 4 is guaranteed regardless of phase alignment, far more
-// than the >1 jump the tally-blend PostProcessor's own min-window tracking
-// needs to register a fully starved window -- see that script's own
-// comment). Full mode: 5-minute sub-windows over the declared 14,400s hold
-// keep the per-window bookkeeping reasonable.
+// active at all (confirmed by a diagnostic max-gap prop this plan tracked
+// per journey during that investigation), which overlapped the
+// "guaranteed starvation detection" ceiling that a 250ms delay allowed
+// for. Rather than make I3 more sensitive to that noise, the defect's own
+// magnitude was widened instead (250ms -> 4000ms), which is the more
+// honest fix: I3's contract ("every journey keeps a non-zero count in
+// every sub-window") is unchanged, only how hard the defect fixture
+// pushes on it. 900ms comfortably clears every journey's own clean-run
+// pacing interval and this environment's own observed jitter ceiling
+// (~220ms, so >4x margin on that side).
+//
+// The margin on the DEFECT side is statistical, not a per-gap guarantee --
+// worth being precise about, since an unreconciled assumption exactly like
+// this is what caused this task's own timing investigation in the first
+// place. transfer's three dedicated threads (see that Thread Group's own
+// comment) give it a capacity-capped combined arrival interval under the
+// defect of threads / latency = 3 / 4s = 0.75 requests/second, i.e. one
+// arrival roughly every 1333ms -- BELOW 1800ms (2 x 900ms), so a single
+// inter-arrival gap is not guaranteed to skip a whole sub-window on every
+// occurrence, only most of them, depending on phase. What IS overwhelming
+// is the statistical picture over the whole measured window: at 0.75
+// requests/second into 900ms buckets, the expected count per bucket is
+// only ~0.675, so (Poisson approximation) any single bucket has roughly a
+// 51% chance of landing on zero, and this plan's own ~20 measured buckets
+// (a smoke run's 18s measured duration / 900ms) make the chance that EVERY
+// one of them is non-zero on a genuinely defect-active run on the order of
+// 1 in 1,000,000 -- not a guarantee, but not a coin flip either. See the
+// task's own report for the full arithmetic. Full mode: 5-minute
+// sub-windows over the declared 14,400s hold keep the per-window
+// bookkeeping reasonable.
 long warmupMs = smoke ? 2000L : 60000L
 long subWindowMillis = smoke ? 900L : 300000L
 
@@ -228,7 +247,7 @@ long subWindowMillis = smoke ? 900L : 300000L
 // pacing-limited, hitting its declared share almost exactly), which pushes
 // every journey's own clean-run pacing interval well below subWindowMillis
 // -- the margin I3 needs to never spuriously fail on a clean run. The
-// journey-starved-affected transfer journey's own two dedicated threads
+// journey-starved-affected transfer journey's own three dedicated threads
 // cannot clear this target once its own latency balloons by 4000ms (see
 // TransferService's own comment) regardless of how high this figure is
 // raised, since that shortfall is capacity-bound, not pacing-bound.
@@ -300,12 +319,17 @@ SampleResult.setResponseCode("200")
            rather than capacity-limited. Once journey-starved adds 4000ms
            to every call, those same three threads still cannot come close
            to clearing that target ; max achievable throughput becomes
-           threads / latency =~ 3/4s = 0.75 requests/second, still two
-           orders of magnitude below the declared share's own target rate,
-           a deterministic, sustained shortfall that shows up as I3's own
-           starvation signal regardless
-           of exactly how many threads (one or two) are given to this
-           journey. Duration is the
+           threads / latency =~ 3/4s = 0.75 requests/second, a ~37x (roughly
+           1.6 orders of magnitude) shortfall below the declared share's
+           own ~28 requests/second target ; a sustained capacity shortfall
+           severe enough that, over this plan's own ~20 measured
+           sub-windows, the chance NONE of them lands on zero is on the
+           order of 1 in 1,000,000 (see the setUp comment above, and the
+           task's own report, for the exact arithmetic). This is a
+           statistical margin, not a per-request deterministic guarantee ;
+           worth stating precisely, since this task's own history is
+           exactly an unreconciled version of this same claim causing a
+           real failure. Duration is the
            smoke/full __groovy switch every other module already uses;
            serialize_threadgroups=false above lets this run concurrently
            with the other three journeys below, which is what makes this a
@@ -418,109 +442,10 @@ vars.put("amountMinor", String.valueOf(amountMinor))
         <hashTree>
           <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"></stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="script"><![CDATA[
-// Tags every sample by vars.get("tst034_journey") (set by this journey's
-// own JSR223PreProcessor above) into props -- the cross-thread aggregation
-// pattern tst-031-ratelimit's assert-ratelimit.groovy established, extended
-// here to four concurrent journeys instead of one metric. Discards every
-// sample before tst034_warmup_ms has elapsed, for every tally below -- see
-// README.md's I5.
-String name = vars.get("tst034_journey")
-long runStartMs = Long.parseLong(props.getProperty("tst034_run_start_ms"))
-long warmupMs = Long.parseLong(props.getProperty("tst034_warmup_ms"))
-long subWindowMillis = Long.parseLong(props.getProperty("tst034_sub_window_millis"))
-final int RESERVOIR_SIZE = 300
-
-long elapsedMs = Math.max(0L, prev.getTimeStamp() - runStartMs)
-String code = prev.getResponseCode()
-boolean ok = code != null && code.startsWith("2")
-
-synchronized (props) {
-    if (elapsedMs < warmupMs) {
-        // Still warming up: I5 requires measurement not begin here --
-        // every tally below is skipped entirely for this sample, not just
-        // its throughput contribution.
-        return
-    }
-
-    long measuredElapsedMs = elapsedMs - warmupMs
-    int windowIdx = (int) Math.floorDiv(measuredElapsedMs, subWindowMillis)
-
-    int maxWindowSeen = Integer.parseInt(props.getProperty("tst034_max_window_idx_seen", "-1"))
-    if (windowIdx > maxWindowSeen) {
-        props.put("tst034_max_window_idx_seen", String.valueOf(windowIdx))
-    }
-
-    long total = Long.parseLong(props.getProperty("tst034_total_samples", "0"))
-    props.put("tst034_total_samples", String.valueOf(total + 1))
-
-    long count = Long.parseLong(props.getProperty("tst034_" + name + "_count", "0"))
-    props.put("tst034_" + name + "_count", String.valueOf(count + 1))
-
-    if (!ok) {
-        long errors = Long.parseLong(props.getProperty("tst034_" + name + "_errors", "0"))
-        props.put("tst034_" + name + "_errors", String.valueOf(errors + 1))
-    }
-
-    // O(1) props keys per journey for the per-sub-window minimum (I3),
-    // rather than one key per window index: with a 100ms sub-window over
-    // an 18s measured smoke run that is 180+ never-reused keys per
-    // journey, and empirically (confirmed by an early version of this
-    // plan) enough churn on the one shared, synchronized "props" Hashtable
-    // to trigger internal resizes that stall EVERY thread sharing it for
-    // 100ms+ at a time -- indistinguishable, without this fix, from a
-    // real defect. Tracks only the CURRENT window's own running count and
-    // a running MINIMUM across every window already closed; the last,
-    // still-open window at the moment the run ends is therefore never
-    // folded into the minimum, which is also exactly the "exclude the
-    // trailing partial window" property this plan needs regardless.
-    int maxJourneyWindow = Integer.parseInt(props.getProperty("tst034_" + name + "_max_window_idx", "0"))
-    if (windowIdx > maxJourneyWindow) {
-        props.put("tst034_" + name + "_max_window_idx", String.valueOf(windowIdx))
-    }
-    int curWindowIdx = Integer.parseInt(props.getProperty("tst034_" + name + "_cur_window_idx", "-1"))
-    long curWindowCount = Long.parseLong(props.getProperty("tst034_" + name + "_cur_window_count", "0"))
-    if (windowIdx > curWindowIdx) {
-        if (curWindowIdx >= 0) {
-            long minSoFar = Long.parseLong(props.getProperty("tst034_" + name + "_min_window_count", String.valueOf(Long.MAX_VALUE)))
-            long newMin = Math.min(minSoFar, curWindowCount)
-            // If windowIdx jumped by more than 1, one or more whole
-            // sub-windows between the previous one and this one got ZERO
-            // samples -- a gap this incremental design would otherwise
-            // silently skip over (it only ever finalizes the window it was
-            // last tracking, never the ones in between). Missing this was
-            // a real bug in an earlier version of this design: it made I3
-            // structurally unable to ever observe starvation, since a
-            // fully-empty window never got recorded as anything at all.
-            if (windowIdx - curWindowIdx > 1) {
-                newMin = 0L
-            }
-            props.put("tst034_" + name + "_min_window_count", String.valueOf(newMin))
-        }
-        props.put("tst034_" + name + "_cur_window_idx", String.valueOf(windowIdx))
-        props.put("tst034_" + name + "_cur_window_count", "1")
-    } else {
-        // Same window, or (rare, with multiple threads in one journey's
-        // Thread Group) a slightly late arrival for an already-closed
-        // window -- folded into the current window's count either way,
-        // since an exact per-window count is not the point; a
-        // representative minimum is.
-        props.put("tst034_" + name + "_cur_window_count", String.valueOf(curWindowCount + 1))
-    }
-
-    // Bounded reservoir: the last RESERVOIR_SIZE latencies for this journey,
-    // overwritten round-robin -- Finalize Blend Tallies (TearDown) sorts
-    // this once, at the end, to derive p95, rather than this PostProcessor
-    // re-sorting a growing list on every single sample.
-    long latencyN = Long.parseLong(props.getProperty("tst034_" + name + "_latency_n", "0"))
-    int reservoirSlot = (int) (latencyN % RESERVOIR_SIZE)
-    props.put("tst034_" + name + "_latency_" + reservoirSlot, String.valueOf(prev.getTime()))
-    props.put("tst034_" + name + "_latency_n", String.valueOf(latencyN + 1))
-}
-]]></stringProp>
+            <stringProp name="script"></stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
@@ -598,96 +523,10 @@ if (sleepMs > 0) {
         <hashTree>
           <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"></stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="script"><![CDATA[
-String name = vars.get("tst034_journey")
-long runStartMs = Long.parseLong(props.getProperty("tst034_run_start_ms"))
-long warmupMs = Long.parseLong(props.getProperty("tst034_warmup_ms"))
-long subWindowMillis = Long.parseLong(props.getProperty("tst034_sub_window_millis"))
-final int RESERVOIR_SIZE = 300
-
-long elapsedMs = Math.max(0L, prev.getTimeStamp() - runStartMs)
-String code = prev.getResponseCode()
-boolean ok = code != null && code.startsWith("2")
-
-synchronized (props) {
-    if (elapsedMs < warmupMs) {
-        return
-    }
-
-    long measuredElapsedMs = elapsedMs - warmupMs
-    int windowIdx = (int) Math.floorDiv(measuredElapsedMs, subWindowMillis)
-
-    int maxWindowSeen = Integer.parseInt(props.getProperty("tst034_max_window_idx_seen", "-1"))
-    if (windowIdx > maxWindowSeen) {
-        props.put("tst034_max_window_idx_seen", String.valueOf(windowIdx))
-    }
-
-    long total = Long.parseLong(props.getProperty("tst034_total_samples", "0"))
-    props.put("tst034_total_samples", String.valueOf(total + 1))
-
-    long count = Long.parseLong(props.getProperty("tst034_" + name + "_count", "0"))
-    props.put("tst034_" + name + "_count", String.valueOf(count + 1))
-
-    if (!ok) {
-        long errors = Long.parseLong(props.getProperty("tst034_" + name + "_errors", "0"))
-        props.put("tst034_" + name + "_errors", String.valueOf(errors + 1))
-    }
-
-    // O(1) props keys per journey for the per-sub-window minimum (I3),
-    // rather than one key per window index: with a 100ms sub-window over
-    // an 18s measured smoke run that is 180+ never-reused keys per
-    // journey, and empirically (confirmed by an early version of this
-    // plan) enough churn on the one shared, synchronized "props" Hashtable
-    // to trigger internal resizes that stall EVERY thread sharing it for
-    // 100ms+ at a time -- indistinguishable, without this fix, from a
-    // real defect. Tracks only the CURRENT window's own running count and
-    // a running MINIMUM across every window already closed; the last,
-    // still-open window at the moment the run ends is therefore never
-    // folded into the minimum, which is also exactly the "exclude the
-    // trailing partial window" property this plan needs regardless.
-    int maxJourneyWindow = Integer.parseInt(props.getProperty("tst034_" + name + "_max_window_idx", "0"))
-    if (windowIdx > maxJourneyWindow) {
-        props.put("tst034_" + name + "_max_window_idx", String.valueOf(windowIdx))
-    }
-    int curWindowIdx = Integer.parseInt(props.getProperty("tst034_" + name + "_cur_window_idx", "-1"))
-    long curWindowCount = Long.parseLong(props.getProperty("tst034_" + name + "_cur_window_count", "0"))
-    if (windowIdx > curWindowIdx) {
-        if (curWindowIdx >= 0) {
-            long minSoFar = Long.parseLong(props.getProperty("tst034_" + name + "_min_window_count", String.valueOf(Long.MAX_VALUE)))
-            long newMin = Math.min(minSoFar, curWindowCount)
-            // If windowIdx jumped by more than 1, one or more whole
-            // sub-windows between the previous one and this one got ZERO
-            // samples -- a gap this incremental design would otherwise
-            // silently skip over (it only ever finalizes the window it was
-            // last tracking, never the ones in between). Missing this was
-            // a real bug in an earlier version of this design: it made I3
-            // structurally unable to ever observe starvation, since a
-            // fully-empty window never got recorded as anything at all.
-            if (windowIdx - curWindowIdx > 1) {
-                newMin = 0L
-            }
-            props.put("tst034_" + name + "_min_window_count", String.valueOf(newMin))
-        }
-        props.put("tst034_" + name + "_cur_window_idx", String.valueOf(windowIdx))
-        props.put("tst034_" + name + "_cur_window_count", "1")
-    } else {
-        // Same window, or (rare, with multiple threads in one journey's
-        // Thread Group) a slightly late arrival for an already-closed
-        // window -- folded into the current window's count either way,
-        // since an exact per-window count is not the point; a
-        // representative minimum is.
-        props.put("tst034_" + name + "_cur_window_count", String.valueOf(curWindowCount + 1))
-    }
-
-    long latencyN = Long.parseLong(props.getProperty("tst034_" + name + "_latency_n", "0"))
-    int reservoirSlot = (int) (latencyN % RESERVOIR_SIZE)
-    props.put("tst034_" + name + "_latency_" + reservoirSlot, String.valueOf(prev.getTime()))
-    props.put("tst034_" + name + "_latency_n", String.valueOf(latencyN + 1))
-}
-]]></stringProp>
+            <stringProp name="script"></stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
@@ -762,96 +601,10 @@ if (sleepMs > 0) {
         <hashTree>
           <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"></stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="script"><![CDATA[
-String name = vars.get("tst034_journey")
-long runStartMs = Long.parseLong(props.getProperty("tst034_run_start_ms"))
-long warmupMs = Long.parseLong(props.getProperty("tst034_warmup_ms"))
-long subWindowMillis = Long.parseLong(props.getProperty("tst034_sub_window_millis"))
-final int RESERVOIR_SIZE = 300
-
-long elapsedMs = Math.max(0L, prev.getTimeStamp() - runStartMs)
-String code = prev.getResponseCode()
-boolean ok = code != null && code.startsWith("2")
-
-synchronized (props) {
-    if (elapsedMs < warmupMs) {
-        return
-    }
-
-    long measuredElapsedMs = elapsedMs - warmupMs
-    int windowIdx = (int) Math.floorDiv(measuredElapsedMs, subWindowMillis)
-
-    int maxWindowSeen = Integer.parseInt(props.getProperty("tst034_max_window_idx_seen", "-1"))
-    if (windowIdx > maxWindowSeen) {
-        props.put("tst034_max_window_idx_seen", String.valueOf(windowIdx))
-    }
-
-    long total = Long.parseLong(props.getProperty("tst034_total_samples", "0"))
-    props.put("tst034_total_samples", String.valueOf(total + 1))
-
-    long count = Long.parseLong(props.getProperty("tst034_" + name + "_count", "0"))
-    props.put("tst034_" + name + "_count", String.valueOf(count + 1))
-
-    if (!ok) {
-        long errors = Long.parseLong(props.getProperty("tst034_" + name + "_errors", "0"))
-        props.put("tst034_" + name + "_errors", String.valueOf(errors + 1))
-    }
-
-    // O(1) props keys per journey for the per-sub-window minimum (I3),
-    // rather than one key per window index: with a 100ms sub-window over
-    // an 18s measured smoke run that is 180+ never-reused keys per
-    // journey, and empirically (confirmed by an early version of this
-    // plan) enough churn on the one shared, synchronized "props" Hashtable
-    // to trigger internal resizes that stall EVERY thread sharing it for
-    // 100ms+ at a time -- indistinguishable, without this fix, from a
-    // real defect. Tracks only the CURRENT window's own running count and
-    // a running MINIMUM across every window already closed; the last,
-    // still-open window at the moment the run ends is therefore never
-    // folded into the minimum, which is also exactly the "exclude the
-    // trailing partial window" property this plan needs regardless.
-    int maxJourneyWindow = Integer.parseInt(props.getProperty("tst034_" + name + "_max_window_idx", "0"))
-    if (windowIdx > maxJourneyWindow) {
-        props.put("tst034_" + name + "_max_window_idx", String.valueOf(windowIdx))
-    }
-    int curWindowIdx = Integer.parseInt(props.getProperty("tst034_" + name + "_cur_window_idx", "-1"))
-    long curWindowCount = Long.parseLong(props.getProperty("tst034_" + name + "_cur_window_count", "0"))
-    if (windowIdx > curWindowIdx) {
-        if (curWindowIdx >= 0) {
-            long minSoFar = Long.parseLong(props.getProperty("tst034_" + name + "_min_window_count", String.valueOf(Long.MAX_VALUE)))
-            long newMin = Math.min(minSoFar, curWindowCount)
-            // If windowIdx jumped by more than 1, one or more whole
-            // sub-windows between the previous one and this one got ZERO
-            // samples -- a gap this incremental design would otherwise
-            // silently skip over (it only ever finalizes the window it was
-            // last tracking, never the ones in between). Missing this was
-            // a real bug in an earlier version of this design: it made I3
-            // structurally unable to ever observe starvation, since a
-            // fully-empty window never got recorded as anything at all.
-            if (windowIdx - curWindowIdx > 1) {
-                newMin = 0L
-            }
-            props.put("tst034_" + name + "_min_window_count", String.valueOf(newMin))
-        }
-        props.put("tst034_" + name + "_cur_window_idx", String.valueOf(windowIdx))
-        props.put("tst034_" + name + "_cur_window_count", "1")
-    } else {
-        // Same window, or (rare, with multiple threads in one journey's
-        // Thread Group) a slightly late arrival for an already-closed
-        // window -- folded into the current window's count either way,
-        // since an exact per-window count is not the point; a
-        // representative minimum is.
-        props.put("tst034_" + name + "_cur_window_count", String.valueOf(curWindowCount + 1))
-    }
-
-    long latencyN = Long.parseLong(props.getProperty("tst034_" + name + "_latency_n", "0"))
-    int reservoirSlot = (int) (latencyN % RESERVOIR_SIZE)
-    props.put("tst034_" + name + "_latency_" + reservoirSlot, String.valueOf(prev.getTime()))
-    props.put("tst034_" + name + "_latency_n", String.valueOf(latencyN + 1))
-}
-]]></stringProp>
+            <stringProp name="script"></stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
@@ -934,96 +687,10 @@ if (sleepMs > 0) {
         <hashTree>
           <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"></stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="script"><![CDATA[
-String name = vars.get("tst034_journey")
-long runStartMs = Long.parseLong(props.getProperty("tst034_run_start_ms"))
-long warmupMs = Long.parseLong(props.getProperty("tst034_warmup_ms"))
-long subWindowMillis = Long.parseLong(props.getProperty("tst034_sub_window_millis"))
-final int RESERVOIR_SIZE = 300
-
-long elapsedMs = Math.max(0L, prev.getTimeStamp() - runStartMs)
-String code = prev.getResponseCode()
-boolean ok = code != null && code.startsWith("2")
-
-synchronized (props) {
-    if (elapsedMs < warmupMs) {
-        return
-    }
-
-    long measuredElapsedMs = elapsedMs - warmupMs
-    int windowIdx = (int) Math.floorDiv(measuredElapsedMs, subWindowMillis)
-
-    int maxWindowSeen = Integer.parseInt(props.getProperty("tst034_max_window_idx_seen", "-1"))
-    if (windowIdx > maxWindowSeen) {
-        props.put("tst034_max_window_idx_seen", String.valueOf(windowIdx))
-    }
-
-    long total = Long.parseLong(props.getProperty("tst034_total_samples", "0"))
-    props.put("tst034_total_samples", String.valueOf(total + 1))
-
-    long count = Long.parseLong(props.getProperty("tst034_" + name + "_count", "0"))
-    props.put("tst034_" + name + "_count", String.valueOf(count + 1))
-
-    if (!ok) {
-        long errors = Long.parseLong(props.getProperty("tst034_" + name + "_errors", "0"))
-        props.put("tst034_" + name + "_errors", String.valueOf(errors + 1))
-    }
-
-    // O(1) props keys per journey for the per-sub-window minimum (I3),
-    // rather than one key per window index: with a 100ms sub-window over
-    // an 18s measured smoke run that is 180+ never-reused keys per
-    // journey, and empirically (confirmed by an early version of this
-    // plan) enough churn on the one shared, synchronized "props" Hashtable
-    // to trigger internal resizes that stall EVERY thread sharing it for
-    // 100ms+ at a time -- indistinguishable, without this fix, from a
-    // real defect. Tracks only the CURRENT window's own running count and
-    // a running MINIMUM across every window already closed; the last,
-    // still-open window at the moment the run ends is therefore never
-    // folded into the minimum, which is also exactly the "exclude the
-    // trailing partial window" property this plan needs regardless.
-    int maxJourneyWindow = Integer.parseInt(props.getProperty("tst034_" + name + "_max_window_idx", "0"))
-    if (windowIdx > maxJourneyWindow) {
-        props.put("tst034_" + name + "_max_window_idx", String.valueOf(windowIdx))
-    }
-    int curWindowIdx = Integer.parseInt(props.getProperty("tst034_" + name + "_cur_window_idx", "-1"))
-    long curWindowCount = Long.parseLong(props.getProperty("tst034_" + name + "_cur_window_count", "0"))
-    if (windowIdx > curWindowIdx) {
-        if (curWindowIdx >= 0) {
-            long minSoFar = Long.parseLong(props.getProperty("tst034_" + name + "_min_window_count", String.valueOf(Long.MAX_VALUE)))
-            long newMin = Math.min(minSoFar, curWindowCount)
-            // If windowIdx jumped by more than 1, one or more whole
-            // sub-windows between the previous one and this one got ZERO
-            // samples -- a gap this incremental design would otherwise
-            // silently skip over (it only ever finalizes the window it was
-            // last tracking, never the ones in between). Missing this was
-            // a real bug in an earlier version of this design: it made I3
-            // structurally unable to ever observe starvation, since a
-            // fully-empty window never got recorded as anything at all.
-            if (windowIdx - curWindowIdx > 1) {
-                newMin = 0L
-            }
-            props.put("tst034_" + name + "_min_window_count", String.valueOf(newMin))
-        }
-        props.put("tst034_" + name + "_cur_window_idx", String.valueOf(windowIdx))
-        props.put("tst034_" + name + "_cur_window_count", "1")
-    } else {
-        // Same window, or (rare, with multiple threads in one journey's
-        // Thread Group) a slightly late arrival for an already-closed
-        // window -- folded into the current window's count either way,
-        // since an exact per-window count is not the point; a
-        // representative minimum is.
-        props.put("tst034_" + name + "_cur_window_count", String.valueOf(curWindowCount + 1))
-    }
-
-    long latencyN = Long.parseLong(props.getProperty("tst034_" + name + "_latency_n", "0"))
-    int reservoirSlot = (int) (latencyN % RESERVOIR_SIZE)
-    props.put("tst034_" + name + "_latency_" + reservoirSlot, String.valueOf(prev.getTime()))
-    props.put("tst034_" + name + "_latency_n", String.valueOf(latencyN + 1))
-}
-]]></stringProp>
+            <stringProp name="script"></stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
