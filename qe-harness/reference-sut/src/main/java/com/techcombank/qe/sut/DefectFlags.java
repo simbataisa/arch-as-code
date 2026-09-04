@@ -25,11 +25,12 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class DefectFlags {
 
     /** The complete, closed set of defect flags this SUT understands.
-     *  One per archetype capability that Wave 16 implements. */
+     *  One per archetype capability that Waves 16 and 17 implement. */
     public static final Set<String> KNOWN_FLAGS = Set.of(
         "ledger-unbalanced", "schema-drift", "ratelimit-leaky",
         "breaker-disabled", "recon-false-clean", "authz-missing-marker",
-        "cache-headers-absent"
+        "cache-headers-absent",
+        "reservation-overcommit"
     );
 
     private static final AtomicReference<String> ACTIVE = new AtomicReference<>();

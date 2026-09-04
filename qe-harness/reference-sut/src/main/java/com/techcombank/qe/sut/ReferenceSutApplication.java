@@ -4,8 +4,15 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
+/**
+ * {@code @EnableScheduling}: TST-023's {@link com.techcombank.qe.sut.capability
+ * .reservation.ReservationSweeper} runs its TTL sweep via {@code @Scheduled}
+ * (Wave 17, Task 7).
+ */
 @SpringBootApplication
+@EnableScheduling
 public class ReferenceSutApplication {
 
     public static void main(String[] args) {

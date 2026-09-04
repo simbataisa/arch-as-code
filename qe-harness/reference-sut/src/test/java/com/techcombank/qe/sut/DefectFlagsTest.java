@@ -57,11 +57,11 @@ class DefectFlagsTest {
     }
 
     @Test
-    void knownFlagsContainsAllSevenArchetypeDefects() {
-        assertEquals(7, DefectFlags.KNOWN_FLAGS.size());
+    void knownFlagsContainsAllEightArchetypeDefects() {
+        assertEquals(8, DefectFlags.KNOWN_FLAGS.size());
         assertTrue(DefectFlags.KNOWN_FLAGS.containsAll(java.util.Set.of(
             "ledger-unbalanced", "schema-drift", "ratelimit-leaky",
             "breaker-disabled", "recon-false-clean", "authz-missing-marker",
-            "cache-headers-absent")));
+            "cache-headers-absent", "reservation-overcommit")));
     }
 }

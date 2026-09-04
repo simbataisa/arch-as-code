@@ -15,7 +15,7 @@ public final class CapabilityRegistry {
      *  IMPLEMENTED_AT_WAVE_17 in the same commit -- see that test for the guard
      *  that keeps this set from drifting from what modules.yml actually ships. */
     public static final Set<String> IMPLEMENTED =
-        Set.of("TST-021", "TST-030", "TST-031", "TST-035", "TST-039", "TST-040", "TST-043");
+        Set.of("TST-021", "TST-023", "TST-030", "TST-031", "TST-035", "TST-039", "TST-040", "TST-043");
 
     private CapabilityRegistry() {}
 
