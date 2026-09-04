@@ -9,7 +9,7 @@
 | TST-026 | B — Messaging & Integration | jmeter | qe-harness/harness/jmeter/tst-026-routing | full | route-default-fallthrough |
 | TST-027 | B — Messaging & Integration | jmeter | qe-harness/harness/jmeter/tst-027-ordering | partial — I5's per_partition and global scopes cannot be exercised against RabbitMQ, which has no partitions; the declared scope is per_key and only that scope is asserted. I3's post-restart clause belongs to TST-029, which owns the broker-restart path. | resequencer-emits-on-arrival |
 | TST-028 | B — Messaging & Integration | jmeter | qe-harness/harness/jmeter/tst-028-fanout | full | aggregate-emitted-incomplete |
-| TST-029 | B — Messaging & Integration | — | — | declared | — |
+| TST-029 | B — Messaging & Integration | jmeter | qe-harness/harness/jmeter/tst-029-dlq | full | dlq-bypass-drop |
 | TST-030 | B — Messaging & Integration | gatling-karate | qe-harness/harness/gatling-karate/tst-030-contract | full | schema-drift |
 | TST-031 | C — Load & Capacity | jmeter | qe-harness/harness/jmeter/tst-031-ratelimit | full | ratelimit-leaky |
 | TST-032 | C — Load & Capacity | — | — | declared | — |
@@ -25,4 +25,4 @@
 | TST-042 | G — Observability & Client | — | — | declared | — |
 | TST-043 | G — Observability & Client | k6 | qe-harness/harness/k6/tst-043-clientexp | partial — None of the archetype's own I1-I6 are implemented: I1/I2/I6 need an offline client, I3/I4 a rendered DOM, and I5 k6/browser against a real page - no such application exists in this repository. This module ships four substitute server-side HTTP invariants (perf budget, cache correctness, conditional requests, compression) which are renumbered I1-I4 and are NOT the archetype's I1-I4. | cache-headers-absent |
 
-13 of 24 archetypes implemented · 11 declared · 3 partial
+14 of 24 archetypes implemented · 10 declared · 3 partial

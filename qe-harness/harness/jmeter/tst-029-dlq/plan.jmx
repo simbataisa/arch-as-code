@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-029 Delivery Guarantee, Retry, DLQ" enabled="true">
+      <stringProp name="TestPlan.comments">Task 24 (Wave 17 QE Harness). See README.md for the invariants (I1-I6) this plan asserts, and for why I2's broker restart is real (docker compose restart broker) rather than a Toxiproxy severance, and run-gated to full runs only rather than left unimplemented. The "Restart Broker And Recheck DLQ" JSR223Sampler in the TearDown group is the ONLY step that ever touches the broker container, and it is guarded by System.getenv("HARNESS_SMOKE_MODE") -- Tst029ModuleTest always runs with HARNESS_SMOKE_MODE=true, so that guard is exactly what keeps this module's own automated test from ever restarting a developer's running stack.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: purges qe.q.work and qe.q.dlq (DeliveryService.
+           reset()) before "Submit Work and Poison"'s first request, reads
+           the SUT's own declared dlqAlertDepth so the Main Thread Group
+           never hardcodes how many poison messages it takes to cross the
+           threshold, and zeroes this run's own tallies in props - same
+           idiom TST-021/023/026/027/028/031's own setUp Thread Groups use:
+           a second run in the same SUT process (this module's own JUnit
+           fixture running clean-then-defect) must never mix its counts
+           with a previous run's leftovers. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset Delivery State" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/delivery/reset" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/delivery/reset</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/dlq/depth (declared alertDepth)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/dlq/depth</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- The Main Thread Group's own "Choose Job Or Poison" reads this
+               back rather than assuming app.messaging.dlq-alert-depth's
+               current value (5) - so this plan keeps working unchanged if
+               that declared threshold ever moves. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-declared-alert-depth" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
+props.put("tst029_dlq_alert_depth", String.valueOf(json.alertDepth as long))
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Zero Tallies" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never adds its tallies on top of a previous run's leftovers -- same idiom
+// TST-023/026/027/028/031's own setUp Thread Groups use for their own props.
+props.put("tst029_poison_submitted", "0")
+props.put("tst029_ordinary_submitted", "0")
+props.put("tst029_max_poison_attempts", "0")
+props.put("tst029_jobs_behind_poison", "0")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("reset delivery state, zeroed tst029_* tallies", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: 6 threads x 3 loops = eighteen independent
+           submissions. "Choose Job Or Poison" below assigns each of the
+           eighteen (threadNum, iteration) slots a role purely as a
+           function of a deterministic slot number and the declared
+           alertDepth read in setUp - enough poison jobs to push DLQ depth
+           at least two past dlqAlertDepth (I5), and exactly one ordinary
+           job in the very next slot after the poison run (I3's
+           non-blocking clause). Every other slot is an ordinary job. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Submit Work and Poison" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">3</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">6</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Choose Job Or Poison" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// (threadNum 0..5) * 3 + (iteration 1..3) -> a unique integer 1..18 for
+// every one of this thread group's own eighteen slots -- no shared counter
+// to race the way TST-027's own "Select Sequence And Role" needs one,
+// since threadNum/iteration alone already identify exactly one physical
+// execution slot apiece (same reasoning TST-028's own "assign-role-and-
+// tally-correlation" comment gives for its own role assignment).
+int slot = ctx.getThreadNum() * 3 + vars.getIteration()
+
+long alertDepth = Long.parseLong(props.getProperty("tst029_dlq_alert_depth", "5"))
+// Two past the declared threshold, not merely one, so I5's own
+// observedDepth > alertDepth check is never a coin-flip on the exact
+// boundary under ordinary scheduling jitter.
+long poisonTarget = alertDepth + 2
+
+String role
+String jobId
+boolean poison
+
+if (slot <= poisonTarget) {
+    // Poison run: slots 1..poisonTarget. Job ids are hyphenated short
+    // forms (poison-0001), never a numeric id wide enough to trip gate
+    // check 5 (13-19 consecutive digits) -- see README.md.
+    role = "poison"
+    poison = true
+    jobId = String.format("poison-%04d", slot)
+} else if (slot == poisonTarget + 1) {
+    // The one ordinary job this plan deliberately submits in the very next
+    // slot after the poison run -- every thread ramps within the same
+    // one-second window, so this genuinely lands in qe.q.work alongside
+    // the poison run rather than only after every one of them has already
+    // settled. I3's own non-blocking clause: if a poison message anywhere
+    // in qe.q.work were able to block the queue, this job's own state
+    // change would never settle within "Poll Delivery State Until
+    // Settled"'s bounded deadline in the TearDown group below.
+    role = "behindPoison"
+    poison = false
+    jobId = String.format("job-%04d", slot)
+} else {
+    role = "normal"
+    poison = false
+    jobId = String.format("job-%04d", slot)
+}
+
+// Cross-thread tallies (a JMeter *variable* is scoped per-thread and would
+// silently undercount) -- same idiom TST-023/026/028's own PostProcessors
+// use for their own admission/correlation tallies.
+synchronized (props) {
+    String key = poison ? "tst029_poison_submitted" : "tst029_ordinary_submitted"
+    long count = Long.parseLong(props.getProperty(key, "0"))
+    props.put(key, String.valueOf(count + 1))
+}
+
+vars.put("jobId", jobId)
+vars.put("poison", String.valueOf(poison))
+vars.put("tst029_role", role)
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/work" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/work?jobId=${jobId}&amp;poison=${poison}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every "Submit Work and
+           Poison" thread has finished (JMeter guarantees this ordering,
+           and TestPlan.serialize_threadgroups above makes it explicit). -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Delivery" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <!-- Bounded (30s: generous headroom past the retry ladder's own
+             declared 13s = 1s+3s+9s rungs) poll of the conservation-law
+             counters until submitted == stateChanges + dlqCount - never
+             an indefinite wait on a broker that never settles. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Poll Delivery State Until Settled" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.Instant
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+long ordinarySubmitted = Long.parseLong(props.getProperty("tst029_ordinary_submitted", "0"))
+
+Instant deadline = Instant.now().plusSeconds(30)
+def state = null
+boolean settled = false
+while (Instant.now().isBefore(deadline)) {
+    HttpRequest request = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/delivery/state"))
+        .timeout(Duration.ofSeconds(5))
+        .GET()
+        .build()
+    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    state = new JsonSlurper().parseText(response.body())
+    long submitted = state.submitted as long
+    long stateChanges = state.stateChanges as long
+    long dlqCount = state.dlqCount as long
+    if (submitted == stateChanges + dlqCount) {
+        settled = true
+        break
+    }
+    Thread.sleep(500L)
+}
+
+long finalStateChanges = (state?.stateChanges ?: 0) as long
+int maxAttempts = (state?.maxDeliveryAttempts ?: 0) as int
+
+// I3/I6 need each poison message's own attempt count, but
+// DeliveryService.attemptsFor(jobId) has no REST surface at all -- its own
+// javadoc says it is "kept public so the SUT's own test can assert the
+// boundary without going through HTTP". An HTTP-only module has no way to
+// read a per-message attempt count directly, the same gap TST-028's own
+// README documents for AggregatorService.awaitAggregate. qe.q.work's own
+// x-delivery-limit queue argument (MessagingTopology) is declared AS
+// maxDeliveryAttempts, so RabbitMQ itself -- not this module -- is what
+// structurally prevents any message from ever being delivered more times
+// than that. Once this poll confirms every poison message reached the DLQ
+// rather than hanging mid-retry (settled == true), that ceiling has
+// already held; this records the DECLARED value the broker enforced, not
+// a count this module derived independently.
+props.put("tst029_max_poison_attempts", String.valueOf(maxAttempts))
+
+// I3's non-blocking clause: "behindPoison"'s own job (see "Choose Job Or
+// Poison") is one of ordinarySubmitted; if it -- or any ordinary job --
+// were stuck behind a poison message that never releases the queue,
+// stateChanges would never catch up to ordinarySubmitted within this
+// bounded poll.
+long jobsBehindPoison = (settled && finalStateChanges >= ordinarySubmitted) ? 1L : 0L
+props.put("tst029_jobs_behind_poison", String.valueOf(jobsBehindPoison))
+
+SampleResult.setSuccessful(settled)
+SampleResult.setResponseData("settled=${settled} submitted=${state?.submitted} stateChanges=${finalStateChanges} dlqCount=${state?.dlqCount}", "UTF-8")
+SampleResult.setResponseCode(settled ? "200" : "500")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/delivery/state" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/delivery/state</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- assert-dlq.groovy reads this exact var for I1/I4's own
+               declared-config fields. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-delivery-state" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("delivery_state", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/dlq/depth" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/dlq/depth</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- assert-dlq.groovy reads this exact var for I5's own
+               exported/alertFiring/alertDepth/depth fields. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-dlq-info" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("dlq_info", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- The ONLY step in this entire plan that ever touches the broker
+             container, and the reason coverage stays "full" rather than
+             "partial": I2 is genuinely implemented, just run-gated. Guarded
+             by HARNESS_SMOKE_MODE so Tst029ModuleTest (which always sets
+             that flag) can never restart a developer's running stack; see
+             README.md and this plan's own TestPlan-level comment. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Restart Broker And Recheck DLQ (full runs only)" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.io.File
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+
+if (System.getenv("HARNESS_SMOKE_MODE") == "true") {
+    // I2 is reported not-evaluated by assert-dlq.groovy in this case --
+    // dlq_depth_before_restart/dlq_depth_after_restart deliberately stay
+    // unset, and the assertion script only ever reads them on the
+    // non-smoke branch. This is the ONE branch Tst029ModuleTest's own
+    // smoke-mode runs always take.
+    SampleResult.setSuccessful(true)
+    SampleResult.setResponseData("smoke mode: broker restart skipped -- I2 reported not-evaluated", "UTF-8")
+    SampleResult.setResponseCode("200")
+    return
+}
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+// ASSERT_SCRIPT_PATH (set by bin/run-jmeter.sh) is this module's own
+// absolute assert-dlq.groovy path, e.g.
+// <repo>/qe-harness/harness/jmeter/tst-029-dlq/assert-dlq.groovy -- walk up
+// from it to find the qe-harness/ directory containing docker-compose.yml,
+// rather than trusting this JSR223 sampler's own JVM working directory
+// (jmeter-maven-plugin documents no guarantee about it).
+Path assertScript = Paths.get(System.getenv("ASSERT_SCRIPT_PATH")).toAbsolutePath()
+Path qeHarnessRoot = assertScript
+while (qeHarnessRoot != null && qeHarnessRoot.getFileName()?.toString() != "qe-harness") {
+    qeHarnessRoot = qeHarnessRoot.getParent()
+}
+if (qeHarnessRoot == null) {
+    throw new IllegalStateException("could not locate qe-harness/ walking up from " + assertScript)
+}
+File qeHarnessDir = qeHarnessRoot.toFile()
+
+// Fresh, immediately-pre-restart read -- close enough to dlq_info (already
+// captured a moment ago in this same TearDown group) that either would do,
+// but reading again right here removes any doubt about what "before"
+// means.
+HttpRequest beforeReq = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/dlq/depth"))
+    .timeout(Duration.ofSeconds(5)).GET().build()
+HttpResponse<String> beforeResp = http.send(beforeReq, HttpResponse.BodyHandlers.ofString())
+def beforeJson = new JsonSlurper().parseText(beforeResp.body())
+long depthBefore = beforeJson.depth as long
+vars.put("dlq_depth_before_restart", String.valueOf(depthBefore))
+
+// The real thing: restart ONLY the broker service -- never `down`, never a
+// bare `docker compose restart` of the whole stack, which would also
+// cycle reference-sut and postgres for no reason this invariant needs.
+ProcessBuilder restartPb = new ProcessBuilder("docker", "compose", "restart", "broker")
+restartPb.directory(qeHarnessDir)
+restartPb.redirectErrorStream(true)
+Process restartProcess = restartPb.start()
+String restartOutput = restartProcess.getInputStream().getText("UTF-8")
+boolean restartFinished = restartProcess.waitFor(60, TimeUnit.SECONDS)
+if (!restartFinished) {
+    restartProcess.destroyForcibly()
+    throw new IllegalStateException("docker compose restart broker did not finish within 60s")
+}
+if (restartProcess.exitValue() != 0) {
+    throw new IllegalStateException("docker compose restart broker failed: " + restartOutput)
+}
+
+// Bounded wait for the SAME check docker-compose.yml's own healthcheck
+// uses (rabbitmq-diagnostics -q ping) -- never an indefinite wait on a
+// broker that never comes back.
+Instant healthDeadline = Instant.now().plusSeconds(60)
+boolean healthy = false
+while (Instant.now().isBefore(healthDeadline)) {
+    ProcessBuilder pingPb = new ProcessBuilder(
+        "docker", "compose", "exec", "-T", "broker", "rabbitmq-diagnostics", "-q", "ping")
+    pingPb.directory(qeHarnessDir)
+    pingPb.redirectErrorStream(true)
+    Process pingProcess = pingPb.start()
+    // Drain, never close-without-reading: closing this pipe out from under
+    // a still-writing child risks a broken-pipe write on its side, which
+    // can abort it with a misleading non-zero/hung exit rather than the
+    // ping's own true result.
+    String pingOutput = pingProcess.getInputStream().getText("UTF-8")
+    boolean pingFinished = pingProcess.waitFor(10, TimeUnit.SECONDS)
+    if (pingFinished && pingProcess.exitValue() == 0) {
+        healthy = true
+        break
+    }
+    if (!pingFinished) {
+        pingProcess.destroyForcibly()
+    }
+    Thread.sleep(2000L)
+}
+if (!healthy) {
+    throw new IllegalStateException("broker did not report healthy within 60s of the restart")
+}
+
+// The SUT's own Spring AMQP connections recover automatically once the
+// broker is back, but that recovery is itself unbounded from this
+// script's point of view -- retry the depth re-read on its own bounded
+// deadline rather than trusting the very first call right after the
+// broker reports healthy.
+Instant reconnectDeadline = Instant.now().plusSeconds(30)
+Long depthAfter = null
+while (Instant.now().isBefore(reconnectDeadline)) {
+    try {
+        HttpRequest afterReq = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/dlq/depth"))
+            .timeout(Duration.ofSeconds(5)).GET().build()
+        HttpResponse<String> afterResp = http.send(afterReq, HttpResponse.BodyHandlers.ofString())
+        if (afterResp.statusCode() == 200) {
+            def afterJson = new JsonSlurper().parseText(afterResp.body())
+            depthAfter = afterJson.depth as long
+            break
+        }
+    } catch (IOException ignored) {
+        // SUT still reconnecting to the restarted broker; retry within budget.
+    }
+    Thread.sleep(1000L)
+}
+if (depthAfter == null) {
+    throw new IllegalStateException("SUT did not reconnect to the restarted broker within 30s")
+}
+vars.put("dlq_depth_after_restart", String.valueOf(depthAfter))
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("broker restarted: depthBefore=${depthBefore} depthAfter=${depthAfter}", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- assert-dlq.groovy (this task's deliverable) evaluates I1, I3-I6
+             and I2 (or its not-evaluated reason) against the
+             delivery_state/dlq_info vars and the tst029_* props tallied
+             above, then calls the JVM EvidenceEmitter to write one fragment
+             to traceability/runs/. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-dlq" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

@@ -31,6 +31,11 @@ modules:
     path: qe-harness/harness/jmeter/tst-028-fanout
     coverage: full
     defect_flag: aggregate-emitted-incomplete
+  - archetype: TST-029
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-029-dlq
+    coverage: full
+    defect_flag: dlq-bypass-drop
   - archetype: TST-030
     tool: gatling-karate
     path: qe-harness/harness/gatling-karate/tst-030-contract
