@@ -41,6 +41,17 @@ public class ReportingController {
         return new OutboxResponse(reporting.outboxMiscountedRows());
     }
 
+    /** POST /reporting/publish -> 204. Publishes every pending outbox row,
+     *  the one HTTP path into the defect-aware publishPending() -- the
+     *  harness (a separate process) can only observe outbox-published-count-stale
+     *  through this endpoint, exactly as every other module's defect is
+     *  injected/observed over HTTP rather than in-process. */
+    @PostMapping("/reporting/publish")
+    public ResponseEntity<Void> publish() {
+        reporting.publishPending();
+        return ResponseEntity.noContent().build();
+    }
+
     public record LagResponse(long p95Ms, long p99Ms, long accountsCovered, long convergenceBoundMs) {}
 
     public record OutboxResponse(long miscountedRows) {}
