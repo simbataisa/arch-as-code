@@ -234,7 +234,10 @@ if ("201".equals(code)) {
            and independent of whether reservation-overcommit was active
            (which affects only the reserve path, never release) ; so I3/I4
            below start from a known, empty baseline regardless of the
-           burst's own outcome. -->
+           burst's own outcome. Scoped to ACC-000001's own account_id (not a
+           table-wide UPDATE) so the statement is correct by construction ;
+           not merely safe by convention because this fixture happens to be
+           the only account this plan ever seeds. -->
       <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Reservation" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
@@ -266,7 +269,9 @@ Connection conn = DriverManager.getConnection(url, user, password)
 try {
     def st = conn.createStatement()
     try {
-        st.executeUpdate("UPDATE reservation SET state = 'released' WHERE state = 'held'")
+        st.executeUpdate("UPDATE reservation SET state = 'released' " +
+            "WHERE account_id = (SELECT id FROM account WHERE account_ref = 'ACC-000001') " +
+            "AND state = 'held'")
     } finally {
         st.close()
     }
