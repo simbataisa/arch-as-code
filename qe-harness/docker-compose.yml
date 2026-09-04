@@ -14,8 +14,10 @@
 #                 injection (Task 11's circuit breaker capability).
 #   observability otel-collector + prometheus, declared for a later wave's
 #                 archetype; not started by default.
-#   messaging     a broker, declared for a later wave's archetype; not
-#                 started by default.
+#   messaging     a broker (RabbitMQ) serving TST-026/027/028/029's topology.
+#                 Not started by default -- the SUT's AMQP connection is lazy,
+#                 so `core` alone boots without it. Messaging modules need
+#                 `make up PROFILES="core messaging"`.
 #
 # Every service declares a healthcheck. reference-sut waits on postgres's
 # healthcheck (condition: service_healthy), not just container-start, so a
@@ -62,6 +64,16 @@ services:
       # Passed through unset by default so a defect run needs no compose
       # edit: `SUT_DEFECT=ledger-unbalanced docker compose --profile core up`.
       SUT_DEFECT: ${SUT_DEFECT:-}
+      # Broker coordinates for the messaging capability (Wave 17). Deliberately
+      # NO depends_on for broker: reference-sut is in the `core` profile and
+      # broker is in `messaging`, so a depends_on would make
+      # `docker compose --profile core up` fail outright. The AMQP connection is
+      # lazy (see MessagingConnectionConfig), so `core` alone boots unchanged and
+      # only the messaging modules require PROFILES="core messaging".
+      SPRING_RABBITMQ_HOST: broker
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: sut
+      SPRING_RABBITMQ_PASSWORD: sut
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,6 +151,10 @@ services:
     ports:
       - "5672:5672"   # AMQP
       - "15672:15672" # management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: sut
+      RABBITMQ_DEFAULT_PASS: sut
+      RABBITMQ_DEFAULT_VHOST: /
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
