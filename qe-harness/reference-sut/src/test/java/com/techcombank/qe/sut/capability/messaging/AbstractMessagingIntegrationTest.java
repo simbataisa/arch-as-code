@@ -58,16 +58,30 @@ abstract class AbstractMessagingIntegrationTest {
     @Autowired
     protected MessagingTopology topology;
 
+    @Autowired
+    protected MessageLog log;
+
+    @Autowired
+    protected MessagingObservabilityController observability;
+
     @Value("${app.messaging.retry-intervals-ms}")
     private List<Long> retryIntervalsMs;
+
+    @Value("${app.messaging.dlq-alert-depth}")
+    private long dlqAlertDepth;
 
     protected List<Long> retryIntervalsMs() {
         return retryIntervalsMs;
     }
 
+    protected long dlqAlertDepth() {
+        return dlqAlertDepth;
+    }
+
     @BeforeEach
     void resetMessagingFixture() {
         DefectFlags.clear();
+        log.clear();
         topology.declareTopology();
         for (String q : new String[] {
                 MessagingTopology.Q_DOMESTIC, MessagingTopology.Q_INTL,
