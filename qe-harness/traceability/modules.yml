@@ -26,6 +26,11 @@ modules:
       partitions; the declared scope is per_key and only that scope is asserted. I3's
       post-restart clause belongs to TST-029, which owns the broker-restart path.
     defect_flag: resequencer-emits-on-arrival
+  - archetype: TST-028
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-028-fanout
+    coverage: full
+    defect_flag: aggregate-emitted-incomplete
   - archetype: TST-030
     tool: gatling-karate
     path: qe-harness/harness/gatling-karate/tst-030-contract
