@@ -17,7 +17,7 @@
 | TST-034 | C — Load & Capacity | — | — | declared | — |
 | TST-035 | D — Resilience | jmeter | qe-harness/harness/jmeter/tst-035-faultinjection | full | breaker-disabled |
 | TST-036 | D — Resilience | — | — | declared | — |
-| TST-037 | E — Data | — | — | declared | — |
+| TST-037 | E — Data | jmeter | qe-harness/harness/jmeter/tst-037-readmodel | partial — I5 (no loss or duplication across a connector restart) requires a CDC connector this repository does not contain. I1-I4 and I6 are asserted; I5 is reported not-evaluated rather than substituted. | outbox-published-count-stale |
 | TST-038 | E — Data | — | — | declared | — |
 | TST-039 | E — Data | locust | qe-harness/harness/locust/tst_039_recon | full | recon-false-clean |
 | TST-040 | F — Security | jmeter | qe-harness/harness/jmeter/tst-040-authz | full | authz-missing-marker |
@@ -25,4 +25,4 @@
 | TST-042 | G — Observability & Client | — | — | declared | — |
 | TST-043 | G — Observability & Client | k6 | qe-harness/harness/k6/tst-043-clientexp | partial — None of the archetype's own I1-I6 are implemented: I1/I2/I6 need an offline client, I3/I4 a rendered DOM, and I5 k6/browser against a real page - no such application exists in this repository. This module ships four substitute server-side HTTP invariants (perf budget, cache correctness, conditional requests, compression) which are renumbered I1-I4 and are NOT the archetype's I1-I4. | cache-headers-absent |
 
-8 of 24 archetypes implemented · 16 declared · 1 partial
+9 of 24 archetypes implemented · 15 declared · 2 partial

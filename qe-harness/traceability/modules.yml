@@ -27,6 +27,15 @@ modules:
     path: qe-harness/harness/jmeter/tst-035-faultinjection
     coverage: full
     defect_flag: breaker-disabled
+  - archetype: TST-037
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-037-readmodel
+    coverage: partial
+    partial_reason: >-
+      I5 (no loss or duplication across a connector restart) requires a CDC connector this
+      repository does not contain. I1-I4 and I6 are asserted; I5 is reported not-evaluated
+      rather than substituted.
+    defect_flag: outbox-published-count-stale
   - archetype: TST-039
     tool: locust
     path: qe-harness/harness/locust/tst_039_recon
