@@ -5,11 +5,13 @@ import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -33,6 +35,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the assertions below (ledger entries actually persisted, the reservation
  * row actually still present) are checking real state, not a stub's
  * bookkeeping.
+ *
+ * <p><b>Round 2:</b> {@link #aTtlExpiredButStillPresentReservationTimesOutInsteadOfRecursingUnboundedly}
+ * covers a narrower bug the round-1 fix's own "leave it pending" design
+ * surfaced: a permanently-pending row (left behind by an exhausted
+ * {@code storeResponse}) reused after its TTL elapses used to recurse
+ * unboundedly between {@code attempt()} and {@code awaitWinner()} instead of
+ * honouring {@code awaitWinner}'s own bounded timeout -- see that test and
+ * {@code IdempotencyService#awaitWinner}'s javadoc.
  */
 class IdempotencyServiceStorageFailureTest extends AbstractLedgerIntegrationTest {
 
@@ -96,6 +106,45 @@ class IdempotencyServiceStorageFailureTest extends AbstractLedgerIntegrationTest
             () -> service.transfer("ACC-000001", "ACC-000002", 500L));
         assertFalse(retry.replayed());
         assertEquals(2, ledgerEntryCount(), "the retry ran action exactly once, as a fresh key would");
+    }
+
+    @Test
+    void aTtlExpiredButStillPresentReservationTimesOutInsteadOfRecursingUnboundedly() {
+        // Round-2 review finding: storeResponse's retry-then-leave-pending
+        // behaviour (round 1's fix) means a row that permanently fails to
+        // persist its response is now left pending forever instead of
+        // deleted. If that same key is ever reused after its TTL elapses,
+        // find()'s "WHERE ... expires_at > now()" filter can no longer see
+        // it, but the row is still physically present -- so the reservation
+        // INSERT below hits the real UNIQUE constraint and throws
+        // DuplicateKeyException, landing in awaitWinner with an empty
+        // find() result that is NOT the "genuinely deleted" case. Reproduce
+        // that exact row shape directly via JDBC, bypassing execute()'s own
+        // insert path entirely, since that path can't produce an
+        // already-expired row on its own.
+        String key = "idem-ttlgap1";
+        jdbc.update(
+            "INSERT INTO idempotency_key (idempotency_key, payload_hash, response_body, expires_at) "
+                + "VALUES (?, ?, ?, now() - interval '1 second')",
+            key, "irrelevant-hash", "");
+
+        // Before the fix, this recurses between attempt() and awaitWinner()
+        // with no sleep and a fresh 10s deadline computed on every re-entry
+        // -- unbounded, stack-growing recursion, never actually honouring
+        // that budget. After the fix, the row is recognised as "present but
+        // TTL-expired, not deleted" and the SAME awaitWinner call polls in
+        // its own loop until ITS OWN deadline lapses, then throws a single,
+        // bounded IllegalStateException. Bounding the whole assertion at a
+        // small multiple of that 10s budget means a reintroduced regression
+        // (a hang, or a fast StackOverflowError) fails this test fast rather
+        // than hanging the suite.
+        assertTimeoutPreemptively(Duration.ofSeconds(15), () ->
+            assertThrows(IllegalStateException.class, () ->
+                idempotency.execute(key, requestBody(500L),
+                    () -> service.transfer("ACC-000001", "ACC-000002", 500L))));
+
+        assertEquals(0, ledgerEntryCount(),
+            "no winner ever ran -- the row was never reclaimed, so action must never have executed");
     }
 
     private String requestBody(long amountMinor) {

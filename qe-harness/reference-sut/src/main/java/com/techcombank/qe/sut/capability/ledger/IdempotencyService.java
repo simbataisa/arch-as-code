@@ -227,18 +227,48 @@ public class IdempotencyService {
     }
 
     /** Polls the reserved row until its winner fills in a real response (or
-     *  removes it on failure), then replays -- or, if the winner rolled back,
-     *  re-attempts the reservation as if this were the first caller. */
+     *  removes it on failure), then replays -- or, if the winner rolled back
+     *  (the row is genuinely gone), re-attempts the reservation as if this
+     *  were the first caller.
+     *
+     *  <p>{@link #find} filters on {@code expires_at > now()}, so an empty
+     *  result is ambiguous by itself: it means either "no row" or "a row,
+     *  but it is past its TTL". Those two cases must NOT be handled the same
+     *  way. "No row" (the winner's {@code action} threw and {@link
+     *  #runReservedAction} deleted the reservation) is genuinely the first-
+     *  caller case, so re-attempting via {@link #attempt} once is correct.
+     *  But "a row, past its TTL" is NOT that case -- re-attempting would
+     *  retry the exact same {@code INSERT}, hit the exact same {@link
+     *  DuplicateKeyException} against the still-physically-present row, and
+     *  land right back in this method, recursing between {@link #attempt}
+     *  and {@code awaitWinner} with no sleep and a fresh {@code deadline}
+     *  computed on every re-entry -- unbounded, stack-growing recursion that
+     *  never actually waits out this method's own {@link
+     *  #AWAIT_TIMEOUT_NANOS} budget. {@link #exists} tells the two cases
+     *  apart without the TTL filter, so the TTL-expired-but-present case is
+     *  instead folded into the ordinary poll-and-sleep loop below, bounded
+     *  by the SAME {@code deadline} in the SAME stack frame -- exactly like
+     *  the merely-pending case just below it. */
     private Outcome awaitWinner(String key, String hash, Supplier<Object> action) {
         long deadline = System.nanoTime() + AWAIT_TIMEOUT_NANOS;
         while (System.nanoTime() < deadline) {
             List<StoredKey> found = find(key);
             if (found.isEmpty()) {
-                return attempt(key, hash, action);
-            }
-            StoredKey stored = found.get(0);
-            if (!isPending(stored)) {
-                return replayOrConflict(key, hash, stored);
+                if (!exists(key)) {
+                    // Genuinely gone: the winner rolled back. Re-attempt
+                    // once, as the first caller for this key would.
+                    return attempt(key, hash, action);
+                }
+                // Still physically present, just past the expiry filter --
+                // NOT the "gone" case. Fall through to the same sleep the
+                // pending branch uses below, bounded by this method's own
+                // deadline rather than recursing back into attempt().
+            } else {
+                StoredKey stored = found.get(0);
+                if (!isPending(stored)) {
+                    return replayOrConflict(key, hash, stored);
+                }
+                // else: still pending -- fall through to the same sleep.
             }
             try {
                 Thread.sleep(AWAIT_POLL_MILLIS);
@@ -267,6 +297,23 @@ public class IdempotencyService {
                 + "WHERE idempotency_key = ? AND expires_at > now()",
             (rs, n) -> new StoredKey(rs.getString("payload_hash"), rs.getString("response_body")),
             key);
+    }
+
+    /** Whether a row for {@code key} physically exists, WITHOUT {@link
+     *  #find}'s {@code expires_at > now()} filter. Used only to distinguish,
+     *  inside {@link #awaitWinner}'s empty-{@link #find} branch, "the row
+     *  was deleted" (genuinely gone -- safe to re-attempt) from "the row is
+     *  still there but past its TTL" (must not be treated as gone -- see
+     *  that method's javadoc). This is a narrow, local disambiguation, not a
+     *  general TTL-expiry design: a key reused normally after
+     *  {@code keyTtlSeconds} elapses is a wider, separately-scoped gap in
+     *  {@link #find}'s expiry filter that this method does not attempt to
+     *  close. */
+    private boolean exists(String key) {
+        List<Integer> rows = jdbc.query(
+            "SELECT 1 FROM idempotency_key WHERE idempotency_key = ?",
+            (rs, n) -> 1, key);
+        return !rows.isEmpty();
     }
 
     /** Verbatim rendering: the stored body is what a replay returns, so this is
