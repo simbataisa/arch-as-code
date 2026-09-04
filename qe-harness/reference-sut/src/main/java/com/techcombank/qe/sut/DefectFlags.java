@@ -34,7 +34,8 @@ public final class DefectFlags {
         "breaker-disabled", "recon-false-clean", "authz-missing-marker",
         "cache-headers-absent",
         "reservation-overcommit",
-        "outbox-published-count-stale"
+        "outbox-published-count-stale",
+        "journey-starved"
     );
 
     private static final AtomicReference<String> ACTIVE = new AtomicReference<>();

@@ -22,6 +22,11 @@ modules:
     path: qe-harness/harness/jmeter/tst-031-ratelimit
     coverage: full
     defect_flag: ratelimit-leaky
+  - archetype: TST-034
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-034-blend
+    coverage: full
+    defect_flag: journey-starved
   - archetype: TST-035
     tool: jmeter
     path: qe-harness/harness/jmeter/tst-035-faultinjection

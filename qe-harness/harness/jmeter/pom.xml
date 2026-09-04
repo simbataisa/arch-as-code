@@ -110,9 +110,25 @@
           <suppressJMeterOutput>false</suppressJMeterOutput>
           <!-- See qe.jmeter.javaRuntime's own comment above (properties
                block): the forked JMeter JVM must run on JDK <= ~21 for its
-               bundled Groovy 3.0.17 to handle JSR223 elements at all. -->
+               bundled Groovy 3.0.17 to handle JSR223 elements at all.
+
+               xmx bumped from the plugin's own 512MB default (confirmed via
+               `ps aux` against a running fork): TST-034's plan.jmx (Task 13)
+               runs four concurrent Thread Groups executing JSR223
+               Pre/PostProcessor scripts on every single sample ; a 512MB
+               heap under that load produced empirically reproducible,
+               ~150ms-long pauses roughly every second iteration (a
+               young-gen GC pattern, not a real defect), enough to make one
+               journey's own request pacing look exactly like a genuine
+               throughput shortfall. A bigger heap noticeably reduced, but
+               did not fully eliminate, that pattern in testing ; the other
+               mitigation (this plan's own thread counts, kept as low as
+               each journey's own target rate allows) matters at least as
+               much. No observed downside for any other module either
+               way. -->
           <jMeterProcessJVMSettings>
             <javaRuntime>${qe.jmeter.javaRuntime}</javaRuntime>
+            <xmx>1536</xmx>
           </jMeterProcessJVMSettings>
           <!--
             Explicit, non-transitive: kg.apc:jmeter-plugins-tst:2.6 (Task 17's
