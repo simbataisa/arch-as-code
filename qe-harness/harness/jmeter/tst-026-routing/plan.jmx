@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-026 Message Transformation and Routing" enabled="true">
+      <stringProp name="TestPlan.comments">Task 18 (Wave 17 QE Harness). See README.md for the invariants (I1-I7) this plan asserts and for why I1's oracle is contract-schema rather than invariant-assertion.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: declares the messaging topology (a deliberately
+           invalid publish, so a completely cold broker's queues exist before
+           anything below tries to purge them), purges the three routing
+           queues via the broker's OWN management API (this SUT has no reset
+           endpoint for either the queues or the in-memory published log —
+           unlike ledger/reservation's TRUNCATE-via-JDBC pattern, there is
+           nothing to TRUNCATE here, and none of I1-I7 read the published
+           log), zeroes this run's own tallies, computes I4's and I7's
+           tallies against the now-clean queues, and fetches
+           GET /messaging/contract once for I1. Necessary, not just tidy:
+           GET /messaging/routed sums every message ever routed with no
+           scoping to this run, so a prior run's leftovers would otherwise
+           poison I2's exact-equality check below (same rationale TST-021/
+           TST-023's own setUp Thread Groups document for their own fixtures). -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset Messaging Fixture" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Reset Routing Queues and Compute Batch Tallies" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.util.Base64
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+String mgmtBaseUrl = System.getenv().getOrDefault("BROKER_MGMT_URL", "http://localhost:15672")
+String mgmtAuth = "Basic " + Base64.getEncoder().encodeToString("sut:sut".getBytes("UTF-8"))
+
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+// Declares the topology: RoutingService.publish calls
+// MessagingTopology.declareTopology() UNCONDITIONALLY before validating the
+// payload, so even this deliberately invalid (kind outside the declared
+// domain) call guarantees every queue purged below already exists -- a
+// completely cold broker (first run since `make up`) would otherwise make
+// the management API purges 404.
+HttpRequest declareReq = HttpRequest.newBuilder(
+        URI.create(sutBaseUrl + "/messaging/publish?routingKey=pay.domestic.credit"))
+    .timeout(Duration.ofSeconds(5))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(
+        '{"messageId":"msg-0000","kind":"TOPOLOGY_BOOTSTRAP","currency":"VND","amount":"1.00","party":"bootstrap"}'))
+    .build()
+http.send(declareReq, HttpResponse.BodyHandlers.discarding())
+
+// Purges the three routing queues via the broker's own management API
+// (rabbitmq:3.13-management-alpine, see docker-compose.yml's `broker`
+// service -- always reachable at localhost:15672 with the same sut/sut
+// credentials the SUT itself uses). Without this, I2's
+// quarantineDepth == unmatchedSent equality in assert-routing.groovy would
+// accumulate across every earlier run against this same long-lived broker
+// container instead of reflecting only this run's own publishes.
+["qe.q.route.domestic", "qe.q.route.intl", "qe.q.unroutable"].each { queue ->
+    HttpRequest purgeReq = HttpRequest.newBuilder(
+            URI.create(mgmtBaseUrl + "/api/queues/%2F/" + queue + "/contents"))
+        .timeout(Duration.ofSeconds(5))
+        .header("Authorization", mgmtAuth)
+        .DELETE()
+        .build()
+    http.send(purgeReq, HttpResponse.BodyHandlers.discarding())
+}
+
+// Cleared here, not just at process start, so a second run in the same SUT/
+// broker process (e.g. this module's own JUnit fixture running
+// clean-then-defect) never mixes its counts with a previous run's
+// leftovers -- same idiom TST-023/TST-031's own setUp Thread Groups use.
+props.put("tst026_unmatched_sent", "0")
+props.put("tst026_unmapped_sent", "0")
+props.put("tst026_unmapped_rejected", "0")
+props.put("tst026_split_declared", "0")
+props.put("tst026_split_observed", "0")
+props.put("tst026_enricher_partials", "0")
+
+// I4: this SUT has no batch/splitter endpoint of its own -- RoutingService
+// maps exactly one message per call (see README.md) -- so I4 is exercised
+// as the transform pipeline's own per-call cardinality across a declared
+// batch: four independent, valid POST /messaging/transform calls must each
+// come back with exactly one well-formed output, never zero (silently
+// dropped) or duplicated.
+def batch = [
+    '{"messageId":"msg-0101","kind":"CREDIT","currency":"VND","amount":"10.00","party":"Batch One"}',
+    '{"messageId":"msg-0102","kind":"DEBIT","currency":"VND","amount":"20.00","party":"Batch Two"}',
+    '{"messageId":"msg-0103","kind":"REVERSAL","currency":"VND","amount":"30.00","party":"Batch Three"}',
+    '{"messageId":"msg-0104","kind":"CREDIT","currency":"VND","amount":"40.00","party":"Batch Four"}'
+]
+long splitObserved = 0L
+batch.each { payload ->
+    HttpRequest req = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/transform"))
+        .timeout(Duration.ofSeconds(5))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(payload))
+        .build()
+    HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+    if (resp.statusCode() == 200 && new JsonSlurper().parseText(resp.body())?.messageId) {
+        splitObserved++
+    }
+}
+props.put("tst026_split_declared", String.valueOf(batch.size()))
+props.put("tst026_split_observed", String.valueOf(splitObserved))
+
+// I7: this SUT has no distinct "enricher" stage either -- the closest
+// analogue is RoutingService.publish's own kind-validation, which runs
+// BEFORE it ever calls MessageLog.recordPublished or
+// RabbitTemplate.convertAndSend (see RoutingService's own javadoc). I7
+// confirms that structurally: every 422 rejection here must leave the
+// routed queues' combined depth exactly where it started.
+def routedBeforeResp = http.send(
+    HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/routed")).timeout(Duration.ofSeconds(5)).GET().build(),
+    HttpResponse.BodyHandlers.ofString())
+def routedBefore = new JsonSlurper().parseText(routedBeforeResp.body())
+long depthBefore = (routedBefore.domestic as long) + (routedBefore.intl as long) + (routedBefore.quarantine as long)
+
+(0..1).each { n ->
+    HttpRequest req = HttpRequest.newBuilder(
+            URI.create(sutBaseUrl + "/messaging/publish?routingKey=pay.domestic.credit"))
+        .timeout(Duration.ofSeconds(5))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(
+            '{"messageId":"msg-020' + n + '","kind":"NOT_A_REAL_KIND","currency":"VND","amount":"5.00","party":"Enricher Failure Probe"}'))
+        .build()
+    http.send(req, HttpResponse.BodyHandlers.discarding())
+}
+
+def routedAfterResp = http.send(
+    HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/routed")).timeout(Duration.ofSeconds(5)).GET().build(),
+    HttpResponse.BodyHandlers.ofString())
+def routedAfter = new JsonSlurper().parseText(routedAfterResp.body())
+long depthAfter = (routedAfter.domestic as long) + (routedAfter.intl as long) + (routedAfter.quarantine as long)
+
+long partials = Math.max(0L, depthAfter - depthBefore)
+props.put("tst026_enricher_partials", String.valueOf(partials))
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData(
+    "purged qe.q.route.domestic/qe.q.route.intl/qe.q.unroutable; " +
+    "I4 batch ${splitObserved}/${batch.size()}; I7 partials ${partials}",
+    "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- Fetched into props (not vars): this GET runs in THIS Thread
+             Group's own JMeter thread, and JMeterVariables (vars) are never
+             shared across separate Thread Groups — only props (a single
+             process-wide java.util.Properties) is. The "Verify Routing"
+             TearDown group's own assert-routing JSR223Sampler needs this
+             value as a vars entry (assert-routing.groovy calls
+             vars.get("contract_schema") — an exact, unmodifiable Task 18
+             deliverable), so its own PreProcessor bridges props back into
+             vars immediately before that script runs; see that
+             PreProcessor's comment below. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/contract" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/contract</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-contract-schema" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+props.put("contract_schema", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+      </hashTree>
+
+      <!-- Main Thread Group: 6 threads x 4 loops = 24 publishes, evenly
+           rotating through 4 deliberate cases (matched domestic, matched
+           intl, unmatched -> quarantine, unmapped enum -> 422) via
+           (threadNum + iteration) % 4 — since iteration alone already
+           spans every residue 0-3 for each thread, every thread hits each
+           case exactly once, so each case fires exactly 6 times regardless
+           of thread/loop count. on_sample_error=continue: the unmapped-enum
+           case's 422 is deliberate data (I3), not a plan failure. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Publish Mixed Keys" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">4</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">6</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Select Publish Case" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+int threadNum = ctx.getThreadNum()
+int iter = vars.getIteration()
+int caseIdx = (threadNum + iter) % 4
+
+String routingKey
+String body
+
+switch (caseIdx) {
+    case 0:
+        // Matched domestic -- the fixed diacritic / two-place-amount
+        // payload. The "Verify Routing" TearDown group's own
+        // POST /messaging/transform replay (I1/I5/I6) uses this EXACT same
+        // payload, so assert-routing.groovy's hardcoded declaredAmount
+        // ("1500.00") / declaredParty ("Nguyễn Thị Hoà") correspond to what
+        // was actually sent here.
+        routingKey = "pay.domestic.credit"
+        body = '{"messageId":"msg-0001","kind":"CREDIT","currency":"VND","amount":"1500.00","party":"Nguyễn Thị Hoà"}'
+        break
+    case 1:
+        // Matched intl.
+        routingKey = "pay.intl.debit"
+        body = '{"messageId":"msg-0002","kind":"DEBIT","currency":"USD","amount":"250.00","party":"Acme International Trading Co"}'
+        break
+    case 2:
+        // Unmatched key -- neither pay.domestic.* nor pay.intl.*, so I2
+        // demands this reaches qe.q.unroutable, never a default route.
+        routingKey = "pay.unknown.transfer"
+        body = '{"messageId":"msg-0003","kind":"CREDIT","currency":"VND","amount":"75.00","party":"Quarantine Test Party"}'
+        synchronized (props) {
+            long sent = Long.parseLong(props.getProperty("tst026_unmatched_sent", "0"))
+            props.put("tst026_unmatched_sent", String.valueOf(sent + 1))
+        }
+        break
+    case 3:
+        // kind outside the declared domain -- I3 demands 422, never a
+        // silent default.
+        routingKey = "pay.domestic.credit"
+        body = '{"messageId":"msg-0004","kind":"TELEPORT","currency":"VND","amount":"10.00","party":"Rejected Party"}'
+        synchronized (props) {
+            long sent = Long.parseLong(props.getProperty("tst026_unmapped_sent", "0"))
+            props.put("tst026_unmapped_sent", String.valueOf(sent + 1))
+        }
+        break
+}
+
+vars.put("routingKey", routingKey)
+vars.put("body", body)
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <!-- contentEncoding=UTF-8 is required here, not merely conventional:
+             this is the sampler the diacritic case (caseIdx 0) actually
+             posts through, and without an explicit UTF-8 encoding on the
+             sampler itself, "Nguyễn Thị Hoà" would fail for an encoding
+             reason unrelated to routing (see README.md / task notes). -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/publish" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${body}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/publish?routingKey=${routingKey}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-unmapped-rejected" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+if ("422".equals(prev.getResponseCode())) {
+    synchronized (props) {
+        long rejected = Long.parseLong(props.getProperty("tst026_unmapped_rejected", "0"))
+        props.put("tst026_unmapped_rejected", String.valueOf(rejected + 1))
+    }
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Publish Mixed Keys
+           thread has finished. Reads GET /messaging/routed for I2's
+           verdict, replays the exact diacritic/two-place-amount payload
+           through POST /messaging/transform for I1/I5/I6 (publish() itself
+           never returns the transformed body), then assert-routing.groovy
+           validates that replayed message against the schema fetched in
+           setUp and evaluates I1-I7. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Routing" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/routed" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/routed</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="extract-routed-depths" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
+vars.put("routed_domestic", json.domestic.toString())
+vars.put("routed_intl", json.intl.toString())
+vars.put("routed_quarantine", json.quarantine.toString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- contentEncoding=UTF-8 is required here too: this replay is the
+             SAME diacritic payload the Main Thread Group's caseIdx-0 sampler
+             posts, and I1/I5/I6 all read the response body this sampler
+             receives back. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/transform" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"messageId":"msg-0001","kind":"CREDIT","currency":"VND","amount":"1500.00","party":"Nguyễn Thị Hoà"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/transform</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-transformed-message" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("transformed_message", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- assert-routing.groovy (this task's deliverable) reads
+             vars.get("contract_schema"), but the fetch that produced it ran
+             in the SEPARATE "Reset Messaging Fixture" setUp Thread Group,
+             whose JMeterVariables this group's own thread never sees (see
+             that fetch's own PostProcessor comment). This PreProcessor
+             bridges the value from props (shared) into THIS thread's vars,
+             immediately before the sampler below reads it. -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="bridge-contract-schema-into-vars" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("contract_schema", props.getProperty("contract_schema"))
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-routing" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

@@ -6,7 +6,7 @@
 | TST-023 | A — Correctness & State | jmeter | qe-harness/harness/jmeter/tst-023-reservation | full | reservation-overcommit |
 | TST-024 | A — Correctness & State | — | — | declared | — |
 | TST-025 | A — Correctness & State | — | — | declared | — |
-| TST-026 | B — Messaging & Integration | — | — | declared | — |
+| TST-026 | B — Messaging & Integration | jmeter | qe-harness/harness/jmeter/tst-026-routing | full | route-default-fallthrough |
 | TST-027 | B — Messaging & Integration | — | — | declared | — |
 | TST-028 | B — Messaging & Integration | — | — | declared | — |
 | TST-029 | B — Messaging & Integration | — | — | declared | — |
@@ -25,4 +25,4 @@
 | TST-042 | G — Observability & Client | — | — | declared | — |
 | TST-043 | G — Observability & Client | k6 | qe-harness/harness/k6/tst-043-clientexp | partial — None of the archetype's own I1-I6 are implemented: I1/I2/I6 need an offline client, I3/I4 a rendered DOM, and I5 k6/browser against a real page - no such application exists in this repository. This module ships four substitute server-side HTTP invariants (perf budget, cache correctness, conditional requests, compression) which are renumbered I1-I4 and are NOT the archetype's I1-I4. | cache-headers-absent |
 
-10 of 24 archetypes implemented · 14 declared · 2 partial
+11 of 24 archetypes implemented · 13 declared · 2 partial

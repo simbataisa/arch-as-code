@@ -12,6 +12,11 @@ modules:
     path: qe-harness/harness/jmeter/tst-023-reservation
     coverage: full
     defect_flag: reservation-overcommit
+  - archetype: TST-026
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-026-routing
+    coverage: full
+    defect_flag: route-default-fallthrough
   - archetype: TST-030
     tool: gatling-karate
     path: qe-harness/harness/gatling-karate/tst-030-contract
