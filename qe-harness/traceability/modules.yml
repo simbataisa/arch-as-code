@@ -7,6 +7,11 @@ modules:
     path: qe-harness/harness/jmeter/tst-021-ledger
     coverage: full
     defect_flag: ledger-unbalanced
+  - archetype: TST-023
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-023-reservation
+    coverage: full
+    defect_flag: reservation-overcommit
   - archetype: TST-030
     tool: gatling-karate
     path: qe-harness/harness/gatling-karate/tst-030-contract
