@@ -65,4 +65,25 @@ class AggregatorServiceTest extends AbstractMessagingIntegrationTest {
         assertFalse(aggregator.aggregateFor(corr).orElseThrow().partial(),
             "and must do so without the partial marker -- that is the violation");
     }
+
+    @Test
+    void aLateBranchReplyAfterTimeoutDoesNotOverwriteThePartialAggregate() {
+        aggregator.reset();
+        String corr = aggregator.fanOut("corr-0005");
+        aggregator.branchReply(corr, "a", "one");
+        assertTrue(aggregator.awaitAggregate(corr, aggregateTimeoutMs() * 2),
+            "the timeout arm must emit a partial aggregate before the slow branches arrive");
+        assertTrue(aggregator.aggregateFor(corr).orElseThrow().partial(),
+            "sanity check: the aggregate emitted so far must be the timed-out, partial one");
+
+        // Branches b and c are slow consumers that finally reply AFTER the
+        // timeout-triggered emit already happened. This must not re-emit and
+        // flip the recorded outcome from "timed out, partial" to "complete,
+        // non-partial" -- that would be a silent double-emit.
+        aggregator.branchReply(corr, "b", "two");
+        aggregator.branchReply(corr, "c", "three");
+
+        assertTrue(aggregator.aggregateFor(corr).orElseThrow().partial(),
+            "a late reply arriving after a timeout emission must not overwrite the partial marker");
+    }
 }

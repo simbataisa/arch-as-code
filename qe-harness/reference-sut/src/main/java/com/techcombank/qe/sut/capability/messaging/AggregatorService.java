@@ -87,7 +87,17 @@ public class AggregatorService {
 
     public synchronized void branchReply(String correlationId, String branch, String payload) {
         Map<String, String> parts = pending.get(correlationId);
-        if (parts == null) {
+        // Once an aggregate has been emitted for this correlation -- whether
+        // by completeness or by the timeout arm -- a later reply must be a
+        // no-op. Without this guard, a slow branch arriving after
+        // awaitAggregate's timeout-triggered partial emit would see
+        // containsAll(BRANCHES) turn true and re-emit with partial=false,
+        // silently overwriting the already-published, correctly-marked
+        // aggregate (a double-emit that flips the recorded outcome after the
+        // fact). This is a DIFFERENT race than the same-instant reply-vs-
+        // timeout case the method's own synchronized lock already handles --
+        // this is reply-AFTER-timeout, which nothing else defends against.
+        if (parts == null || emitted.containsKey(correlationId)) {
             return;
         }
         // Keyed, not appended: a branch replying twice overwrites its own slot,
