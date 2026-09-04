@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Routed payment message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["messageId", "kind", "currency", "amount", "party", "route"],
+  "properties": {
+    "messageId": { "type": "string", "pattern": "^msg-[0-9]{4}$" },
+    "kind": { "enum": ["CREDIT", "DEBIT", "REVERSAL"] },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "amount": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
+    "party": { "type": "string", "minLength": 1 },
+    "route": { "enum": ["domestic", "intl", "quarantine"] }
+  }
+}

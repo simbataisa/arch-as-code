@@ -64,6 +64,9 @@ abstract class AbstractMessagingIntegrationTest {
     @Autowired
     protected MessagingObservabilityController observability;
 
+    @Autowired
+    protected RoutingService routing;
+
     @Value("${app.messaging.retry-intervals-ms}")
     private List<Long> retryIntervalsMs;
 
