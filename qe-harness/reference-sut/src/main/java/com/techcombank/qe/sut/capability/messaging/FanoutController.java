@@ -40,10 +40,25 @@ public class FanoutController {
         return ResponseEntity.noContent().build();
     }
 
-    /** GET /messaging/aggregate?correlationId=corr-0001 -> the aggregate's
-     *  state, or 404 while the window is still open. */
+    /** GET /messaging/aggregate?correlationId=corr-0001[&awaitMs=8000] -> the
+     *  aggregate's state, or 404 while the window is still open.
+     *
+     * <p>{@code awaitMs} (default 0 -- a pure read, unchanged from before this
+     * parameter existed) wires {@link AggregatorService#awaitAggregate} onto
+     * this endpoint, bounded exactly as that method already is: harness
+     * modules run as separate tool processes against an already-running
+     * container (see {@code DefectController}'s javadoc for the same
+     * constraint), so a bounded, HTTP-triggered wait is the only way for one
+     * to observe the timeout arm's partial-marked emission -- the alternative,
+     * an unconditional background sweep, would emit for every open
+     * correlation whether or not anything is actually polling it, which is
+     * not what I1's timeout arm describes. */
     @GetMapping("/messaging/aggregate")
-    public ResponseEntity<?> aggregate(@RequestParam String correlationId) {
+    public ResponseEntity<?> aggregate(@RequestParam String correlationId,
+                                       @RequestParam(defaultValue = "0") long awaitMs) {
+        if (awaitMs > 0) {
+            aggregator.awaitAggregate(correlationId, awaitMs);
+        }
         return aggregator.aggregateFor(correlationId)
             .<ResponseEntity<?>>map(a -> ResponseEntity.ok(new AggregateResponse(
                 a.correlationId(), a.parts().size(), a.partial(), aggregator.branchCount(),
