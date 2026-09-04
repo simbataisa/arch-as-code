@@ -143,8 +143,18 @@ see [§4.3 of the design doc](../docs/superpowers/specs/2026-08-24-wave-16-qe-ha
 | E — Data | TST-039 Data Quality & Reconciliation | Locust | confusion-matrix |
 | F — Security | TST-040 AuthN/AuthZ Matrix & Token Lifecycle | JMeter | invariant-assertion |
 | G — Observability & Client | TST-043 Client Experience & Perf Budget | k6 | invariant-assertion |
+| A — Correctness & State | TST-020 Idempotency & Replay | JMeter | invariant-assertion |
+| A — Correctness & State | TST-023 Concurrent Limit & Counter | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-026 Message Transformation & Routing | JMeter | contract-schema |
+| B — Messaging & Integration | TST-027 Ordering & Resequencing | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-028 Fan-out / Fan-in Correlation | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-029 Delivery Guarantee, Retry, DLQ | JMeter | invariant-assertion |
+| C — Load & Capacity | TST-034 Blended Journey Workload | JMeter | invariant-assertion |
+| E — Data | TST-037 Read-Model Convergence & CDC Lag | JMeter | invariant-assertion |
 
-One archetype per family, so all four tools and three of the four oracle types are exercised.
+Wave 16 seeded one archetype per family; Wave 17 completed Family B and deepened A, C and E, so
+15 of the 24 archetypes now have runnable modules. All four tools and three of the four oracle
+types are exercised.
 `golden-dataset` is not implemented — no family representative uses it as primary oracle; it
 lands with `TST-022` or `TST-038` in a later wave. `TST-039` uses Locust rather than JMeter
 because [its archetype document §6](../knowledge-base/testing/archetypes/data-quality-reconciliation.md)

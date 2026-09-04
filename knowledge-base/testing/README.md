@@ -13,7 +13,7 @@ repository stays documentation-only, matching every other category in `knowledge
 That distinction is about this corpus, not about testing generally: a runnable counterpart
 now exists in this same repository, at [`qe-harness/`](../../qe-harness/) (catalog ID
 `TST-016`) — a reference SUT plus a four-toolchain harness (JMeter, Gatling+Karate, Locust,
-k6) implementing 7 of the 24 documented test archetypes as real, executable modules with
+k6) implementing 15 of the 24 documented test archetypes as real, executable modules with
 real evidence. Every code fragment here — JMeter JMX snippets, Karate features, k6 scripts —
 remains a worked example to copy into a harness, `qe-harness/` or a squad's own, not a
 runnable artefact maintained in this folder.
