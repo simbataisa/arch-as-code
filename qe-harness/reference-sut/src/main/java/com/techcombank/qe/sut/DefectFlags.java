@@ -36,7 +36,8 @@ public final class DefectFlags {
         "reservation-overcommit",
         "outbox-published-count-stale",
         "journey-starved",
-        "route-default-fallthrough"
+        "route-default-fallthrough",
+        "resequencer-emits-on-arrival"
     );
 
     private static final AtomicReference<String> ACTIVE = new AtomicReference<>();

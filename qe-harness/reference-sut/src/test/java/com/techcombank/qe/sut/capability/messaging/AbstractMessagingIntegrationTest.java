@@ -67,11 +67,17 @@ abstract class AbstractMessagingIntegrationTest {
     @Autowired
     protected RoutingService routing;
 
+    @Autowired
+    protected ResequencerService resequencer;
+
     @Value("${app.messaging.retry-intervals-ms}")
     private List<Long> retryIntervalsMs;
 
     @Value("${app.messaging.dlq-alert-depth}")
     private long dlqAlertDepth;
+
+    @Value("${app.messaging.gap-timeout-ms}")
+    private long gapTimeoutMs;
 
     protected List<Long> retryIntervalsMs() {
         return retryIntervalsMs;
@@ -79,6 +85,10 @@ abstract class AbstractMessagingIntegrationTest {
 
     protected long dlqAlertDepth() {
         return dlqAlertDepth;
+    }
+
+    protected long gapTimeoutMs() {
+        return gapTimeoutMs;
     }
 
     @BeforeEach
@@ -112,6 +122,24 @@ abstract class AbstractMessagingIntegrationTest {
             }
             try {
                 Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /** Bounded poll on emission count -- an unbounded wait on a resequencer is
+     *  how a hung test becomes a green one. */
+    protected boolean awaitEmissionCount(String key, int expected) {
+        Instant deadline = Instant.now().plusSeconds(10);
+        while (Instant.now().isBefore(deadline)) {
+            if (resequencer.emittedSequences(key).size() >= expected) {
+                return true;
+            }
+            try {
+                Thread.sleep(50L);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;
