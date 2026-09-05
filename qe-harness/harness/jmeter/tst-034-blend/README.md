@@ -10,7 +10,10 @@ Oracle: invariant-assertion. Best-fit tool per TST-010: JMeter.
 | I4 | Errors are attributed per journey, not pooled |
 | I5 | Steady state is reached before measurement begins |
 
-Defect proof: with `journey-starved` active this module MUST report I3 failed and I1 passed.
+Defect proof: with `journey-starved` active this module MUST report I3 failed. Under
+`HARNESS_SMOKE_MODE=true` (the defect proof's own example run below), I1 is honestly
+`not-evaluated` rather than `passed` -- a 20s smoke hold cannot measure a real p95, so I1 says so
+instead of claiming a result it did not check. I4 stays passed.
 
 This is the **first module in the repository to read a profile file**. The blend comes from
 `profiles/mixed.yml`'s `blend_ref: wave17-core-mix` via `ProfileResolver` (Wave 17), not from
@@ -53,5 +56,7 @@ curl -X DELETE http://localhost:8080/_test/defect                 # 204
 
 With `journey-starved` active, `TransferService.transfer` sleeps before taking its locks, so the
 transfer journey's throughput collapses and its observed share falls below tolerance. The ledger
-stays balanced and per-journey latency attribution keeps working, so I1 and I4 still pass --
-which is what makes the proof specific.
+stays balanced and per-journey latency attribution keeps working, so I4 still passes -- which is
+what makes the proof specific. (I1 is `not-evaluated` in this same smoke-mode run, honestly, not
+because the defect affects it -- a 20s hold never measures a real p95 regardless of which defect,
+if any, is active.)
