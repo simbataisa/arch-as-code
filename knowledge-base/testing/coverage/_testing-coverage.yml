@@ -453,7 +453,7 @@ rows:
       security: n/a
       data_quality: required
     perf_profiles: [baseline, load, stress, soak]
-    primary_tool: locust
+    primary_tool: jmeter
     owner: tech-lead-backend
     notes: ''
   - catalog_id: BSP-003
@@ -469,7 +469,7 @@ rows:
       security: n/a
       data_quality: required
     perf_profiles: [baseline, load, stress, soak]
-    primary_tool: locust
+    primary_tool: jmeter
     owner: risk-management-domain-owner
     notes: ''
   - catalog_id: BSP-019
@@ -501,7 +501,7 @@ rows:
       security: n/a
       data_quality: required
     perf_profiles: [baseline, load, stress, soak]
-    primary_tool: locust
+    primary_tool: jmeter
     owner: risk-management-domain-owner
     notes: ''
   - catalog_id: SEC-010

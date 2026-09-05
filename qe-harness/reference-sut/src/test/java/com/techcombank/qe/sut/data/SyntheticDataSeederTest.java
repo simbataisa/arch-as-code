@@ -106,4 +106,17 @@ class SyntheticDataSeederTest {
                 "INSERT INTO account (account_ref, party_name) VALUES (?, ?)",
                 "NOT-A-VALID-ACCOUNT-REF", "Malformed Test Account"));
     }
+
+    @Test
+    void seedsTheRequestedNumberOfAccounts() {
+        SeedSummary summary = seeder.seed(42L, 12);
+        assertEquals(12, summary.accounts());
+        assertEquals(60, summary.entries(), "transfer count is fixed at 30 pairs");
+    }
+
+    @Test
+    void requestingMoreAccountsThanNamesIsRejected() {
+        assertThrows(IllegalArgumentException.class,
+            () -> seeder.seed(42L, SyntheticNames.NAMES.length + 1));
+    }
 }

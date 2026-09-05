@@ -79,9 +79,15 @@ abstract class AbstractLedgerIntegrationTest {
     @Autowired
     protected TrialBalanceService trialBalance;
 
+    @Autowired
+    protected IdempotencyService idempotency;
+
     @BeforeEach
     void resetLedgerFixture() {
         DefectFlags.clear();
+        // idempotency_key has no FK to account, so CASCADE does not reach it --
+        // truncate it explicitly or keys leak into the next test.
+        jdbc.execute("TRUNCATE TABLE idempotency_key RESTART IDENTITY");
         jdbc.execute("TRUNCATE TABLE ledger_entry, account RESTART IDENTITY CASCADE");
         jdbc.update("INSERT INTO account (account_ref, party_name) VALUES (?, ?)",
             "ACC-000001", "Test Fixture Debtor Co");

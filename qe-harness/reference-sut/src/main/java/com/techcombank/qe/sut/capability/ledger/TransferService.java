@@ -39,6 +39,28 @@ public class TransferService {
 
     @Transactional
     public UUID transfer(String from, String to, long amountMinor) {
+        // TST-034 I3: with journey-starved active, the transfer journey is
+        // deliberately delayed so its observed share collapses below its
+        // declared tolerance. The ledger stays balanced throughout -- this
+        // starves a journey, it does not corrupt state, so I1/I2 hold and I3
+        // alone fails.
+        //
+        // 4000ms, not the originally-drafted 250ms: this magnitude was never
+        // pinned by the design spec or by blended-journey-workload.md -- it
+        // was an arbitrary detail invented while first writing this branch.
+        // Empirically (Task 13), 250ms sat too close to this test
+        // environment's own scheduling jitter (observed up to ~220ms on a
+        // clean run, no defect involved at all) for plan.jmx's per-sub-window
+        // starvation check to ever separate "defect" from "noisy but
+        // healthy" reliably. 4000ms gives a wide, dependable margin over
+        // that jitter without changing what I3 asserts.
+        if (DefectFlags.isActive("journey-starved")) {
+            try {
+                Thread.sleep(4000L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         AccountPair pair = lockPair(from, to);
 
         UUID ref = UUID.randomUUID();

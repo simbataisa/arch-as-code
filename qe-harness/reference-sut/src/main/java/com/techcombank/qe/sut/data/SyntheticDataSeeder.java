@@ -47,21 +47,35 @@ public class SyntheticDataSeeder {
         this.jdbc = jdbc;
     }
 
+    /** Seeds with one account per synthetic name -- the original contract. */
     public SeedSummary seed(long seed) {
+        return seed(seed, ACCOUNT_COUNT);
+    }
+
+    /** Seeds {@code accountCount} accounts. A blended workload (TST-034) needs
+     *  more contention surface than the two-account ledger fixture provides,
+     *  but can never exceed the fixed synthetic-name pool -- requesting more
+     *  throws rather than inventing a name, since a generated party name could
+     *  not be guaranteed non-PII. */
+    public SeedSummary seed(long seed, int accountCount) {
+        if (accountCount < 1 || accountCount > SyntheticNames.NAMES.length) {
+            throw new IllegalArgumentException(
+                "accountCount must be 1.." + SyntheticNames.NAMES.length + ", got " + accountCount);
+        }
         Random random = new Random(seed);
 
-        List<Long> accountIds = seedAccounts(random);
+        List<Long> accountIds = seedAccounts(random, accountCount);
         int entries = seedLedger(random, accountIds);
 
         return new SeedSummary(accountIds.size(), entries);
     }
 
-    private List<Long> seedAccounts(Random random) {
+    private List<Long> seedAccounts(Random random, int accountCount) {
         List<String> shuffledNames = new ArrayList<>(List.of(SyntheticNames.NAMES));
         Collections.shuffle(shuffledNames, random);
 
-        List<Long> accountIds = new ArrayList<>(ACCOUNT_COUNT);
-        for (int i = 0; i < ACCOUNT_COUNT; i++) {
+        List<Long> accountIds = new ArrayList<>(accountCount);
+        for (int i = 0; i < accountCount; i++) {
             String accountRef = "ACC-%06d".formatted(i + 1);
             Long id = jdbc.queryForObject(
                 "INSERT INTO account (account_ref, party_name) VALUES (?, ?) RETURNING id",

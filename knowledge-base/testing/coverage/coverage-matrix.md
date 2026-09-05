@@ -45,14 +45,14 @@ python3 scripts/render-testing-coverage.py
 | BP-011 | Blameless Culture | T0, T1, T2, T3 | — | G | G | G | G | G | G | — | jmeter |
 | BSP-001 | Double-Entry Ledger | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
 | BSP-002 | Idempotent Payment Key | T0 | TST-020 | R | R | R | — | — | R | baseline, load, stress, spike, soak | jmeter |
-| BSP-003 | Sanction Screening Pipeline | T0 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | locust |
+| BSP-003 | Sanction Screening Pipeline | T0 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | jmeter |
 | BSP-004 | End-of-Day Batch Window | T0, T1 | TST-032 | R | R | R | — | — | R | baseline, load, scalability, soak, mixed | jmeter |
 | BSP-005 | Reversal and Chargeback | T0 | TST-021 | R | R | R | — | — | R | baseline, load, stress, soak, failover-under-load | jmeter |
 | BSP-006 | Pricing Engine | T0, T1 | TST-022 | R | R | — | — | — | R | baseline, load | locust |
 | BSP-007 | Interest Calculation Engine | T0, T1 | TST-022 | R | R | — | — | — | R | baseline, load | locust |
 | BSP-008 | Fee Engine | T0, T1, T2 | TST-022 | R | R | — | — | — | R | baseline, load | locust |
 | BSP-009 | Tax Calculation Engine | T0, T1, T2 | TST-022 | R | R | — | — | — | R | baseline, load | locust |
-| BSP-010 | Rule / Decisioning Engine | T0, T1 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | locust |
+| BSP-010 | Rule / Decisioning Engine | T0, T1 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | jmeter |
 | BSP-011 | Credit Limit Engine | T0, T1 | TST-023 | R | R | R | — | — | — | baseline, load, stress, spike | jmeter |
 | BSP-012 | Transaction Limit Engine | T0, T1, T2 | TST-023 | R | R | R | — | — | — | baseline, load, stress, spike | jmeter |
 | BSP-013 | Collateral Management Engine | T0, T1 | TST-023 | R | R | R | — | — | — | baseline, load, stress, spike | jmeter |
@@ -214,7 +214,7 @@ python3 scripts/render-testing-coverage.py
 | SEC-006 | JWT Best Practices | T0, T1, T2 | TST-040 | R | R | — | — | R | — | baseline, load, soak | jmeter |
 | SEC-007 | Secrets Rotation | T0, T1, T2 | TST-036 | R | R | R | — | R | — | baseline, load, failover-under-load | jmeter |
 | SEC-008 | Data Masking | T0, T1, T2 | TST-041 | R | R | — | — | R | R | baseline, load, stress, soak | jmeter |
-| SEC-009 | Fraud Signal Collection | T0, T1 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | locust |
+| SEC-009 | Fraud Signal Collection | T0, T1 | TST-025 | R | R | — | — | — | R | baseline, load, stress, soak | jmeter |
 | SEC-010 | Attribute-Based Access Control | T0, T1, T2 | TST-025, TST-040 | R | R | — | — | R | R | baseline, load, stress, soak | jmeter |
 | SEC-011 | Session Revocation | T0, T1, T2 | TST-040 | R | R | — | — | R | — | baseline, load, soak | jmeter |
 | SEC-012 | Tamper-Evident Audit Logging | T0, T1 | TST-041 | R | R | — | — | R | R | baseline, load, stress, soak | jmeter |

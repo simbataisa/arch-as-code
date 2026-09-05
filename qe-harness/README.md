@@ -122,7 +122,7 @@ the SUT is bundled rather than pointed at a real service.
 | Binding | [`traceability/modules.yml`](./traceability/modules.yml) | archetype → tool, path, coverage, defect flag | No — hand-maintained |
 | Thresholds | [`profiles/_nfr-thresholds.yml`](./profiles/_nfr-thresholds.yml) | Numbers, each citing an `NFR-####anchor` | No — hand-maintained |
 | Load profiles | `profiles/baseline.yml` … (8 files) | Workload shape per [TST-002](../knowledge-base/testing/strategy/performance-test-standard.md) profile | No |
-| SUT | [`reference-sut/`](./reference-sut/) | Java 21 + Spring Boot service, 7 capabilities implemented, 24 declared | No |
+| SUT | [`reference-sut/`](./reference-sut/) | Java 21 + Spring Boot service, 15 capabilities implemented, 24 declared | No |
 | Modules | [`harness/`](./harness/) | The tests, in 4 tools across 3 build systems (Maven, npm, pip) | No |
 | Run fragments | `traceability/runs/*.json` | One record per module run | **Yes** — by the modules |
 | Coverage table | [`traceability/harness-coverage.md`](./traceability/harness-coverage.md) | 24-row status view | **Yes** — `render-harness-coverage.py` |
@@ -143,8 +143,18 @@ see [§4.3 of the design doc](../docs/superpowers/specs/2026-08-24-wave-16-qe-ha
 | E — Data | TST-039 Data Quality & Reconciliation | Locust | confusion-matrix |
 | F — Security | TST-040 AuthN/AuthZ Matrix & Token Lifecycle | JMeter | invariant-assertion |
 | G — Observability & Client | TST-043 Client Experience & Perf Budget | k6 | invariant-assertion |
+| A — Correctness & State | TST-020 Idempotency & Replay | JMeter | invariant-assertion |
+| A — Correctness & State | TST-023 Concurrent Limit & Counter | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-026 Message Transformation & Routing | JMeter | contract-schema |
+| B — Messaging & Integration | TST-027 Ordering & Resequencing | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-028 Fan-out / Fan-in Correlation | JMeter | invariant-assertion |
+| B — Messaging & Integration | TST-029 Delivery Guarantee, Retry, DLQ | JMeter | invariant-assertion |
+| C — Load & Capacity | TST-034 Blended Journey Workload | JMeter | invariant-assertion |
+| E — Data | TST-037 Read-Model Convergence & CDC Lag | JMeter | invariant-assertion |
 
-One archetype per family, so all four tools and three of the four oracle types are exercised.
+Wave 16 seeded one archetype per family; Wave 17 completed Family B and deepened A, C and E, so
+15 of the 24 archetypes now have runnable modules. All four tools and three of the four oracle
+types are exercised.
 `golden-dataset` is not implemented — no family representative uses it as primary oracle; it
 lands with `TST-022` or `TST-038` in a later wave. `TST-039` uses Locust rather than JMeter
 because [its archetype document §6](../knowledge-base/testing/archetypes/data-quality-reconciliation.md)
@@ -468,6 +478,23 @@ reason. `qe-harness/downstream-stub/` is a small, static-responder Docker image 
 is what actually black-holes/restores traffic to it in that setup — `BreakerBehaviourTest` itself
 needs neither, using a hand-rolled in-process JDK `HttpServer` stub instead (see that test's
 Javadoc).
+
+## TST-020 Idempotency Content-Type Handling
+
+`LedgerController.transfer` (Wave 17) accepts an optional `Idempotency-Key` header on
+`POST /transfers`. Spring cannot bind two `@RequestBody` parameters on one handler method, so the
+controller reads the body once as a raw `String` and parses it itself (via the shared
+`ObjectMapper` bean) instead of letting Spring bind a typed `@RequestBody TransferRequest`
+parameter directly, as it did before this task.
+
+This is a narrow, deliberate divergence from "byte-identical": the pre-Wave-17 typed binding
+required a JSON-compatible `Content-Type` and returned `415 Unsupported Media Type` for anything
+else. Reading the body as a raw string accepts any `Content-Type` as long as the body itself is
+JSON-shaped — a request Spring's binder would have rejected with `415` now succeeds instead. Every
+caller in this corpus — TST-021's own JMeter module and TST-034's blended-journey module included —
+sends `Content-Type: application/json`, so no existing behaviour actually changes; this is
+recorded here so a future reader isn't surprised if they ever probe the endpoint with a
+deliberately wrong `Content-Type`.
 
 ## Related
 

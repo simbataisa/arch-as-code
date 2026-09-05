@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-023 Concurrent Limit and Counter" enabled="true">
+      <stringProp name="TestPlan.comments">Task 8 (Wave 17 QE Harness). See README.md for the invariants (I1-I5) this plan asserts and for why the TearDown group releases every burst-admitted reservation before exercising I3/I4.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: resets the reservation tables and seeds
+           ACC-000001's declared limit before the Reservation Burst's first
+           request; same TRUNCATE ... RESTART IDENTITY CASCADE pattern
+           reference-sut's own AbstractReservationIntegrationTest#
+           resetReservationFixture() uses, with the same declared_limit=10 /
+           ttl_seconds=60 fixture values. Necessary, not just tidy: GET
+           /reservations/utilisation sums every held row for the account with
+           no scoping to this run, so one defect-active run's overcommitted
+           holds would otherwise poison every later clean run's I1/I2 result
+           (same rationale TST-021's own setUp Thread Group documents). Also
+           zeroes this run's own tallies, so a second run in the same SUT
+           process (this module's own JUnit fixture running clean-then-defect)
+           never mixes its counts with a previous run's leftovers. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset and Seed Limit" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Reset and Seed Reservation Limit" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.sql.Connection
+import java.sql.DriverManager
+
+String url = System.getenv("LEDGER_JDBC_URL")
+String user = System.getenv("LEDGER_JDBC_USER")
+String password = System.getenv("LEDGER_JDBC_PASSWORD")
+
+Connection conn = DriverManager.getConnection(url, user, password)
+try {
+    def st = conn.createStatement()
+    try {
+        st.executeUpdate("TRUNCATE TABLE reservation, account_limit, ledger_entry, account RESTART IDENTITY CASCADE")
+        st.executeUpdate("INSERT INTO account (account_ref, party_name) VALUES ('ACC-000001', 'Test Fixture Limit Holder Co')")
+        st.executeUpdate("INSERT INTO account_limit (account_id, declared_limit, ttl_seconds) " +
+            "SELECT id, 10, 60 FROM account WHERE account_ref = 'ACC-000001'")
+    } finally {
+        st.close()
+    }
+} finally {
+    conn.close()
+}
+
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never adds its tallies on top of a previous run's leftovers -- same idiom
+// TST-031/TST-040's own setUp Thread Groups use for their own props (this
+// block is inside a CDATA-wrapped Groovy // comment, not an XML comment, so
+// double hyphens here are fine).
+props.put("tst023_declared_limit", "10")
+props.put("tst023_attempts", "16")
+props.put("tst023_admitted", "0")
+props.put("tst023_rejected", "0")
+props.put("tst023_max_utilisation", "0")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("reset reservation/account_limit/ledger_entry/account, seeded ACC-000001 (limit=10)", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: 16 threads each attempting exactly one
+           POST /reservations for the same account, released together by a
+           Synchronizing Timer (group size 16, matching num_threads exactly)
+           so the SELECT ... FOR UPDATE serialisation ReservationService.reserve
+           relies on is genuinely exercised under concurrent contention, not
+           threads trickling in one at a time under ramp-up alone ; see
+           README.md and ReservationService's own javadoc. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Reservation Burst" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">16</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <SyncTimer guiclass="TestBeanGUI" testclass="SyncTimer" testname="Synchronizing Timer" enabled="true">
+          <intProp name="groupSize">16</intProp>
+          <longProp name="timeoutInMs">10000</longProp>
+        </SyncTimer>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /reservations" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"account":"ACC-000001","amount":1}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/reservations</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- Tallies every response into props (JMeter's process-wide,
+               cross-thread shared store ; a JMeter *variable* is scoped
+               per-thread and would silently undercount, each of the 16
+               threads seeing only its own slice) ; the same idiom
+               tst-031-ratelimit's own tally-accept-reject PostProcessor
+               uses. On every 201, this thread ALSO samples
+               GET /reservations/utilisation itself, directly over HTTP
+               (there is no JMeter sampler element wired to fire mid-
+               PostProcessor), and raises the running maximum: I2 demands a
+               continuous sample taken at every admission instant, not a
+               start/end pair, so the peak must be captured here, while the
+               burst is still in flight. synchronized(props) guards both
+               updates ; sixteen threads increment/compare the same
+               counters concurrently. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-admission-and-sample-utilisation" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+String code = prev.getResponseCode()
+
+if ("201".equals(code)) {
+    synchronized (props) {
+        long admitted = Long.parseLong(props.getProperty("tst023_admitted", "0"))
+        props.put("tst023_admitted", String.valueOf(admitted + 1))
+    }
+
+    String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+    HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+    HttpRequest request = HttpRequest.newBuilder(
+            URI.create(sutBaseUrl + "/reservations/utilisation?account=ACC-000001"))
+        .timeout(Duration.ofSeconds(5))
+        .GET()
+        .build()
+    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    if (response.statusCode() == 200) {
+        long observed = new JsonSlurper().parseText(response.body()).utilisation as long
+        synchronized (props) {
+            long currentMax = Long.parseLong(props.getProperty("tst023_max_utilisation", "0"))
+            if (observed > currentMax) {
+                props.put("tst023_max_utilisation", String.valueOf(observed))
+            }
+        }
+    }
+} else if ("409".equals(code)) {
+    synchronized (props) {
+        long rejected = Long.parseLong(props.getProperty("tst023_rejected", "0"))
+        props.put("tst023_rejected", String.valueOf(rejected + 1))
+    }
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Reservation Burst
+           thread has finished (JMeter guarantees this ordering). Releases
+           every reservation the burst admitted BEFORE exercising I3/I4 ;
+           necessary, not tidy: the burst deliberately consumes the account's
+           declared limit down to exactly zero spare capacity (that is the
+           whole point of I1 ; admitted count equals min(N, L) exactly), so
+           without this release a brand-new reservation here would always be
+           rejected regardless of whether ReservationService itself is
+           working correctly, and I3/I4 would never get to exercise anything.
+           A direct SQL UPDATE (not the HTTP release endpoint) is used
+           because it must clear every burst-admitted row unconditionally,
+           independent of which specific ids the burst happened to create,
+           and independent of whether reservation-overcommit was active
+           (which affects only the reserve path, never release) ; so I3/I4
+           below start from a known, empty baseline regardless of the
+           burst's own outcome. Scoped to ACC-000001's own account_id (not a
+           table-wide UPDATE) so the statement is correct by construction ;
+           not merely safe by convention because this fixture happens to be
+           the only account this plan ever seeds. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Reservation" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Release All Held Reservations" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.sql.Connection
+import java.sql.DriverManager
+
+String url = System.getenv("LEDGER_JDBC_URL")
+String user = System.getenv("LEDGER_JDBC_USER")
+String password = System.getenv("LEDGER_JDBC_PASSWORD")
+
+Connection conn = DriverManager.getConnection(url, user, password)
+try {
+    def st = conn.createStatement()
+    try {
+        st.executeUpdate("UPDATE reservation SET state = 'released' " +
+            "WHERE account_id = (SELECT id FROM account WHERE account_ref = 'ACC-000001') " +
+            "AND state = 'held'")
+    } finally {
+        st.close()
+    }
+} finally {
+    conn.close()
+}
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("released every reservation the burst admitted, freeing capacity for the I3/I4 exercise below", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /reservations (verify)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"account":"ACC-000001","amount":3}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/reservations</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-reservation-id" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+if ("201".equals(prev.getResponseCode())) {
+    def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
+    vars.put("reservation_id", json.reservationId.toString())
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /reservations/{id}/release (first)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/reservations/${reservation_id}/release</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /reservations/utilisation" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/reservations/utilisation?account=ACC-000001</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- I3's own reservation is now the ONLY thing this account could
+               possibly have held (the burst's own holds were all released
+               above), so the amount released is exactly what utilisation()
+               reports right after this release: 0 confirms the release
+               credited back precisely its own amount, neither more nor
+               less. windowTimezone (I5) comes from the very same response. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="extract-i3-i5" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
+vars.put("i3_returned", json.utilisation.toString())
+vars.put("i5_timezone", json.windowTimezone.toString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /reservations/{id}/release (second)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/reservations/${reservation_id}/release</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="detect-double-release-rejected" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("i4_rejected", String.valueOf(prev.getResponseCode() == "409"))
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- assert-reservation.groovy (this task's deliverable) evaluates
+             I1-I5 against the props tallies from the burst and the vars
+             this group's own samplers wrote above, then calls the JVM
+             EvidenceEmitter to write one fragment to traceability/runs/. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-reservation" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

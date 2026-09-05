@@ -1,13 +1,22 @@
 # TST-043 -- Client Experience Budget (k6)
 
+> **Substitute invariants.** This module's `I1`-`I4` are server-side HTTP checks of its own
+> devising, not the archetype document's `I1`-`I6`. None of the archetype's own invariants are
+> implemented here — see `partial_reason` in `traceability/modules.yml`. Invariant IDs in a
+> fragment are module-local by design (see `qe-harness/README.md`, "Three names that mean more
+> than one thing").
+
 Oracle: invariant-assertion. Best-fit tool per TST-010: k6. Canonical archetype:
 [client-experience-offline-perf.md](../../../../knowledge-base/testing/archetypes/client-experience-offline-perf.md)
 (TST-043, catalog IDs FE-005/FE-006/FE-001/FE-002/MOB-001/MOB-006).
 
 `traceability/modules.yml` declares this module `coverage: partial`:
 
-> Offline-sync invariants require a client application, which this repository does not contain.
-> Perf budget, cache correctness, conditional requests, and compression only.
+> None of the archetype's own I1-I6 are implemented: I1/I2/I6 need an offline client, I3/I4
+> a rendered DOM, and I5 k6/browser against a real page - no such application exists in this
+> repository. This module ships four substitute server-side HTTP invariants (perf budget,
+> cache correctness, conditional requests, compression) which are renumbered I1-I4 and are
+> NOT the archetype's I1-I4.
 
 This is the third and last non-JMeter module (a third, independent toolchain: Node/k6, entirely
 outside both the Maven reactor and Python), and the last of Wave 16's seven harness modules.

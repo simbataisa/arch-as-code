@@ -615,7 +615,7 @@ are named here so the coverage claim in §10 is honest rather than aspirational:
     }
     // The truncation case carries no field name to match on: a partially redacted value can ride
     // inside an allow-listed field's value. Assert the marker's trailing fragment too.
-    def flat = payload.data.values().join(" ")
+    def flat = payload.data.values().join(" ")
     if (flat.contains(marker) || flat.contains(marker[-4..-1])) {
         failures << "planted sensitive marker (or its trailing fragment) present in a payload value"
     }

@@ -112,3 +112,27 @@ thresholds:
     value: 3072
     unit: bytes
     applies_to: [client-experience]
+
+  # --- Per-journey latency for TST-034's blend (NFR-002 Latency Budget Model) ---
+  # Source table: "End-to-end budgets per tier (customer-facing)". One entry per
+  # tier the wave17-core-mix blend touches, because TST-034's I1 asserts every
+  # journey against its OWN tier budget and never against a single blended
+  # figure. Same anchor as p50/p95/p99_latency_ms above -- no new NFR section is
+  # needed, and none is created.
+  - name: p95_latency_t0_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 200
+    unit: ms
+    applies_to: [mixed]
+
+  - name: p95_latency_t1_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 500
+    unit: ms
+    applies_to: [mixed]
+
+  - name: p95_latency_t2_ms
+    threshold_ref: NFR-002#end-to-end-budgets-per-tier-customer-facing
+    value: 2000
+    unit: ms
+    applies_to: [mixed]

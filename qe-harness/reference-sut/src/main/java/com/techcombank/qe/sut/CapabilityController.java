@@ -20,7 +20,7 @@ import java.util.Map;
 @RestController
 public class CapabilityController {
 
-    /** GET /_capabilities -> {"TST-020": "declared", "TST-021": "implemented", ...} */
+    /** GET /_capabilities -> {"TST-020": "implemented", "TST-022": "declared", ...} */
     @GetMapping("/_capabilities")
     public Map<String, String> capabilities() {
         return CapabilityRegistry.statusMap();

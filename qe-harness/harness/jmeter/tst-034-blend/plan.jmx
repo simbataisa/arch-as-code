@@ -1,0 +1,812 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-034 Blended Journey Workload" enabled="true">
+      <stringProp name="TestPlan.comments">Task 13 (Wave 17 QE Harness). See README.md for the invariants (I1-I5) this plan asserts. First plan in the repository to read a TST-002 profile (profiles/mixed.yml) via ProfileResolver rather than hardcoding the blend as plan.jmx literals.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <!-- FALSE, deliberately, unlike every sibling module's single-Thread-Group
+           plan: this plan has FOUR main Thread Groups (one per journey, see
+           below) that MUST run concurrently ; that concurrency is the entire
+           point of a "blend". serialize_threadgroups=true would run them one
+           after another, which is not a blend at all. setUp/tearDown Thread
+           Groups are unaffected either way ; JMeter always runs those in
+           their own phase regardless of this flag. -->
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- POST /transfers needs a JSON Content-Type or the SUT rejects it
+           with 415 (confirmed empirically ; without this header every
+           transfer sample failed fast instead of ever reaching
+           TransferService, which is exactly what a defect proof must not
+           be able to hide behind). Plan-wide like tst-021-ledger/plan.jmx's
+           own HeaderManager; harmless for the other three journeys' GET
+           requests, which carry no body. -->
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: truncates the ledger tables, seeds a wider
+           20-account fixture, and computes/zeros every prop the four
+           Journey Load Thread Groups below and the Verify Blend teardown
+           depend on ; all BEFORE any of them fires its first request.
+
+           The truncate step is not in the archetype's own prose but is
+           load-bearing: SyntheticDataSeeder#seedAccounts always inserts
+           the fixed refs ACC-000001..ACC-0000(accounts) (see that class),
+           so POST /_test/seed?seed=42&accounts=20 called a SECOND time
+           against a container that already has those rows collides on
+           account.account_ref's unique constraint and returns 500 ; this
+           module's own test (Tst034ModuleTest) runs it three times
+           (clean, then two defect-pair legs), and a full-suite run later
+           runs it again on top of that. TRUNCATE ... RESTART IDENTITY
+           CASCADE is the exact statement tst-021-ledger/plan.jmx's own
+           setUp already uses and AbstractLedgerIntegrationTest resets
+           with between JVM test methods ; same fixture-reset idiom,
+           applied here for the same reason. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Seed Blend Fixture" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Truncate Ledger and Account Tables" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.sql.Connection
+import java.sql.DriverManager
+
+String url = System.getenv("LEDGER_JDBC_URL")
+String user = System.getenv("LEDGER_JDBC_USER")
+String password = System.getenv("LEDGER_JDBC_PASSWORD")
+
+Connection conn = DriverManager.getConnection(url, user, password)
+try {
+    def st = conn.createStatement()
+    try {
+        st.executeUpdate("TRUNCATE TABLE ledger_entry, account RESTART IDENTITY CASCADE")
+    } finally {
+        st.close()
+    }
+} finally {
+    conn.close()
+}
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("truncated ledger_entry/account", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- Runs only after the truncate above completes (this Thread
+             Group is single-threaded, single-loop, so its children run in
+             strict sequence) ; a wider account pool than the two-account
+             ledger fixture, so the transfer journey below has real
+             contention surface across 20 accounts rather than one fixed
+             pair. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /_test/seed?seed=42&#38;accounts=20" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="seed" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.name">seed</stringProp>
+                <stringProp name="Argument.value">42</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="accounts" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.name">accounts</stringProp>
+                <stringProp name="Argument.value">20</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/_test/seed</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <!-- Loads the declared blend ONCE via ProfileResolver (Task 11) and
+             writes every prop the rest of this plan reads.
+
+             Structural note (why this plan is FOUR dedicated Thread Groups,
+             not one shared pool with sibling Throughput Controllers, despite
+             this task's own brief describing the latter): a single shared
+             pool's Throughput Controllers converge on the declared
+             percentage split so aggressively ; confirmed empirically across
+             several real runs, both clean and with journey-starved active ;
+             that a fixed per-request delay on one journey never drives that
+             journey's count to zero in any sub-window; the shared pool
+             simply reallocates threads to the slow journey to keep its
+             share, and per-journey counts stay smooth and comfortably
+             non-zero in both scenarios. That is precisely the behaviour
+             blended-journey-workload.md's own canonical harness (Section 5)
+             uses instead: ONE THREAD GROUP PER JOURNEY, each a population
+             dedicated to that journey alone, paced to its own declared-share
+             target rate via a Constant Throughput Timer ; not a shared pool
+             split by a Throughput Controller. Threads are NOT fungible
+             across journeys in that design, so a journey whose own request
+             latency balloons cannot borrow another journey's capacity to
+             compensate: its throughput genuinely collapses, proportionally,
+             which is what turns journey-starved into an observable,
+             distinctive defect rather than an invisible one. This plan
+             follows that canonical pattern. Each journey's own dedicated
+             thread count is sized (via real, empirical measurement against
+             this SUT) to comfortably clear its own pacing target under
+             clean latency (single-digit milliseconds, measured directly)
+             while the transfer journey's own three dedicated threads
+             cannot clear its own target once journey-starved adds 4000ms
+             to every call ; the resulting THROUGHPUT shortfall itself is
+             deterministic (Little's Law: threads / latency caps it at
+             ~0.75 requests/second, a ~37x shortfall against its ~28
+             requests/second target, regardless of timing jitter). Turning
+             that shortfall into a per-sub-window zero count, which is what
+             I3 actually checks, is a separate, statistical step ; see the
+             sub-window-width comment below for why, and for the exact
+             arithmetic. percentThroughput's role from the brief's literal
+             Throughput Controller design is played here by each journey's
+             own target request rate, still derived from ProfileResolver's
+             declared share (never a plan.jmx literal) ; see
+             tst034_target_rps_* below. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Compute Blend Shape and Zero Tallies" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import com.techcombank.qe.harness.config.HarnessConfig
+import com.techcombank.qe.harness.config.ProfileResolver
+
+boolean smoke = HarnessConfig.smokeMode()
+ProfileResolver.Profile profile = new ProfileResolver().load("mixed")
+
+// Sub-window width and warm-up duration for I5's steady-state check, in
+// whole milliseconds (an internal arithmetic unit, never written to a prop
+// as a raw epoch timestamp literal -- that is what check5's "no PAN-shaped
+// 13-19 digit string" rule actually forbids; a small derived index like the
+// ones this plan stores is not that). Smoke mode: 900ms.
+//
+// This margin (and TransferService's own journey-starved delay, 4000ms --
+// see that class's own comment) were retuned once, empirically, after the
+// first version of this plan picked a much tighter window (95-130ms)
+// against a 250ms delay: this test environment's own scheduling jitter
+// turned out to reach as high as ~220ms on a clean run with NO defect
+// active at all (confirmed by a diagnostic max-gap prop this plan tracked
+// per journey during that investigation), which overlapped the
+// "guaranteed starvation detection" ceiling that a 250ms delay allowed
+// for. Rather than make I3 more sensitive to that noise, the defect's own
+// magnitude was widened instead (250ms -> 4000ms), which is the more
+// honest fix: I3's contract ("every journey keeps a non-zero count in
+// every sub-window") is unchanged, only how hard the defect fixture
+// pushes on it. 900ms comfortably clears every journey's own clean-run
+// pacing interval and this environment's own observed jitter ceiling
+// (~220ms, so >4x margin on that side).
+//
+// The margin on the DEFECT side is statistical, not a per-gap guarantee --
+// worth being precise about, since an unreconciled assumption exactly like
+// this is what caused this task's own timing investigation in the first
+// place. transfer's three dedicated threads (see that Thread Group's own
+// comment) give it a capacity-capped combined arrival interval under the
+// defect of threads / latency = 3 / 4s = 0.75 requests/second, i.e. one
+// arrival roughly every 1333ms -- BELOW 1800ms (2 x 900ms), so a single
+// inter-arrival gap is not guaranteed to skip a whole sub-window on every
+// occurrence, only most of them, depending on phase. What IS overwhelming
+// is the statistical picture over the whole measured window: at 0.75
+// requests/second into 900ms buckets, the expected count per bucket is
+// only ~0.675, so (Poisson approximation) any single bucket has roughly a
+// 51% chance of landing on zero, and this plan's own ~20 measured buckets
+// (a smoke run's 18s measured duration / 900ms) make the chance that EVERY
+// one of them is non-zero on a genuinely defect-active run on the order of
+// 1 in 1,000,000 -- not a guarantee, but not a coin flip either. See the
+// task's own report for the full arithmetic. Full mode: 5-minute
+// sub-windows over the declared 14,400s hold keep the per-window
+// bookkeeping reasonable.
+long warmupMs = smoke ? 2000L : 60000L
+long subWindowMillis = smoke ? 900L : 300000L
+
+// Overall blended request rate this plan paces the FOUR dedicated Thread
+// Groups to, in requests/second, split per journey by ProfileResolver's own
+// declared share below. Higher than a "realistic contention" figure might
+// suggest on its own (see mixed.yml's own header comment) specifically to
+// widen the gap above: every journey's own dedicated thread count clears
+// this target under clean latency with room to spare (so clean stays
+// pacing-limited, hitting its declared share almost exactly), which pushes
+// every journey's own clean-run pacing interval well below subWindowMillis
+// -- the margin I3 needs to never spuriously fail on a clean run. The
+// journey-starved-affected transfer journey's own three dedicated threads
+// cannot clear this target once its own latency balloons by 4000ms (see
+// TransferService's own comment) regardless of how high this figure is
+// raised, since that shortfall is capacity-bound, not pacing-bound.
+final double OVERALL_TARGET_RPS = 70.0d
+
+// Single source of truth for every "Journey Load: *" Thread Group's own
+// ThreadGroup.duration below -- resolved here from the SAME profile/smoke
+// already loaded above, rather than each duration re-deriving smoke mode
+// from a raw, case-sensitive getenv check (inconsistent with
+// HarnessConfig.smokeMode() just above) against literals frozen in this
+// file instead of mixed.yml's own declared hold_seconds /
+// smoke_mode_overrides.hold_seconds.
+props.put("tst034_hold_seconds", String.valueOf(smoke ? profile.smokeHoldSeconds() : profile.holdSeconds()))
+
+props.put("tst034_run_start_ms", String.valueOf(System.currentTimeMillis()))
+props.put("tst034_warmup_ms", String.valueOf(warmupMs))
+props.put("tst034_sub_window_millis", String.valueOf(subWindowMillis))
+props.put("tst034_max_window_idx_seen", "-1")
+props.put("tst034_total_samples", "0")
+props.put("tst034_sub_windows", "0")
+
+profile.journeys().each { name, journey ->
+    double targetRps = (journey.share() / 100.0d) * OVERALL_TARGET_RPS
+    // Read back by each journey's own Constant Throughput Timer below via
+    // ${__groovy(props.get("tst034_target_rps_<name>"),)} -- computed once
+    // here from ProfileResolver's own parsed mixed.yml, not re-read from
+    // YAML on every one of thousands of timer decisions.
+    props.put("tst034_target_rps_" + name, String.valueOf(targetRps))
+    // Shared pacing ticket (see each journey's own "Tag Journey" PreProcessor
+    // below): the next wall-clock instant, in epoch millis, this journey's
+    // dedicated Thread Group is allowed to fire its next request. Zeroing
+    // this to "0" (never the current epoch millis, which is exactly the
+    // 13-digit shape check5 forbids as a literal -- this is a runtime value,
+    // not a literal, but "0" itself is a completely safe literal either way)
+    // makes the very first request in every run fire immediately.
+    props.put("tst034_next_allowed_ms_" + name, "0")
+    props.put("tst034_share_" + name, String.valueOf(journey.share()))
+    props.put("tst034_" + name + "_count", "0")
+    props.put("tst034_" + name + "_p95", "0")
+    props.put("tst034_" + name + "_errors", "0")
+    // Deliberately NOT initialized here: tst034_<name>_min_window_count.
+    // Each tally-blend PostProcessor below computes this incrementally (an
+    // O(1)-key running minimum across CLOSED sub-windows only, never one
+    // prop key per window index -- see that script's own comment for why),
+    // and its absence here is itself meaningful: if a journey never gets a
+    // single sample all run, this key never gets created at all, and
+    // assert-blend.groovy's own default ("0") for a missing key correctly
+    // reads that as total starvation.
+    props.put("tst034_" + name + "_cur_window_idx", "-1")
+    props.put("tst034_" + name + "_cur_window_count", "0")
+    props.put("tst034_" + name + "_max_window_idx", "0")
+    props.put("tst034_" + name + "_latency_n", "0")
+}
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("smoke=" + smoke + " warmupMs=" + warmupMs + " subWindowMillis=" + subWindowMillis +
+    " overallTargetRps=" + OVERALL_TARGET_RPS + " blendRef=" + profile.blendRef() +
+    " journeys=" + profile.journeys().keySet(), "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Journey Load: transfer. THREE dedicated threads: at this
+           journey's own clean latency (single-digit milliseconds for the
+           HTTP call itself, measured directly against this SUT) one or two
+           threads did not reliably clear the pacing gate below (see this
+           group's own "Tag Journey and Compute Transfer Params"
+           PreProcessor) ; confirmed empirically across several real runs:
+           with fewer threads, this journey's own per-iteration script
+           overhead (account rotation, request-body templating) became the
+           binding constraint under clean load often enough to understate
+           its actual share below I2's own tolerance, with no defect active
+           at all. Three threads clear it reliably, with room to spare, so
+           the clean run is pacing-limited (hits its declared-share target)
+           rather than capacity-limited. Once journey-starved adds 4000ms
+           to every call, those same three threads still cannot come close
+           to clearing that target ; max achievable throughput becomes
+           threads / latency =~ 3/4s = 0.75 requests/second, a ~37x (roughly
+           1.6 orders of magnitude) shortfall below the declared share's
+           own ~28 requests/second target ; a sustained capacity shortfall
+           severe enough that, over this plan's own ~20 measured
+           sub-windows, the chance NONE of them lands on zero is on the
+           order of 1 in 1,000,000 (see the setUp comment above, and the
+           task's own report, for the exact arithmetic). This is a
+           statistical margin, not a per-request deterministic guarantee ;
+           worth stating precisely, since this task's own history is
+           exactly an unreconciled version of this same claim causing a
+           real failure. Duration is the
+           smoke/full __groovy switch every other module already uses;
+           serialize_threadgroups=false above lets this run concurrently
+           with the other three journeys below, which is what makes this a
+           blend at all. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Journey Load: transfer" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">3</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Tags this iteration for the shared tally-blend PostProcessor
+             below, PACES this journey's dedicated Thread Group to its own
+             declared-share target rate (see below), and, since transfer is
+             the one journey that needs per-iteration request parameters,
+             computes them across the 20-account fixture seeded above ; the
+             same fromAcc/toAcc/amountMinor idiom tst-021-ledger/plan.jmx's
+             own "Compute Transfer Params" preprocessor uses, generalised
+             from 2 accounts to 20.
+
+             Pacing note: a native ConstantThroughputTimer was tried here
+             first and rejected ; TestBean-style elements resolve their own
+             properties (including any ${__groovy(...)} embedded in them)
+             during JMeter's global "notify test listeners of start" pass,
+             which runs BEFORE the setUp Thread Group's own samplers (the
+             ones that populate tst034_target_rps_transfer in props) have
+             executed, confirmed empirically by the exact
+             NullPointerException that pass throws reading a still-unset
+             prop. A JSR223PreProcessor has no such eager-resolution step ;
+             it runs once per iteration, well after setUp has completed ;
+             so pacing is implemented directly here instead: a shared,
+             monotonic "next allowed instant" ticket in props, exactly
+             reproducing ConstantThroughputTimer's own
+             AllActiveThreadsInCurrentThreadGroup semantics (the whole
+             group's threads share one pacing clock, not one each) without
+             that timing pitfall. -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Tag Journey and Compute Transfer Params" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("tst034_journey", "transfer")
+
+double targetRps = Double.parseDouble(props.getProperty("tst034_target_rps_transfer"))
+long minIntervalMs = (long) Math.ceil(1000.0d / targetRps)
+long sleepMs
+synchronized (props) {
+    long now = System.currentTimeMillis()
+    long nextAllowed = Long.parseLong(props.getProperty("tst034_next_allowed_ms_transfer", "0"))
+    long start = Math.max(now, nextAllowed)
+    props.put("tst034_next_allowed_ms_transfer", String.valueOf(start + minIntervalMs))
+    sleepMs = start - now
+}
+if (sleepMs > 0) {
+    Thread.sleep(sleepMs)
+}
+
+int accountCount = 20
+int threadNum = ctx.getThreadNum()
+int iter = vars.getIteration()
+int fromIdx = (threadNum + iter) % accountCount
+int toIdx = (fromIdx + 1) % accountCount
+// Avoids String.formatted()/String.format() here deliberately: their
+// regex-based format-string parsing runs on EVERY call with no caching,
+// measurably adding to this journey's own per-iteration overhead (this
+// preprocessor also carries this journey's pacing gate above, so extra
+// overhead here directly eats into its own paced budget). Zero-padding a
+// 1..20 index to 6 digits by hand is simple enough not to need it.
+vars.put("fromAcc", "ACC-" + String.valueOf(1000000 + fromIdx + 1).substring(1))
+vars.put("toAcc", "ACC-" + String.valueOf(1000000 + toIdx + 1).substring(1))
+long amountMinor = 100L + ((threadNum * 7L + iter * 13L) % 900L)
+vars.put("amountMinor", String.valueOf(amountMinor))
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /transfers" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"from":"${fromAcc}","to":"${toAcc}","amountMinor":${amountMinor}}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- Journey Load: trial_balance. Two dedicated threads ; this
+           journey has no injectable defect, so its own thread count is
+           chosen with comfortable margin (see the transfer group's own
+           comment above for the design rationale that requires exactly one
+           of the four groups to be tight). -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Journey Load: trial_balance" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Pacing implemented directly in this PreProcessor, not via a
+             native ConstantThroughputTimer ; see the transfer journey's
+             own "Tag Journey and Compute Transfer Params" PreProcessor for
+             why (a TestBean property-resolution timing pitfall, confirmed
+             empirically). -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Tag Journey" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("tst034_journey", "trial_balance")
+
+double targetRps = Double.parseDouble(props.getProperty("tst034_target_rps_trial_balance"))
+long minIntervalMs = (long) Math.ceil(1000.0d / targetRps)
+long sleepMs
+synchronized (props) {
+    long now = System.currentTimeMillis()
+    long nextAllowed = Long.parseLong(props.getProperty("tst034_next_allowed_ms_trial_balance", "0"))
+    long start = Math.max(now, nextAllowed)
+    props.put("tst034_next_allowed_ms_trial_balance", String.valueOf(start + minIntervalMs))
+    sleepMs = start - now
+}
+if (sleepMs > 0) {
+    Thread.sleep(sleepMs)
+}
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /ledger/trial-balance" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/ledger/trial-balance</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- Journey Load: catalogue. Two dedicated threads (see Journey
+           Load: transfer's own comment for the full design rationale). -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Journey Load: catalogue" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Pacing implemented directly in this PreProcessor, not via a
+             native ConstantThroughputTimer ; see the transfer journey's
+             own "Tag Journey and Compute Transfer Params" PreProcessor for
+             why (a TestBean property-resolution timing pitfall, confirmed
+             empirically). -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Tag Journey" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("tst034_journey", "catalogue")
+
+double targetRps = Double.parseDouble(props.getProperty("tst034_target_rps_catalogue"))
+long minIntervalMs = (long) Math.ceil(1000.0d / targetRps)
+long sleepMs
+synchronized (props) {
+    long now = System.currentTimeMillis()
+    long nextAllowed = Long.parseLong(props.getProperty("tst034_next_allowed_ms_catalogue", "0"))
+    long start = Math.max(now, nextAllowed)
+    props.put("tst034_next_allowed_ms_catalogue", String.valueOf(start + minIntervalMs))
+    sleepMs = start - now
+}
+if (sleepMs > 0) {
+    Thread.sleep(sleepMs)
+}
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /catalogue" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/catalogue</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- Journey Load: rate_limited. Two dedicated threads (see Journey
+           Load: transfer's own comment for the full design rationale). This
+           journey's own paced target rate is deliberately close to (and can
+           slightly exceed) the reference SUT's separate 10 requests/second
+           TokenBucket (tst-031-ratelimit's own archetype) ; some 429s under
+           a clean run are therefore expected and correctly attributed
+           (I4), not a bug; I3's own check only cares that this journey's
+           ATTEMPT count stays non-zero in every sub-window, which pacing
+           guarantees regardless of how many of those attempts the rate
+           limiter itself admits. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Journey Load: rate_limited" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Pacing implemented directly in this PreProcessor, not via a
+             native ConstantThroughputTimer ; see the transfer journey's
+             own "Tag Journey and Compute Transfer Params" PreProcessor for
+             why (a TestBean property-resolution timing pitfall, confirmed
+             empirically). -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Tag Journey" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("tst034_journey", "rate_limited")
+
+double targetRps = Double.parseDouble(props.getProperty("tst034_target_rps_rate_limited"))
+long minIntervalMs = (long) Math.ceil(1000.0d / targetRps)
+long sleepMs
+synchronized (props) {
+    long now = System.currentTimeMillis()
+    long nextAllowed = Long.parseLong(props.getProperty("tst034_next_allowed_ms_rate_limited", "0"))
+    long start = Math.max(now, nextAllowed)
+    props.put("tst034_next_allowed_ms_rate_limited", String.valueOf(start + minIntervalMs))
+    sleepMs = start - now
+}
+if (sleepMs > 0) {
+    Thread.sleep(sleepMs)
+}
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /rate-limited/ping" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/rate-limited/ping</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-blend" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename">${__groovy(new java.io.File(new java.io.File(System.getenv("ASSERT_SCRIPT_PATH")).getParent() + java.io.File.separator + "tally-blend.groovy").getAbsolutePath(),)}</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Journey Load
+           thread (all four groups) has fully drained (same "assert after
+           load has drained" rationale tst-021-ledger/plan.jmx's own
+           TearDown documents). Finalizes the raw per-sample tallies into
+           the derived values assert-blend.groovy reads (a sorted-reservoir
+           p95, a per-sub-window minimum count, and the total sub-window
+           count), then runs assert-blend.groovy itself. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Blend" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Finalize Blend Tallies" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import com.techcombank.qe.harness.config.ProfileResolver
+
+// Converts the raw per-sample tallies the four Journey Load groups'
+// JSR223PostProcessors wrote (per-journey count/errors, a bounded latency
+// reservoir, and per-sub-window counts) into the three derived values
+// assert-blend.groovy actually reads. A sorted-reservoir p95 (bounded at
+// RESERVOIR_SIZE samples per journey) rather than a per-sample recompute:
+// sorting on every single sample would make a real multi-hour run
+// pathologically slow, and this runs once, single-threaded, after every
+// load thread has already drained.
+final int RESERVOIR_SIZE = 300
+
+ProfileResolver.Profile profile = new ProfileResolver().load("mixed")
+
+int maxWindowSeen = Integer.parseInt(props.getProperty("tst034_max_window_idx_seen", "-1"))
+props.put("tst034_sub_windows", String.valueOf(maxWindowSeen + 1))
+
+Map<String, Long> worstPerTier = [:]
+
+profile.journeys().each { name, journey ->
+    long latencyN = Long.parseLong(props.getProperty("tst034_" + name + "_latency_n", "0"))
+    int sampleCount = (int) Math.min(latencyN, (long) RESERVOIR_SIZE)
+    List<Long> latencies = []
+    for (int i = 0; i < sampleCount; i++) {
+        latencies.add(Long.parseLong(props.getProperty("tst034_" + name + "_latency_" + i, "0")))
+    }
+    latencies.sort()
+    long p95 = 0L
+    if (!latencies.isEmpty()) {
+        int idx = (int) Math.ceil(0.95d * latencies.size()) - 1
+        idx = Math.max(0, Math.min(idx, latencies.size() - 1))
+        p95 = latencies.get(idx)
+    }
+    props.put("tst034_" + name + "_p95", String.valueOf(p95))
+
+    String tier = journey.tier().toLowerCase()
+    long currentWorst = worstPerTier.containsKey(tier) ? worstPerTier.get(tier) : 0L
+    worstPerTier.put(tier, Math.max(currentWorst, p95))
+
+    // tst034_<name>_min_window_count is already computed incrementally by
+    // this journey's own tally-blend PostProcessor (an O(1)-key running
+    // minimum across every CLOSED sub-window; see that script's own
+    // comment) -- nothing left to derive here. Its absence (a journey that
+    // never got a single measured sample) is exactly the "0" default
+    // assert-blend.groovy itself falls back to, correctly reading as total
+    // starvation, so it is deliberately not defaulted here either.
+}
+
+worstPerTier.each { tier, worst ->
+    props.put("tst034_worst_p95_" + tier, String.valueOf(worst))
+}
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("finalized blend tallies for " + profile.journeys().keySet(), "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- assert-blend.groovy (this task's own deliverable) evaluates
+             I1-I5 against the finalized tallies above, decides threshold
+             evaluation from HarnessConfig.smokeMode(), and calls the JVM
+             EvidenceEmitter to write one fragment to traceability/runs/. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-blend" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

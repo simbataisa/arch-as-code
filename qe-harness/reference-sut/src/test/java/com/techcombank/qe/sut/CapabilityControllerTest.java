@@ -35,7 +35,7 @@ class CapabilityControllerTest {
         mockMvc.perform(get("/_capabilities"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(24))
-            .andExpect(jsonPath("$['TST-020']").value("declared"));
+            .andExpect(jsonPath("$['TST-020']").value("implemented"));
     }
 
     @Test

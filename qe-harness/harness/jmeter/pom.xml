@@ -110,9 +110,25 @@
           <suppressJMeterOutput>false</suppressJMeterOutput>
           <!-- See qe.jmeter.javaRuntime's own comment above (properties
                block): the forked JMeter JVM must run on JDK <= ~21 for its
-               bundled Groovy 3.0.17 to handle JSR223 elements at all. -->
+               bundled Groovy 3.0.17 to handle JSR223 elements at all.
+
+               xmx bumped from the plugin's own 512MB default (confirmed via
+               `ps aux` against a running fork): TST-034's plan.jmx (Task 13)
+               runs four concurrent Thread Groups executing JSR223
+               Pre/PostProcessor scripts on every single sample ; a 512MB
+               heap under that load produced empirically reproducible,
+               ~150ms-long pauses roughly every second iteration (a
+               young-gen GC pattern, not a real defect), enough to make one
+               journey's own request pacing look exactly like a genuine
+               throughput shortfall. A bigger heap noticeably reduced, but
+               did not fully eliminate, that pattern in testing ; the other
+               mitigation (this plan's own thread counts, kept as low as
+               each journey's own target rate allows) matters at least as
+               much. No observed downside for any other module either
+               way. -->
           <jMeterProcessJVMSettings>
             <javaRuntime>${qe.jmeter.javaRuntime}</javaRuntime>
+            <xmx>1536</xmx>
           </jMeterProcessJVMSettings>
           <!--
             Explicit, non-transitive: kg.apc:jmeter-plugins-tst:2.6 (Task 17's
@@ -160,6 +176,29 @@
             <artifact>kg.apc:jmeter-plugins-tst:2.6</artifact>
             <artifact>kg.apc:jmeter-plugins-cmn-jmeter:0.3</artifact>
             <artifact>org.yaml:snakeyaml:2.4</artifact>
+
+            <!-- TST-026 (Wave 17) is the first assertion script anywhere in this
+                 repo to call ContractSchema, so json-schema-validator reaches
+                 JMeter's classpath here for the first time. downloadLibraryDependencies
+                 is false, so transitives are NOT resolved: every jar the
+                 validator needs at runtime must be listed explicitly, exactly as
+                 the Jackson and Postgres entries above already are. Version 1.5.9
+                 matches reference-sut's own pin: 2.x replaced the
+                 JsonSchemaFactory/SpecVersion API that ContractSchema calls.
+                 Transitives (per `mvn -pl common dependency:tree -Dverbose`):
+                 com.ethlo.time:itu (the validator's own date/time format checker),
+                 jackson-dataformat-yaml (YAML schema support the validator links
+                 against even though this module only ever hands it JSON), and
+                 slf4j-api (the validator's logging facade). Every OTHER transitive
+                 dependency:tree printed for json-schema-validator (jackson-databind,
+                 jackson-core, jackson-annotations, snakeyaml) resolved to a version
+                 already listed above, so no separate <artifact> entry was needed for
+                 those; confirmed, not guessed: org.apache.commons:commons-lang3 does
+                 NOT appear anywhere in this version's tree. -->
+            <artifact>com.networknt:json-schema-validator:1.5.9</artifact>
+            <artifact>com.ethlo.time:itu:1.14.0</artifact>
+            <artifact>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.3</artifact>
+            <artifact>org.slf4j:slf4j-api:2.0.17</artifact>
           </testPlanLibraries>
         </configuration>
       </plugin>

@@ -2,11 +2,45 @@
 # tool MUST equal the archetype's declared best fit in TST-010.
 version: 1
 modules:
+  - archetype: TST-020
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-020-idempotency
+    coverage: full
+    defect_flag: idempotency-key-ignored
   - archetype: TST-021
     tool: jmeter
     path: qe-harness/harness/jmeter/tst-021-ledger
     coverage: full
     defect_flag: ledger-unbalanced
+  - archetype: TST-023
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-023-reservation
+    coverage: full
+    defect_flag: reservation-overcommit
+  - archetype: TST-026
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-026-routing
+    coverage: full
+    defect_flag: route-default-fallthrough
+  - archetype: TST-027
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-027-ordering
+    coverage: partial
+    partial_reason: >-
+      I5's per_partition and global scopes cannot be exercised against RabbitMQ, which has no
+      partitions; the declared scope is per_key and only that scope is asserted. I3's
+      post-restart clause belongs to TST-029, which owns the broker-restart path.
+    defect_flag: resequencer-emits-on-arrival
+  - archetype: TST-028
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-028-fanout
+    coverage: full
+    defect_flag: aggregate-emitted-incomplete
+  - archetype: TST-029
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-029-dlq
+    coverage: full
+    defect_flag: dlq-bypass-drop
   - archetype: TST-030
     tool: gatling-karate
     path: qe-harness/harness/gatling-karate/tst-030-contract
@@ -17,11 +51,25 @@ modules:
     path: qe-harness/harness/jmeter/tst-031-ratelimit
     coverage: full
     defect_flag: ratelimit-leaky
+  - archetype: TST-034
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-034-blend
+    coverage: full
+    defect_flag: journey-starved
   - archetype: TST-035
     tool: jmeter
     path: qe-harness/harness/jmeter/tst-035-faultinjection
     coverage: full
     defect_flag: breaker-disabled
+  - archetype: TST-037
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-037-readmodel
+    coverage: partial
+    partial_reason: >-
+      I5 (no loss or duplication across a connector restart) requires a CDC connector this
+      repository does not contain. I1-I4 and I6 are asserted; I5 is reported not-evaluated
+      rather than substituted.
+    defect_flag: outbox-published-count-stale
   - archetype: TST-039
     tool: locust
     path: qe-harness/harness/locust/tst_039_recon
@@ -37,6 +85,9 @@ modules:
     path: qe-harness/harness/k6/tst-043-clientexp
     coverage: partial
     partial_reason: >-
-      Offline-sync invariants require a client application, which this repository does not
-      contain. Perf budget, cache correctness, conditional requests, and compression only.
+      None of the archetype's own I1-I6 are implemented: I1/I2/I6 need an offline client, I3/I4
+      a rendered DOM, and I5 k6/browser against a real page - no such application exists in this
+      repository. This module ships four substitute server-side HTTP invariants (perf budget,
+      cache correctness, conditional requests, compression) which are renumbered I1-I4 and are
+      NOT the archetype's I1-I4.
     defect_flag: cache-headers-absent

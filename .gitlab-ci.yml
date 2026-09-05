@@ -3,11 +3,12 @@
 # ============================================================
 #
 # Pipeline Stages:
-#   1. validate  — Lint Markdown, validate DAB structure, check links
-#   2. build     — Generate PDFs/DOCX, build MkDocs site, compile OpenAPI docs
-#   3. assign    — Run reviewer assignment script for DAB MRs
-#   4. publish   — Deploy to GitLab Pages (main branch only)
-#   5. notify    — Send Slack notifications on approval/rejection
+#   1. validate   — Lint Markdown, validate DAB structure, check links, testing-corpus gates
+#   2. qe-harness — Build/scan/verify/run the QE harness (Wave 16)
+#   3. build      — Generate PDFs/DOCX, build MkDocs site, compile OpenAPI docs
+#   4. assign     — Run reviewer assignment script for DAB MRs
+#   5. publish    — Deploy to GitLab Pages (main branch only)
+#   6. notify     — Send Slack notifications on approval/rejection
 #
 # Conventions:
 #   - DAB branches: dab/{domain}/{project-slug}
@@ -199,6 +200,41 @@ validate:yaml:
     - when: never
   allow_failure: false
 
+# Testing-corpus gates (Wave 15 deliverables, wired in Wave 17).
+#
+# A separate anchor from .qe-harness-rules / .qe-harness-code-rules: neither of
+# those lists knowledge-base/testing/** or these two scripts, so reusing either
+# would silently never fire on a corpus-only change -- which is exactly the
+# change these gates exist to catch. Wave 17 mutates the coverage matrix these
+# scripts validate, so they must be blocking before that wave lands.
+.testing-corpus-rules: &testing-corpus-rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - knowledge-base/testing/**/*
+        - governance/standards/_catalog-inventory.yml
+        - scripts/validate-testing-coverage.py
+        - scripts/render-testing-coverage.py
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: never
+
+validate:testing-coverage:
+  stage: validate
+  <<: *testing-corpus-rules
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet -r scripts/requirements.txt
+  script:
+    - echo "🔍 Validating the testing coverage matrix..."
+    - python3 scripts/validate-testing-coverage.py
+    - python3 scripts/render-testing-coverage.py --check
+    - echo "✅ Testing-corpus gates passed"
+  allow_failure: false
+
 # ============================================================
 # STAGE 1b: QE-HARNESS (Wave 16)
 # ============================================================
@@ -359,7 +395,7 @@ harness:run:
     - echo "🚀 Running qe-harness smoke suite (run-all + run-defects)..."
     - cd qe-harness
     - export HARNESS_SMOKE_MODE=true
-    - make up PROFILES="core resilience"
+    - make up PROFILES="core resilience messaging"
     - make run-all
     - make run-defects
     # final-review N2: harness:verify and harness:run are same-stage with no

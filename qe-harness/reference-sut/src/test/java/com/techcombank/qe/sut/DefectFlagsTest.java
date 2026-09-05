@@ -3,9 +3,25 @@ package com.techcombank.qe.sut;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DefectFlagsTest {
+
+    /** The registry's expected contents. Each Wave 17 task that introduces a
+     *  new defect flag appends its name here in the same commit that adds it
+     *  to DefectFlags.KNOWN_FLAGS -- so this set is the drift guard, mirroring
+     *  CapabilityRegistryTest's IMPLEMENTED_AT_WAVE_17. */
+    private static final Set<String> KNOWN_FLAGS_AT_WAVE_17 = Set.of(
+        "ledger-unbalanced", "schema-drift", "ratelimit-leaky",
+        "breaker-disabled", "recon-false-clean", "authz-missing-marker",
+        "cache-headers-absent", "reservation-overcommit",
+        "outbox-published-count-stale", "journey-starved",
+        "route-default-fallthrough", "resequencer-emits-on-arrival",
+        "aggregate-emitted-incomplete", "dlq-bypass-drop",
+        "idempotency-key-ignored"
+    );
 
     @AfterEach
     void clearState() {
@@ -57,11 +73,7 @@ class DefectFlagsTest {
     }
 
     @Test
-    void knownFlagsContainsAllSevenArchetypeDefects() {
-        assertEquals(7, DefectFlags.KNOWN_FLAGS.size());
-        assertTrue(DefectFlags.KNOWN_FLAGS.containsAll(java.util.Set.of(
-            "ledger-unbalanced", "schema-drift", "ratelimit-leaky",
-            "breaker-disabled", "recon-false-clean", "authz-missing-marker",
-            "cache-headers-absent")));
+    void knownFlagsMatchesTheDeclaredSetExactly() {
+        assertEquals(KNOWN_FLAGS_AT_WAVE_17, DefectFlags.KNOWN_FLAGS);
     }
 }

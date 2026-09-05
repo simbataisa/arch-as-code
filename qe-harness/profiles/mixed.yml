@@ -9,8 +9,18 @@ required_for_tiers: [T0, T1]
 recommended_for_tiers: [T2]
 
 load_shape:
-  blend_ref: null             # named journey blend owned by TST-034 (blended-journey-workload.md);
-                               # populated when the blend is declared for the SUT under test
+  # Named journey blend, owned by TST-034 (blended-journey-workload.md). Shares
+  # are percentages of total arrivals and MUST sum to 100 -- ProfileResolver
+  # rejects any other total, since a blend that does not sum to a whole cannot
+  # have per-journey share tolerances checked against it (invariant I2).
+  # Each journey's tier determines which NFR-002 budget its p95 is asserted
+  # against (invariant I1): never a single blended figure.
+  blend_ref: wave17-core-mix
+  blend:
+    transfer:       { share: 40, tier: T0, endpoint: "POST /transfers" }
+    trial_balance:  { share: 25, tier: T1, endpoint: "GET /ledger/trial-balance" }
+    catalogue:      { share: 20, tier: T2, endpoint: "GET /catalogue" }
+    rate_limited:   { share: 15, tier: T1, endpoint: "GET /rate-limited/ping" }
   hold_seconds: 14400         # hold blended load 4h
 
 threshold_names: [p95_latency_ms]

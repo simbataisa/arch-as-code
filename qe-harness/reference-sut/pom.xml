@@ -55,6 +55,15 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
+    <!-- TST-026/027/028/029 messaging (Wave 17, Tasks 14-24). Version managed
+         by spring-boot-dependencies, so no explicit <version> — same pattern
+         as spring-boot-starter-web/-jdbc/-aop above, and unlike jjwt-*/
+         springdoc/resilience4j which are not BOM-managed. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
+    </dependency>
+
     <!-- TST-035 circuit breaker (Task 11). resilience4j-spring-boot3 pulls in
          resilience4j-spring6 (the @CircuitBreaker annotation + Spring Boot
          autoconfiguration binding resilience4j.circuitbreaker.instances.* from
@@ -203,6 +212,12 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>rabbitmq</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

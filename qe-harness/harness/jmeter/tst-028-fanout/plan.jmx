@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-028 Fan-out and Fan-in Correlation" enabled="true">
+      <stringProp name="TestPlan.comments">Task 22 (Wave 17 QE Harness). See README.md for the invariants (I1-I5) this plan asserts, and for why I4 compares fan-in elapsed time against the SUM of branch latencies rather than merely checking the aggregate's own correctness. See the "Reply From Branches" JSR223Sampler's own header comment for why each fan-out's three branch replies are fired as concurrent async HTTP calls from inside one sampler rather than as three separate, necessarily-sequential JMeter samplers.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: resets the aggregator's in-memory state (no
+           pending correlation, no emitted aggregate can survive a reset()
+           call; see AggregatorService) before the Fan Out and Reply
+           group's first request, and zeroes this run's own tallies in
+           props, same idiom TST-021/TST-023/TST-026/TST-027/TST-031's own
+           setUp Thread Groups use: a second run in the same SUT process
+           (this module's own JUnit fixture running clean-then-defect) must
+           never mix its counts, or its correlation ids, with a previous
+           run's leftovers. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset Aggregator" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/fanout/reset" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/fanout/reset</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Zero Tallies" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never adds its tallies on top of a previous run's leftovers -- same idiom
+// TST-023/TST-026/TST-027/TST-031/TST-040's own setUp Thread Groups use for
+// their own props.
+props.put("tst028_correlations_issued", "0")
+props.put("tst028_correlations_distinct", "0")
+props.put("tst028_duplicate_branch_replies", "0")
+props.put("tst028_fanin_elapsed_ms", "0")
+props.put("tst028_branch_sum_ms", "0")
+props.put("tst028_branch_max_ms", "0")
+props.put("tst028_claim_check_resolved", "false")
+props.put("tst028_dedup_part_count", "0")
+props.put("tst028_seen_correlations", "")
+props.put("tst028_timedout_correlation_id", "")
+props.put("tst028_reference_correlation_id", "")
+props.put("tst028_dedup_correlation_id", "")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("reset aggregator, zeroed tst028_* tallies", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: 5 threads x 2 loops = ten independent fan-out
+           cycles, each owning its own SUT-generated correlation id (never
+           an explicit correlationId= param, so uniqueness comes from
+           AggregatorService's own AtomicLong counter, not from this plan
+           assuming it) and driving that correlation's own fan-out AND
+           fan-in end to end. ctx.getThreadNum()/vars.getIteration() pick
+           out exactly three of the ten slots for a special role; see
+           "assign-role-and-tally-correlation" below for exactly which and
+           why; every other slot completes normally. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Fan Out and Reply" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">2</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/fanout" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/fanout</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="assign-role-and-tally-correlation" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
+String corr = json.correlationId.toString()
+
+// I2's own tally: every fanout this thread group issues gets counted and
+// checked for uniqueness against every other one, cross-thread, via props
+// (a JMeter *variable* is scoped per-thread and would silently undercount)
+// -- same idiom tst-023's own admission tally uses. The ids themselves are
+// whatever AggregatorService.nextCorrelationId() generated (hyphenated
+// short forms, e.g. "corr-0007") -- this plan never passes an explicit
+// correlationId= param, so uniqueness here is a genuine property of the
+// SUT's own AtomicLong counter, not an assumption this plan bakes in.
+synchronized (props) {
+    long issued = Long.parseLong(props.getProperty("tst028_correlations_issued", "0"))
+    props.put("tst028_correlations_issued", String.valueOf(issued + 1))
+
+    String seen = props.getProperty("tst028_seen_correlations", "")
+    String updated = seen.isEmpty() ? corr : seen + "," + corr
+    props.put("tst028_seen_correlations", updated)
+    long distinct = (updated.split(",") as Set).size()
+    props.put("tst028_correlations_distinct", String.valueOf(distinct))
+}
+
+// Role assignment is by (threadNum, iteration): each of these ten slots
+// already owns its own, independently generated correlation, so there is
+// no shared arrival counter to race the way TST-027's own "Select Sequence
+// And Role" needs one -- ctx.getThreadNum()/vars.getIteration() alone
+// unambiguously identify exactly one physical execution slot apiece.
+//
+//   thread 0, iteration 1 -> "timedout":  the branch reply sampler below
+//     replies from branch a only, so the aggregate can never complete by
+//     reply, and I1's timeout arm (a partial-marked emission, observed via
+//     the TearDown group's own bounded await) is the only way it can ever
+//     resolve.
+//   thread 1, iteration 1 -> "dedup": the branch reply sampler below
+//     replies from branch a TWICE and NEVER b/c, so it can never complete
+//     naturally either -- deliberately, so I3's own check (does a repeated
+//     reply to the SAME branch still leave exactly one entry?) is entirely
+//     decoupled from whether ANY correlation ever reaches completeness.
+//     That independence is why this is its own correlation rather than a
+//     variant of "reference": reusing "reference" for both concerns was
+//     the original design's own mistake -- aggregate-emitted-incomplete
+//     truncates EVERY correlation's own parts to size 1 on its first
+//     reply, which made an I1-shaped completeness check on "reference"
+//     double as (and break) the I3 dedup check too, for a reason that has
+//     nothing to do with dedup at all. Like "timedout", this one is only
+//     ever resolved by the TearDown group's own bounded await.
+//   thread 2, iteration 1 -> "reference": completes normally like every
+//     other slot, but ALSO becomes the one correlation the TearDown group
+//     reads back for I1's complete-and-whole clause, for the
+//     aggregateTimeoutMs field the timed-out poll's own deadline is sized
+//     from, and for I5's claim-check re-read.
+//   every other slot -> "normal": completes exactly like "reference",
+//     just isn't singled out for anything else.
+String role
+if (ctx.getThreadNum() == 0 && vars.getIteration() == 1) {
+    role = "timedout"
+    props.put("tst028_timedout_correlation_id", corr)
+} else if (ctx.getThreadNum() == 1 && vars.getIteration() == 1) {
+    role = "dedup"
+    props.put("tst028_dedup_correlation_id", corr)
+} else if (ctx.getThreadNum() == 2 && vars.getIteration() == 1) {
+    role = "reference"
+    props.put("tst028_reference_correlation_id", corr)
+} else {
+    role = "normal"
+}
+
+vars.put("tst028_role", role)
+vars.put("corr", corr)
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- The one sampler in this thread group that actually drives
+             fan-in, and the one place I4 could be silently faked: firing
+             branch a/b/c one after another as three separate JMeter
+             samplers would mean this same JMeter thread runs them strictly
+             sequentially, making fanInElapsedMs approximately equal
+             branchSumMs by construction; exactly the "sequential fan-out
+             dressed up as concurrent" failure mode README.md warns I4
+             exists to catch. So the three replies are instead fired as
+             three concurrent ASYNC HTTP calls from inside this one
+             sampler (java.net.http's own async client, never three
+             JMeter samplers any one JMeter thread would have to run one
+             after another), and fanInElapsedMs is the wall-clock span from
+             firing all three to every one of them completing: a plain
+             System.nanoTime() difference, never an absolute epoch value,
+             so no timestamp literal of any width reaches disk (see
+             README.md and gate check 5). -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Reply From Branches" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.util.concurrent.CompletableFuture
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+String corr = vars.get("corr")
+String role = vars.get("tst028_role")
+
+Closure<HttpRequest> replyRequest = { String branch ->
+    HttpRequest.newBuilder(
+            URI.create(sutBaseUrl + "/messaging/fanout/reply?correlationId=" + corr + "&branch=" + branch))
+        .timeout(Duration.ofSeconds(5))
+        .POST(HttpRequest.BodyPublishers.noBody())
+        .build()
+}
+
+if (role == "timedout") {
+    // Deliberately only branch a ever replies: the aggregate can never
+    // complete by reply, so the TearDown group's own bounded await is the
+    // only path that can ever resolve it -- via the timeout arm, marked
+    // partial (I1's second legal shape).
+    http.send(replyRequest("a"), HttpResponse.BodyHandlers.discarding())
+    SampleResult.setSuccessful(true)
+    SampleResult.setResponseData("timedout role: replied branch a only for ${corr}", "UTF-8")
+    SampleResult.setResponseCode("200")
+    return
+}
+
+if (role == "dedup") {
+    // Never fires b/c: this correlation exists solely to prove a repeated
+    // reply to the SAME branch does not create a second Map entry (I3),
+    // entirely independent of whether ANY correlation ever reaches
+    // completeness -- see "assign-role-and-tally-correlation"'s own
+    // comment for why that independence matters (it is exactly what the
+    // aggregate-emitted-incomplete defect proof needs). Both replies
+    // target branch a; AggregatorService.branchReply keys parts by branch,
+    // so a correct implementation leaves exactly one entry regardless of
+    // how many times branch a replies. This correlation can never complete
+    // by reply, so the TearDown group's own bounded await (the same
+    // mechanism "timedout" uses) is the only path that can ever resolve it.
+    http.send(replyRequest("a"), HttpResponse.BodyHandlers.discarding())
+    synchronized (props) {
+        long dup = Long.parseLong(props.getProperty("tst028_duplicate_branch_replies", "0"))
+        props.put("tst028_duplicate_branch_replies", String.valueOf(dup + 1))
+    }
+    http.send(replyRequest("a"), HttpResponse.BodyHandlers.discarding())
+    SampleResult.setSuccessful(true)
+    SampleResult.setResponseData("dedup role: replied branch a twice for ${corr}, never b/c", "UTF-8")
+    SampleResult.setResponseCode("200")
+    return
+}
+
+// Fixed, distinct per-branch pads (10/15/20ms), added after each branch's
+// own response arrives and before its latency is recorded. Three
+// concurrent calls to the same loopback SUT can each complete in
+// low-single-digit milliseconds, occasionally rounding two branches to the
+// exact same tiny value -- which would make the branchSumMs > branchMaxMs
+// sanity precondition (and I4 itself) a flaky property of local network
+// jitter rather than a stable signal. Fixed, distinct, documented pads keep
+// every latency measurement -- and therefore the sum/max/fan-in comparison
+// -- deterministic across environments, the same way TST-027's own
+// shuffled sequence array is a fixed fixture rather than a random one.
+Map<String, Long> padMs = [a: 10L, b: 15L, c: 20L]
+
+long fanOutStartNanos = System.nanoTime()
+List<CompletableFuture<Long>> branchFutures = ["a", "b", "c"].collect { branch ->
+    long branchStartNanos = System.nanoTime()
+    http.sendAsync(replyRequest(branch), HttpResponse.BodyHandlers.discarding())
+        .thenApply { resp ->
+            Thread.sleep(padMs[branch])
+            (System.nanoTime() - branchStartNanos) / 1_000_000L
+        }
+}
+CompletableFuture.allOf(branchFutures as CompletableFuture[]).join()
+long fanInElapsedMs = (System.nanoTime() - fanOutStartNanos) / 1_000_000L
+List<Long> branchLatenciesMs = branchFutures.collect { it.join() }
+long sumMs = branchLatenciesMs.sum() as long
+long maxMs = branchLatenciesMs.max() as long
+
+// Overwritten by whichever completing ("reference"/"normal") iteration
+// happens to run last -- every one of them performs the exact same
+// genuinely-concurrent 3-branch fan-in, so any one of their own
+// (fanInElapsedMs, sumMs, maxMs) triples is an equally valid I4 sample;
+// this just keeps the shared props a scalar rather than needing a running
+// series. ("timedout" and "dedup" never reach this point -- both return
+// early above.)
+synchronized (props) {
+    props.put("tst028_fanin_elapsed_ms", String.valueOf(fanInElapsedMs))
+    props.put("tst028_branch_sum_ms", String.valueOf(sumMs))
+    props.put("tst028_branch_max_ms", String.valueOf(maxMs))
+}
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("role=${role} corr=${corr} fanInElapsedMs=${fanInElapsedMs} sumMs=${sumMs} maxMs=${maxMs}", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Fan Out and Reply
+           thread has finished (JMeter guarantees this ordering, and
+           TestPlan.serialize_threadgroups above makes it explicit). By this
+           point "reference" and every "normal" slot have already completed
+           their aggregates; "timedout" has replied from exactly one branch
+           and nothing else; "dedup" has replied to branch a twice and
+           nothing else: this group's own bounded await is the only
+           remaining path that can resolve either of the latter two. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Correlation" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <!-- props (cross-thread) -> vars (this thread's own), once, up
+             front: every sampler below reads
+             ${refCorr}/${timedoutCorr}/${dedupCorr} as plain JMeter
+             variables rather than each carrying its own
+             ${__property(...)} substitution. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Load Correlation IDs From Props" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("refCorr", props.getProperty("tst028_reference_correlation_id"))
+vars.put("timedoutCorr", props.getProperty("tst028_timedout_correlation_id"))
+vars.put("dedupCorr", props.getProperty("tst028_dedup_correlation_id"))
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("loaded refCorr=${vars.get('refCorr')} timedoutCorr=${vars.get('timedoutCorr')} dedupCorr=${vars.get('dedupCorr')}", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/aggregate (reference)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/aggregate?correlationId=${refCorr}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- "reference" completed normally (all three branches replied
+               above), so this is I1's complete-and-whole clause's own
+               evidence, and its aggregateTimeoutMs field is what sizes the
+               timed-out poll's own bounded deadline right below. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-complete-aggregate" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("aggregate_complete", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- AggregatorService.awaitAggregate is the only code path that
+             ever emits the timeout arm's partial-marked aggregate, and
+             (deliberately, see AggregatorServiceTest) it is otherwise
+             reachable only from the SUT's own in-process unit test: an
+             HTTP-driven module has no way to observe I1's second legal
+             shape at all without a wire to it. GET /messaging/aggregate's
+             own awaitMs parameter (this task's minimal, additive wiring
+             onto that existing, already-tested method; see
+             FanoutController's own javadoc; awaitMs defaults to 0, a pure
+             read, so every OTHER caller of this endpoint, including the
+             "reference" GET just above, is completely unaffected) performs
+             that bounded wait server-side. Retried in a light client-side
+             loop, still bounded to the SAME overall deadline
+             (aggregateTimeoutMs * 2, read from "reference"'s own
+             aggregateTimeoutMs field above), purely as a defence against
+             one dropped connection: never an indefinite wait either
+             way. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Await Timeout Aggregate" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.Instant
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+def completeJson = new JsonSlurper().parseText(vars.get("aggregate_complete"))
+long aggregateTimeoutMs = completeJson.aggregateTimeoutMs as long
+long budgetMs = aggregateTimeoutMs * 2
+String timedoutCorr = vars.get("timedoutCorr")
+
+// Bounded to budgetMs (server-side, via awaitMs) plus a further client-side
+// deadline five seconds past that -- never an indefinite wait, only ever a
+// difference against Instant.now(), never an absolute epoch value recorded
+// anywhere (see README.md and gate check 5).
+Instant deadline = Instant.now().plus(Duration.ofMillis(budgetMs)).plusSeconds(5)
+boolean resolved = false
+while (Instant.now().isBefore(deadline) && !resolved) {
+    HttpRequest request = HttpRequest.newBuilder(
+            URI.create(sutBaseUrl + "/messaging/aggregate?correlationId=" + timedoutCorr + "&awaitMs=" + budgetMs))
+        .timeout(Duration.ofMillis(budgetMs + 5000L))
+        .GET()
+        .build()
+    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    if (response.statusCode() == 200) {
+        resolved = true
+    } else {
+        Thread.sleep(200L)
+    }
+}
+
+SampleResult.setSuccessful(resolved)
+SampleResult.setResponseData("timed-out aggregate resolved=${resolved} within a bounded ${budgetMs}ms deadline", "UTF-8")
+SampleResult.setResponseCode(resolved ? "200" : "500")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /messaging/aggregate (timed-out)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/aggregate?correlationId=${timedoutCorr}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <!-- Plain read, no awaitMs: "Await Timeout Aggregate" above has
+               already resolved it (or exhausted its own bound), so this is
+               exactly the same kind of capture as "capture-complete-
+               aggregate", now for I1's timeout-and-marked-partial clause. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-timedout-aggregate" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("aggregate_timedout", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- I3's own dedicated correlation: "dedup" only ever received two
+             replies to branch a and never b/c (see "Reply From Branches"'
+             own comment), so it can never complete naturally: the same
+             bounded awaitMs mechanism "Await Timeout Aggregate" uses above
+             is the only way to read its partCount back. Its own
+             correctness is entirely about I3 (does a repeated reply to one
+             branch still leave exactly one entry?), never about
+             completeness, which is why this is a SEPARATE correlation from
+             "reference" rather than a re-use of it: aggregate-emitted-
+             incomplete truncates every correlation's own parts to size 1 on
+             its first reply regardless of which correlation, so tying I3 to
+             "reference"'s own partCount==branchCount would fail for a
+             reason that has nothing to do with dedup. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Await And Capture Dedup Aggregate" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+def completeJson = new JsonSlurper().parseText(vars.get("aggregate_complete"))
+long budgetMs = (completeJson.aggregateTimeoutMs as long) * 2
+String dedupCorr = vars.get("dedupCorr")
+
+HttpRequest request = HttpRequest.newBuilder(
+        URI.create(sutBaseUrl + "/messaging/aggregate?correlationId=" + dedupCorr + "&awaitMs=" + budgetMs))
+    .timeout(Duration.ofMillis(budgetMs + 5000L))
+    .GET()
+    .build()
+HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+
+boolean resolved = response.statusCode() == 200
+long dedupPartCount = -1L
+if (resolved) {
+    def json = new JsonSlurper().parseText(response.body())
+    dedupPartCount = json.partCount as long
+    props.put("tst028_dedup_part_count", String.valueOf(dedupPartCount))
+}
+
+SampleResult.setSuccessful(resolved)
+SampleResult.setResponseData("dedup correlation=${dedupCorr} resolved=${resolved} partCount=${dedupPartCount}", "UTF-8")
+SampleResult.setResponseCode(resolved ? "200" : "500")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- I5: re-reads "reference"'s already-emitted aggregate after an
+             explicit, bounded wait standing in for "past the retention
+             boundary". AggregatorService keeps every emitted aggregate in
+             memory until the next reset() (there is no separate eviction
+             sweep for this capability), so this is a genuine re-read after
+             time has genuinely passed, not a race against anything still
+             running: "reference"'s own thread group finished before this
+             TearDown group ever started. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve Claim Check After Retention Boundary" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+String refCorr = vars.get("refCorr")
+
+Thread.sleep(500L)
+
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+HttpRequest request = HttpRequest.newBuilder(
+        URI.create(sutBaseUrl + "/messaging/aggregate?correlationId=" + refCorr))
+    .timeout(Duration.ofSeconds(5))
+    .GET()
+    .build()
+HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+boolean resolved = response.statusCode() == 200
+
+props.put("tst028_claim_check_resolved", String.valueOf(resolved))
+
+SampleResult.setSuccessful(resolved)
+SampleResult.setResponseData("claim-check reference=${refCorr} resolved=${resolved} after the retention boundary wait", "UTF-8")
+SampleResult.setResponseCode(resolved ? "200" : "500")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- assert-fanout.groovy (this task's deliverable) evaluates
+             I1-I5 against the aggregate_complete/aggregate_timedout vars
+             and the tst028_* props tallied above, then calls the JVM
+             EvidenceEmitter to write one fragment to traceability/runs/. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-fanout" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
