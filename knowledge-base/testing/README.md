@@ -18,6 +18,20 @@ real evidence. Every code fragment here — JMeter JMX snippets, Karate features
 remains a worked example to copy into a harness, `qe-harness/` or a squad's own, not a
 runnable artefact maintained in this folder.
 
+How the two directories relate, one line each — the full wiring table, and the gate that keeps
+the two in agreement, are in [`qe-harness/README.md`](../../qe-harness/README.md):
+
+| Here (doctrine, ships no code) | There (runnable, `qe-harness/`) |
+|---|---|
+| An archetype document's invariants and oracle type (`TST-020`–`TST-043`) | A harness module that asserts them, a `reference-sut` capability that implements the behaviour, and one paired defect flag that breaks exactly those invariants |
+| `TST-001`'s four oracle types and `test_acceptance_criteria` contract | `traceability/evidence.schema.json` and `bin/merge-fragments.py`, which produce exactly that block |
+| `TST-002`'s eight performance profiles | `qe-harness/profiles/*.yml`, one file per profile |
+| `TST-003`'s named journey blends | `profiles/mixed.yml` and `ProfileResolver`, read by `TST-034` |
+| `TST-010`'s best-fit tool per archetype | `traceability/modules.yml`'s `tool` column, enforced by a gate |
+| `TST-011`–`TST-014`, one guide per tool | `harness/{jmeter,gatling-karate,k6,locust}/`, one sub-tree per tool |
+| [`coverage/coverage-matrix.md`](./coverage/coverage-matrix.md) — catalog row → archetype | `traceability/harness-coverage.md` — archetype → runnable module (15 of 24 today) |
+| [`../nfr/`](../nfr/) targets | `profiles/_nfr-thresholds.yml`, every number citing its `NFR-` anchor |
+
 ## How to Use This Corpus
 
 1. Find your pattern's catalog ID in [`coverage/coverage-matrix.md`](./coverage/coverage-matrix.md).
