@@ -44,11 +44,27 @@ theme:
   favicon: assets/engibase/engibase-favicon.ico
   features:
     - navigation.instant
-    - navigation.instant.prefetch
+    # instant.prefetch deliberately omitted: it speculatively fetches every
+    # nav link as it scrolls into view. With this nav's size (200+ links
+    # across knowledge-base/testing, domains, tools) that saturates the
+    # browser's per-origin connection limit against mkdocs serve's dev
+    # server, queuing out the actual clicked-through navigation fetch --
+    # confirmed via a hung fetch() to already-loaded URLs while several
+    # prefetches were in flight. Symptom: a tab/nav click updates the URL
+    # but leaves the previous section's (shorter) sidebar on screen.
     - navigation.tracking
     - navigation.tabs
     - navigation.tabs.sticky
-    - navigation.sections
+    # navigation.sections deliberately omitted: it forces every doc under a
+    # tab's top-level section to stay permanently expanded (no accordion
+    # collapse). Combined with toc.integrate merging each page's own
+    # headings into the same nav, the Testing (QE) section's list grows
+    # taller than the sidebar is ever allowed to become on pages with
+    # modest body content (the sidebar's height is capped by the main
+    # content's own scroll range, not a flat 100vh) -- so the last items
+    # were unreachable no matter how far you scrolled. Without it, only
+    # the active section's path stays expanded, so total nav height stays
+    # within reach.
     - toc.integrate
     - search.suggest
     - search.highlight
