@@ -2,6 +2,8 @@ package com.techcombank.qe.sut.capability.messaging;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,6 +57,32 @@ class DeliveryServiceTest extends AbstractMessagingIntegrationTest {
         assertTrue(delivery.awaitDlq(dlqAlertDepth() + 1, 30_000L));
         assertTrue(observability.dlqAlertFiring(delivery.dlqCount()),
             "I5: the alert must fire once depth passes the declared threshold");
+    }
+
+    @Test
+    void aRedeliveredJobIsCountedOnceNotTwice() throws InterruptedException {
+        // I7 (TST-020): the SAME jobId delivered twice (both non-poison) must
+        // only ever count as one state change -- a redelivery is not a second,
+        // distinct piece of work. attempts still observes both deliveries
+        // individually; only stateChanges is deduplicated. Both submissions
+        // race asynchronously over AMQP, so both must settle before either
+        // assertion is meaningful -- a bounded poll on attempts (no
+        // DeliveryService helper exists for this narrower condition, unlike
+        // stateChanges/dlqCount above) rather than a single awaitStateChanges
+        // call, which would only prove the FIRST delivery landed.
+        delivery.reset();
+        String jobId = "job-redelivered-0001";
+        delivery.submit(jobId, false);
+        delivery.submit(jobId, false);
+
+        long deadline = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+        while (delivery.attemptsFor(jobId) < 2 && System.nanoTime() < deadline) {
+            Thread.sleep(100L);
+        }
+
+        assertEquals(2, delivery.attemptsFor(jobId), "both deliveries must still be individually observed");
+        assertEquals(1L, delivery.stateChanges(),
+            "I7: a redelivery of an already-processed job must not double-count");
     }
 
     @Test

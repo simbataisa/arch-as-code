@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -83,6 +84,7 @@ public class DeliveryService {
     private final AtomicLong stateChanges = new AtomicLong();
     private final AtomicLong dropped = new AtomicLong();
     private final Map<String, Integer> attempts = new ConcurrentHashMap<>();
+    private final Set<String> seenJobIds = ConcurrentHashMap.newKeySet();
 
     public DeliveryService(RabbitTemplate rabbit, MessagingTopology topology, RabbitAdmin admin,
                            MessageLog log, RabbitListenerEndpointRegistry listenerRegistry,
@@ -118,6 +120,7 @@ public class DeliveryService {
         stateChanges.set(0);
         dropped.set(0);
         attempts.clear();
+        seenJobIds.clear();
         log.clear();
     }
 
@@ -146,7 +149,13 @@ public class DeliveryService {
         attempts.merge(jobId, 1, Integer::sum);
 
         if (!poison && !bypass) {
-            stateChanges.incrementAndGet();
+            // I7 (TST-020): consumer-side dedup -- a redelivery of an
+            // already-processed job must not count as a second state change
+            // (Idempotent Receiver). attempts still counts every delivery above,
+            // for observability; stateChanges only counts the first.
+            if (seenJobIds.add(jobId)) {
+                stateChanges.incrementAndGet();
+            }
             return;
         }
 
