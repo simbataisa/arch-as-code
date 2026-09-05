@@ -122,7 +122,7 @@ the SUT is bundled rather than pointed at a real service.
 | Binding | [`traceability/modules.yml`](./traceability/modules.yml) | archetype → tool, path, coverage, defect flag | No — hand-maintained |
 | Thresholds | [`profiles/_nfr-thresholds.yml`](./profiles/_nfr-thresholds.yml) | Numbers, each citing an `NFR-####anchor` | No — hand-maintained |
 | Load profiles | `profiles/baseline.yml` … (8 files) | Workload shape per [TST-002](../knowledge-base/testing/strategy/performance-test-standard.md) profile | No |
-| SUT | [`reference-sut/`](./reference-sut/) | Java 21 + Spring Boot service, 7 capabilities implemented, 24 declared | No |
+| SUT | [`reference-sut/`](./reference-sut/) | Java 21 + Spring Boot service, 15 capabilities implemented, 24 declared | No |
 | Modules | [`harness/`](./harness/) | The tests, in 4 tools across 3 build systems (Maven, npm, pip) | No |
 | Run fragments | `traceability/runs/*.json` | One record per module run | **Yes** — by the modules |
 | Coverage table | [`traceability/harness-coverage.md`](./traceability/harness-coverage.md) | 24-row status view | **Yes** — `render-harness-coverage.py` |

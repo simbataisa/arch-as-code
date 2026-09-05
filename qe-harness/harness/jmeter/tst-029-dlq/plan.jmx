@@ -102,6 +102,7 @@ import groovy.json.JsonSlurper
 
 def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
 props.put("tst029_dlq_alert_depth", String.valueOf(json.alertDepth as long))
+props.put("tst029_alert_firing_before_burst", String.valueOf(json.alertFiring as boolean))
 ]]></stringProp>
           </JSR223PostProcessor>
           <hashTree/>

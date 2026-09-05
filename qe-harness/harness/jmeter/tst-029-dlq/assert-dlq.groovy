@@ -39,6 +39,7 @@ long observedDepth = dlqInfo.depth as Long
 
 long poisonAttempts = Long.parseLong(props.getProperty("tst029_max_poison_attempts"))
 long jobsBehindPoisonProcessed = Long.parseLong(props.getProperty("tst029_jobs_behind_poison"))
+boolean alertFiringBeforeBurst = Boolean.parseBoolean(props.getProperty("tst029_alert_firing_before_burst"))
 
 String sutDefect = System.getenv("QE_SUT_DEFECT")
 if (sutDefect != null && sutDefect.trim().isEmpty()) {
@@ -55,8 +56,8 @@ RunFragment.Entry i4 = InvariantAssertion.check(
     "I4", "Retry intervals match the declared backoff with more than one distinct interval",
     { distinctIntervals > 1L } as java.util.function.BooleanSupplier)
 RunFragment.Entry i5 = InvariantAssertion.check(
-    "I5", "DLQ depth is exported and an alert fires past its declared threshold",
-    { dlqExported && (observedDepth > alertDepth ? alertFiring : !alertFiring) } as java.util.function.BooleanSupplier)
+    "I5", "DLQ depth alert does not fire below threshold and does fire once threshold is crossed",
+    { dlqExported && !alertFiringBeforeBurst && alertFiring } as java.util.function.BooleanSupplier)
 RunFragment.Entry i6 = InvariantAssertion.check(
     "I6", "A permanent error stops retrying at the declared ceiling",
     { poisonAttempts <= maxAttempts } as java.util.function.BooleanSupplier)
@@ -100,7 +101,7 @@ SampleResult.setResponseData((
     "I2 restart-durability: ${smoke ? 'not-evaluated (restart path exercised in full runs only)' : 'evaluated'}\n" +
     "I3 dlq-within-attempts-no-blocking: ${i3.result().wire()} (attempts=${poisonAttempts}/${maxAttempts}, behind=${jobsBehindPoisonProcessed})\n" +
     "I4 distinct-backoff-intervals: ${i4.result().wire()} (distinct=${distinctIntervals})\n" +
-    "I5 dlq-depth-exported-and-alerting: ${i5.result().wire()} (depth=${observedDepth}, alertDepth=${alertDepth}, firing=${alertFiring})\n" +
+    "I5 dlq-depth-exported-and-alerting: ${i5.result().wire()} (depth=${observedDepth}, alertDepth=${alertDepth}, firingBeforeBurst=${alertFiringBeforeBurst}, firing=${alertFiring})\n" +
     "I6 stops-at-ceiling: ${i6.result().wire()}\n"
     ).toString(), "UTF-8")
 SampleResult.setResponseCode(passed ? "200" : "500")

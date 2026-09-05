@@ -45,6 +45,9 @@ class Tst029ModuleTest {
             .anyMatch(i -> i.id().equals("I4") && i.result() == RunFragment.Result.PASSED),
             "the defect must be specific: the retry ladder is untouched");
         assertTrue(r.fragment().invariants().stream()
-            .anyMatch(i -> i.id().equals("I5") && i.result() == RunFragment.Result.PASSED));
+            .anyMatch(i -> i.id().equals("I5") && i.result() == RunFragment.Result.FAILED),
+            "every poison submission bypasses the DLQ while this defect is active, so depth "
+                + "never crosses dlqAlertDepth and the alert genuinely never fires -- I5 (now a "
+                + "real two-point check, not a tautology) must catch that, not pass by construction");
     }
 }

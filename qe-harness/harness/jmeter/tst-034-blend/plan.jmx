@@ -253,6 +253,15 @@ long subWindowMillis = smoke ? 900L : 300000L
 // raised, since that shortfall is capacity-bound, not pacing-bound.
 final double OVERALL_TARGET_RPS = 70.0d
 
+// Single source of truth for every "Journey Load: *" Thread Group's own
+// ThreadGroup.duration below -- resolved here from the SAME profile/smoke
+// already loaded above, rather than each duration re-deriving smoke mode
+// from a raw, case-sensitive getenv check (inconsistent with
+// HarnessConfig.smokeMode() just above) against literals frozen in this
+// file instead of mixed.yml's own declared hold_seconds /
+// smoke_mode_overrides.hold_seconds.
+props.put("tst034_hold_seconds", String.valueOf(smoke ? profile.smokeHoldSeconds() : profile.holdSeconds()))
+
 props.put("tst034_run_start_ms", String.valueOf(System.currentTimeMillis()))
 props.put("tst034_warmup_ms", String.valueOf(warmupMs))
 props.put("tst034_sub_window_millis", String.valueOf(subWindowMillis))
@@ -343,7 +352,7 @@ SampleResult.setResponseCode("200")
         <stringProp name="ThreadGroup.num_threads">3</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__groovy(System.getenv("HARNESS_SMOKE_MODE") == "true" ? 20 : 14400,)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
@@ -466,7 +475,7 @@ vars.put("amountMinor", String.valueOf(amountMinor))
         <stringProp name="ThreadGroup.num_threads">2</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__groovy(System.getenv("HARNESS_SMOKE_MODE") == "true" ? 20 : 14400,)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
@@ -544,7 +553,7 @@ if (sleepMs > 0) {
         <stringProp name="ThreadGroup.num_threads">2</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__groovy(System.getenv("HARNESS_SMOKE_MODE") == "true" ? 20 : 14400,)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
@@ -630,7 +639,7 @@ if (sleepMs > 0) {
         <stringProp name="ThreadGroup.num_threads">2</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__groovy(System.getenv("HARNESS_SMOKE_MODE") == "true" ? 20 : 14400,)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${__groovy(Long.parseLong(props.get("tst034_hold_seconds")),)}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>

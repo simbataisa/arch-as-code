@@ -47,7 +47,10 @@ profile.journeys().each { name, journey ->
     double actualShare = totalSamples == 0 ? 0d : (double) count / totalSamples
     double declaredShare = journey.share() / 100.0d
     boolean shareOk = Math.abs(actualShare - declaredShare) <= declaredShare * SHARE_TOLERANCE
-    boolean budgetOk = smoke ? true : p95 <= tierBudget.value()
+    // Smoke mode's 20s hold cannot honestly measure real p95 latency (see I1
+    // below, reported not-evaluated rather than folded into this flag), so
+    // this figure is left real either way and just goes unused under smoke.
+    boolean budgetOk = p95 <= tierBudget.value()
 
     if (!budgetOk) everyJourneyWithinBudget = false
     if (!shareOk) everyShareWithinTolerance = false
@@ -64,9 +67,18 @@ if (sutDefect != null && sutDefect.trim().isEmpty()) {
     sutDefect = null
 }
 
-RunFragment.Entry i1 = InvariantAssertion.check(
-    "I1", "Every journey meets its own tier budget, never a blended figure",
-    { everyJourneyWithinBudget } as java.util.function.BooleanSupplier)
+// A 20s smoke hold cannot honestly measure real p95 latency against a budget
+// tuned for the declared 14,400s full hold, so I1 is reported not-evaluated
+// under smoke rather than short-circuited to a hardcoded pass -- the same
+// honesty the threshold rows below already apply, and the pattern
+// assert-dlq.groovy/assert-readmodel.groovy use for their own run-gated
+// invariants.
+RunFragment.Entry i1 = smoke
+    ? new RunFragment.Entry("I1", "Every journey meets its own tier budget, never a blended figure",
+        RunFragment.Result.NOT_EVALUATED)
+    : InvariantAssertion.check(
+        "I1", "Every journey meets its own tier budget, never a blended figure",
+        { everyJourneyWithinBudget } as java.util.function.BooleanSupplier)
 RunFragment.Entry i2 = InvariantAssertion.check(
     "I2", "Each journey's actual share is within tolerance of its declared share",
     { everyShareWithinTolerance } as java.util.function.BooleanSupplier)
@@ -120,7 +132,7 @@ SampleResult.setSuccessful(passed)
 SampleResult.setResponseData((
     "blend=${profile.blendRef()} smoke=${smoke} totalSamples=${totalSamples}\n" +
     detail.toString() +
-    "I1 per-journey-tier-budget: ${i1.result().wire()}\n" +
+    "I1 per-journey-tier-budget: ${i1.result().wire()}${smoke ? ' (smoke-mode: 20s hold against a declared 14400s)' : ''}\n" +
     "I2 share-within-tolerance: ${i2.result().wire()}\n" +
     "I3 no-journey-starved: ${i3.result().wire()}\n" +
     "I4 errors-attributed: ${i4.result().wire()}\n" +

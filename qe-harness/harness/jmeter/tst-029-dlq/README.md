@@ -10,7 +10,7 @@ Coverage: **full** -- every invariant is implemented. I2's restart path is
 | I2 | A broker restart loses nothing acked-persisted |
 | I3 | A poison message reaches the DLQ inside the declared attempts, without blocking others |
 | I4 | Retry intervals match the declared backoff, `distinct_intervals > 1` |
-| I5 | DLQ depth is exported and an alert fires past its declared threshold |
+| I5 | DLQ depth alert does not fire below threshold and does fire once threshold is crossed |
 | I6 | A permanent error stops retrying at the declared ceiling |
 
 **I2 and CI.** Proving nothing acked-persisted is lost requires restarting the broker process:
@@ -58,5 +58,9 @@ curl -X DELETE http://localhost:8080/_test/defect                 # 204
 
 With the defect active, `DeliveryService.consume` acknowledges a poison message without
 processing it and without dead-lettering it -- the message simply vanishes, so
-`submitted > stateChanges + dlqCount` and I1's conservation law breaks. The retry ladder and the
-alert threshold are untouched, so I4 and I5 still pass.
+`submitted > stateChanges + dlqCount` and I1's conservation law breaks. The retry ladder is
+untouched, so I4 still passes. I5 now (correctly) fails too: every poison submission bypasses the
+DLQ entirely while the defect is active, so depth never crosses `dlqAlertDepth` and the alert
+genuinely never fires -- not because `dlqAlertFiring` itself is broken, but because nothing ever
+reaches the queue it watches. That is the corrected I5 check doing its job: it no longer passes
+by construction (see the fix history) regardless of what the SUT actually does.
