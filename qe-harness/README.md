@@ -1,6 +1,6 @@
 # QE Harness Reference Implementation
 
-Status: Approved | Last Reviewed: 2026-08-24 | Owner: @qe-lead
+Status: Approved | Last Reviewed: 2026-09-05 | Owner: @qe-lead
 Catalog ID: TST-016 | Radii
 Tier Applicability: T0, T1, T2, T3
 
@@ -9,7 +9,7 @@ Tier Applicability: T0, T1, T2, T3
 The Wave 15 testing corpus defines 24 archetypes, four oracle types, and eight performance
 profiles, and states plainly that it ships no harness. A QE team could read all of it and still
 have nothing to run. This directory is the runnable counterpart: a synthetic reference service
-and seven harness modules, one per archetype family, each in the tool
+and fifteen harness modules covering 15 of the 24 archetypes, each in the tool
 [TST-010](../knowledge-base/testing/tooling/tool-selection-matrix.md) names as its best fit.
 
 ## Architecture — How the Pieces Fit
@@ -21,7 +21,7 @@ and seven harness modules, one per archetype family, each in the tool
 The [testing knowledge base](../knowledge-base/testing/README.md) is **doctrine** — 24 archetype
 documents stating what must be true of a system and how to prove it. It ships no code. This
 directory is its **runnable counterpart**, and it has four parts: a deliberately-defective
-[reference SUT](./reference-sut/) to test *against*; seven [harness modules](./harness/) that do
+[reference SUT](./reference-sut/) to test *against*; fifteen [harness modules](./harness/) that do
 the testing; one [binding file](./traceability/modules.yml) declaring which module implements
 which archetype; and an [evidence chain](./traceability/) that turns a run into the
 `test_acceptance_criteria` block a DAB submission requires. Nothing here invents a requirement.
@@ -65,6 +65,31 @@ Read it top to bottom: **doctrine** says what to prove, **binding** says who pro
 which numbers, **execution** proves it, **evidence** records the proof in the form governance
 accepts.
 
+### How the corpus maps onto this directory
+
+The four layers above are the shape; this table is the wiring. Read the left column as "what
+[`knowledge-base/testing/`](../knowledge-base/testing/) says", the right as "what here depends on
+it". Change something on the left and the right is what breaks — and the gate is what tells you.
+
+| In `knowledge-base/testing/` | Defines | Consumed here by |
+| --- | --- | --- |
+| [`archetypes/*.md`](../knowledge-base/testing/archetypes/) — `TST-020`–`TST-043` | Per archetype: its invariants (I1…In), its oracle type, a canonical harness snippet, and the failure it exists to catch | One module per implemented archetype under [`harness/`](./harness/) asserts those invariants (an `assert-*.groovy`, a Karate feature, a k6 or Locust script). [`traceability/modules.yml`](./traceability/modules.yml) binds archetype → module. [`reference-sut/`](./reference-sut/) implements one *capability* per archetype (`CapabilityRegistry`) so the invariants have real behaviour to run against, plus one paired defect flag (`DefectFlags`) that breaks exactly that archetype's invariants and nothing else. |
+| [`strategy/test-strategy-standard.md`](../knowledge-base/testing/strategy/test-strategy-standard.md) — `TST-001` | The four oracle types and the `test_acceptance_criteria` evidence contract | [`traceability/evidence.schema.json`](./traceability/evidence.schema.json) is that contract made machine-checkable; [`bin/merge-fragments.py`](./bin/merge-fragments.py) assembles the block from per-run fragments; every fragment's `oracle` must be one of the four. |
+| [`strategy/performance-test-standard.md`](../knowledge-base/testing/strategy/performance-test-standard.md) — `TST-002` | The eight performance profiles and their pass criteria | [`profiles/*.yml`](./profiles/) — one file per profile, the workload shape a module runs under. |
+| [`strategy/workload-modelling.md`](../knowledge-base/testing/strategy/workload-modelling.md) — `TST-003` | Open vs closed workload models, named journey blends | `profiles/mixed.yml`'s `blend_ref` and [`harness/common/`](./harness/common/)'s `ProfileResolver`, which `TST-034` reads so the declared blend and the asserted blend cannot drift apart. |
+| [`tooling/tool-selection-matrix.md`](../knowledge-base/testing/tooling/tool-selection-matrix.md) — `TST-010` | The best-fit tool per archetype | `modules.yml`'s `tool` column — gate check 2 fails the build if a module is written in any other tool. |
+| [`tooling/jmeter.md`](../knowledge-base/testing/tooling/jmeter.md), [`gatling-karate.md`](../knowledge-base/testing/tooling/gatling-karate.md), [`k6.md`](../knowledge-base/testing/tooling/k6.md), [`locust.md`](../knowledge-base/testing/tooling/locust.md) — `TST-011`–`TST-014` | How to use each tool: project layout, worked examples | [`harness/jmeter/`](./harness/jmeter/), [`harness/gatling-karate/`](./harness/gatling-karate/), [`harness/k6/`](./harness/k6/), [`harness/locust/`](./harness/locust/) — one sub-tree per tool, laid out the way its guide describes. |
+| [`coverage/coverage-matrix.md`](../knowledge-base/testing/coverage/coverage-matrix.md) and `_testing-coverage.yml` | Which archetype(s) verify each catalog row, and with which primary tool | The corpus-side view. [`traceability/harness-coverage.md`](./traceability/harness-coverage.md) is its harness-side counterpart — *which of those archetypes actually has a runnable module today* — regenerated from `modules.yml`. Gate check 1 fails if `modules.yml` names an archetype the corpus does not have. |
+| [`../nfr/*.md`](../knowledge-base/nfr/) — `NFR-001`… | Latency budgets, throughput and capacity targets, per service tier | [`profiles/_nfr-thresholds.yml`](./profiles/_nfr-thresholds.yml) — every number there is a `threshold_ref` citing an `NFR-` row and heading anchor. Gate check 6 fails if that anchor no longer exists. |
+
+`reference-sut/` has no counterpart in the corpus, on purpose. The knowledge base describes what
+must be true of *any* system; this SUT is the deliberately-defective synthetic system those truths
+are proven against. Each of its capabilities is a small, real implementation of the behaviour one
+archetype governs — a double-entry ledger on Postgres for `TST-021`, an idempotency reservation
+row for `TST-020`, a RabbitMQ topology with a real dead-letter path for `TST-029` — and each has a
+paired defect that breaks exactly that archetype's invariants, so every module can prove it
+detects what it claims to.
+
 ### The gate is what holds the layers together
 
 The layers above are only trustworthy because one script asserts they still agree. Every
@@ -90,7 +115,7 @@ the better answer.
 
 ### Follow one archetype end to end: TST-021
 
-Every module works the same way. Tracing one is the fastest way to understand all seven.
+Every module works the same way. Tracing one is the fastest way to understand all fifteen.
 
 | Step | Where | What happens |
 | --- | --- | --- |
@@ -111,7 +136,7 @@ make run-defects         # with ledger-unbalanced injected → MUST fail
 Each module is paired with a **defect flag** — a real behaviour change the SUT can be told to
 adopt over HTTP (`POST /_test/defect/ledger-unbalanced` makes `TransferService` skip the credit
 leg of every transfer). A module that cannot detect its own paired defect is not a test, so
-`make run-defects` asserts all seven fail. This is the harness testing *itself*, and it is why
+`make run-defects` asserts all fifteen fail. This is the harness testing *itself*, and it is why
 the SUT is bundled rather than pointed at a real service.
 
 ### What each layer owns
@@ -216,20 +241,35 @@ and it only works if a real deployment actually activates a profile it excludes.
 
 ## Quick Start
 
-    make up          # start the SUT and the infrastructure its modules need
+    make up PROFILES="core resilience messaging"   # SUT + Postgres + Toxiproxy + RabbitMQ
     make verify      # run the gates — no containers required
     make run ARCH=TST-021
-    make run-all     # all seven modules against the clean SUT
-    make run-defects # all seven modules against their injected defects; each MUST fail
+    make run-all     # all fifteen modules against the clean SUT
+    make run-defects # all fifteen modules against their injected defects; each MUST fail
+
+`make up` alone starts only the `core` profile (SUT + Postgres), which is enough for most modules.
+Two compose profiles add infrastructure specific modules depend on: `resilience` starts Toxiproxy
+for `TST-035`; `messaging` starts the RabbitMQ broker that `TST-026`, `TST-027`, `TST-028`,
+`TST-029` and `TST-020`'s redelivery invariant (I7) all need. Pass all three to be able to run
+everything. `make down` tears down every profile regardless of which ones `up` was given.
 
 ## Scope
 
-Seven of the 24 archetypes are implemented. `GET /_capabilities` lists all 24; the other 17
-answer `501` with their archetype ID. Waves 17+ fill those in.
+Fifteen of the 24 archetypes are implemented — Wave 16 seeded one per family (seven), Wave 17
+added eight more and completed Family B. `GET /_capabilities` lists all 24; the other nine answer
+`501` with their archetype ID. [`traceability/harness-coverage.md`](./traceability/harness-coverage.md)
+is the live, generated table.
 
-`TST-043` is **partial**: it covers perf budget, cache correctness, conditional requests, and
-compression. Its offline-sync invariants need a client application, which this repository does
-not contain.
+Three of the fifteen are **partial**, and each says exactly why in its `modules.yml` row:
+
+- `TST-027` asserts ordering for the declared `per_key` scope only — RabbitMQ has no partitions,
+  so the `per_partition` and `global` scopes cannot be exercised here.
+- `TST-037` reports I5 (no loss or duplication across a CDC connector restart) `not-evaluated`
+  rather than substituting something else for it — this repository contains no CDC connector.
+- `TST-043` implements **none** of its archetype's own I1–I6: they need an offline client, a
+  rendered DOM, and `k6/browser` against a real page, and no such application exists here. It
+  ships four substitute server-side checks (perf budget, cache correctness, conditional requests,
+  compression), renumbered I1–I4, which are **not** the archetype's I1–I4.
 
 ## What the Threshold Gate Does Not Prove
 
@@ -241,10 +281,20 @@ citation.
 
 ## Smoke Mode
 
-In CI, `TST-031` and `TST-035` run in smoke mode: correctness invariants are asserted, and every
-performance threshold is recorded `not-evaluated`. A shared CI runner cannot produce meaningful
-latency figures, and a green pipeline must never imply that performance was validated. Full-load
-runs happen on a dedicated environment via the nightly or manual job.
+In CI (`HARNESS_SMOKE_MODE=true`) the load-shaped and infrastructure-disruptive modules run in
+smoke mode, and say so in their evidence rather than implying a result they did not measure:
+
+- `TST-031`, `TST-034`, `TST-035`: correctness invariants are asserted; every performance
+  threshold is recorded `not-evaluated`. `TST-034` additionally shortens its blended hold from the
+  profile's 14,400s to its 20s smoke override and reports I1 (each journey within its own tier
+  budget) `not-evaluated`, because a 20-second run cannot measure a real p95.
+- `TST-029`: I2 (delivery survives a broker restart) is gated to full runs only — CI never
+  restarts the broker — and is recorded `not-evaluated`.
+
+A shared CI runner cannot produce meaningful latency figures, and a green pipeline must never
+imply that performance was validated. Full-load runs happen on a dedicated environment via the
+nightly or manual job. `HarnessConfig.smokeMode()` in `harness/common/` is the single source of
+truth every module reads for this; no module inspects the environment variable directly.
 
 ## Pinned Versions
 
