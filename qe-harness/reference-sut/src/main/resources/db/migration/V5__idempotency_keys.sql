@@ -25,7 +25,8 @@
 -- [A-Za-z0-9-]. What this DOES guarantee: the key cannot be, say, a bare
 -- UUID or an arbitrary client-supplied string outside that shape. What it
 -- does NOT guarantee: the character class still permits long digit runs
--- inside the suffix (e.g. "idem-1234567890123"), so this constraint alone
+-- inside the suffix (e.g. a key whose suffix is thirteen-plus consecutive
+-- digits), so this constraint alone
 -- does not enforce this corpus's separate "gate check 5" convention (no
 -- 13-19-digit run that could be mistaken for an epoch-millis timestamp or a
 -- PAN -- see AggregatorService/MessageLog for that convention applied to
