@@ -1,0 +1,698 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TST-020 Idempotency and Replay" enabled="true">
+      <stringProp name="TestPlan.comments">Task 26 (Wave 17 QE Harness). See README.md for the invariants (I1-I7) this plan asserts, and in particular the "Why I7 is NOT a POST /messaging/work redelivery through ledger_entry" section for why I7 is driven as a repeated identical POST /messaging/work call against DeliveryService's own dedup gate (Task 26 added seenJobIds to DeliveryService), never a ledger_entry poll -- POST /messaging/work has no relationship to ledger_entry at all. This is the fifteenth and final module of Wave 17.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type: application/json" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- setUp Thread Group: resets the ledger AND idempotency tables (the
+           latter has no FK to account, so the ledger's own TRUNCATE ...
+           CASCADE below never reaches it - truncated explicitly, first),
+           seeds the two fixture accounts, zeroes this run's own tst020_*
+           tallies (same idiom TST-021/023/026/027/028/029/031's own setUp
+           Thread Groups use for their own props - necessary because this
+           module's own JUnit fixture runs clean-then-defect in the same SUT
+           process), and - the one addition this task's own correction to
+           the original brief makes - resets DeliveryService's own
+           in-memory counters via POST /messaging/delivery/reset, so I7's
+           own stateChanges read below can never be polluted by TST-029's
+           own module (Task 24) having run against this same long-lived SUT
+           process earlier. -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Reset Idempotency Fixture" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Reset and Seed Ledger + Idempotency Fixture" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.sql.Connection
+import java.sql.DriverManager
+
+String url = System.getenv("LEDGER_JDBC_URL")
+String user = System.getenv("LEDGER_JDBC_USER")
+String password = System.getenv("LEDGER_JDBC_PASSWORD")
+
+Connection conn = DriverManager.getConnection(url, user, password)
+try {
+    def st = conn.createStatement()
+    try {
+        // idempotency_key has no FK to account, so the ledger's own
+        // TRUNCATE ... CASCADE below never reaches it -- truncate it
+        // explicitly, first, as its own statement.
+        st.executeUpdate("TRUNCATE TABLE idempotency_key RESTART IDENTITY")
+        st.executeUpdate("TRUNCATE TABLE ledger_entry, account RESTART IDENTITY CASCADE")
+        st.executeUpdate("INSERT INTO account (account_ref, party_name) VALUES ('ACC-000001', 'Test Fixture Debtor Co')")
+        st.executeUpdate("INSERT INTO account (account_ref, party_name) VALUES ('ACC-000002', 'Test Fixture Creditor Co')")
+    } finally {
+        st.close()
+    }
+} finally {
+    conn.close()
+}
+
+// Cleared here, not just at process start, so a second run in the same SUT
+// process (e.g. this module's own JUnit fixture running clean-then-defect)
+// never adds its own tallies on top of a previous run's leftovers -- same
+// idiom TST-021/023/026/027/028/029/031's own setUp Thread Groups use for
+// their own props.
+props.put("tst020_distinct_bodies", "0")
+props.put("tst020_created_responses", "0")
+props.put("tst020_replay_responses", "0")
+props.put("tst020_burst_size", "12")
+props.put("tst020_seen_bodies", "")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("reset idempotency_key/ledger_entry/account, seeded ACC-000001/ACC-000002, zeroed tst020_* tallies", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- Corrected Step 6 addition: zeroes DeliveryService's own
+             submitted/stateChanges/dlqCount/attempts/seenJobIds counters,
+             which otherwise persist across module runs in this same
+             long-lived SUT process (e.g. TST-029's own module, Task 24,
+             having already run against it) and would leak into I7's own
+             stateChanges == 1 read below. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/delivery/reset" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/delivery/reset</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Main Thread Group: twelve threads, one shared Idempotency-Key,
+           released together by the Synchronizing Timer below so I5's race
+           is genuine rather than sequential - the unique constraint on
+           idempotency_key.idempotency_key is what arbitrates exactly one
+           winner (see IdempotencyService's own javadoc), not this plan. -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Same-Key Burst" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">12</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <SyncTimer guiclass="TestBeanGUI" testclass="SyncTimer" testname="Synchronizing Timer" enabled="true">
+          <intProp name="groupSize">12</intProp>
+          <longProp name="timeoutInMs">10000</longProp>
+        </SyncTimer>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /transfers (shared Idempotency-Key)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"from":"ACC-000001","to":"ACC-000002","amountMinor":500}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Idempotency-Key: idem-burst-0001" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Idempotency-Key</stringProp>
+                <stringProp name="Header.value">idem-burst-0001</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+          <!-- Cross-thread tallies (a JMeter *variable* is scoped per-thread
+               and would silently undercount) - same idiom TST-023/026/028/
+               029's own PostProcessors use for their own cross-thread
+               tallies. synchronized(props) because twelve threads land here
+               at (as near as SyncTimer can guarantee) the same instant. -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="tally-burst-response" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+synchronized (props) {
+    String code = prev.getResponseCode()
+    if ("201".equals(code)) {
+        long c = Long.parseLong(props.getProperty("tst020_created_responses", "0"))
+        props.put("tst020_created_responses", String.valueOf(c + 1))
+    } else if ("200".equals(code)) {
+        long c = Long.parseLong(props.getProperty("tst020_replay_responses", "0"))
+        props.put("tst020_replay_responses", String.valueOf(c + 1))
+    }
+
+    // Accumulate distinct response bodies as a "|||"-delimited list in a
+    // single String prop -- props (unlike vars) has no native collection
+    // type, and this plan's own tst020_* idiom already keeps every tally as
+    // a plain String for the same reason. A genuine dedup (I1/I2) means
+    // every thread here observes the SAME winner's response body, so this
+    // list should end up holding exactly one entry.
+    String body = prev.getResponseDataAsString()
+    String seen = props.getProperty("tst020_seen_bodies", "")
+    List<String> entries = seen.isEmpty() ? new ArrayList<String>() : new ArrayList<String>(Arrays.asList(seen.split(java.util.regex.Pattern.quote("|||"))))
+    if (!entries.contains(body)) {
+        entries.add(body)
+        props.put("tst020_seen_bodies", entries.join("|||"))
+    }
+    props.put("tst020_distinct_bodies", String.valueOf(entries.size()))
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+      </hashTree>
+
+      <!-- TearDown Thread Group: runs once, after every Same-Key Burst
+           thread has finished. Single thread, single loop - exercises the
+           remaining invariants directly rather than under load. -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="Verify Idempotency" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <!-- 1. I1's own verdict: total ledger_entry rows after the burst.
+             A genuine dedup means exactly one transfer committed -> one
+             balanced debit/credit pair -> 2 rows. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Count ledger_entry After Burst" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.sql.Connection
+import java.sql.DriverManager
+
+String url = System.getenv("LEDGER_JDBC_URL")
+String user = System.getenv("LEDGER_JDBC_USER")
+String password = System.getenv("LEDGER_JDBC_PASSWORD")
+
+long count
+Connection conn = DriverManager.getConnection(url, user, password)
+try {
+    def rs = conn.createStatement().executeQuery("SELECT COUNT(*) FROM ledger_entry")
+    rs.next()
+    count = rs.getLong(1)
+} finally {
+    conn.close()
+}
+
+vars.put("entries_after_burst", String.valueOf(count))
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("entries_after_burst=${count}", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- 2. I3: three DISTINCT keys, each with the same payload shape as
+             the burst, must each produce their own state change (their own
+             balanced pair). -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /transfers (distinct key 1)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"from":"ACC-000001","to":"ACC-000002","amountMinor":600}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Idempotency-Key: idem-distinct-0001" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Idempotency-Key</stringProp>
+                <stringProp name="Header.value">idem-distinct-0001</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /transfers (distinct key 2)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"from":"ACC-000001","to":"ACC-000002","amountMinor":700}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Idempotency-Key: idem-distinct-0002" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Idempotency-Key</stringProp>
+                <stringProp name="Header.value">idem-distinct-0002</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /transfers (distinct key 3)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"from":"ACC-000001","to":"ACC-000002","amountMinor":800}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Idempotency-Key: idem-distinct-0003" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Idempotency-Key</stringProp>
+                <stringProp name="Header.value">idem-distinct-0003</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- entries_after_distinct_keys is the DELTA these three distinct-key
+             transfers alone contributed - (total now) minus
+             entries_after_burst - not the running total, which would also
+             include the burst's own 2 rows and break I3's own
+             entriesAfterDistinctKeys == distinctKeysSent * 2L check in
+             assert-idempotency.groovy. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Count ledger_entry After Distinct Keys" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.sql.Connection
+import java.sql.DriverManager
+
+String url = System.getenv("LEDGER_JDBC_URL")
+String user = System.getenv("LEDGER_JDBC_USER")
+String password = System.getenv("LEDGER_JDBC_PASSWORD")
+
+long total
+Connection conn = DriverManager.getConnection(url, user, password)
+try {
+    def rs = conn.createStatement().executeQuery("SELECT COUNT(*) FROM ledger_entry")
+    rs.next()
+    total = rs.getLong(1)
+} finally {
+    conn.close()
+}
+
+long entriesAfterBurst = Long.parseLong(vars.get("entries_after_burst"))
+long delta = total - entriesAfterBurst
+
+vars.put("entries_after_distinct_keys", String.valueOf(delta))
+vars.put("distinct_keys_sent", "3")
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("entries_after_distinct_keys=${delta} (total=${total}, afterBurst=${entriesAfterBurst})", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- 3. I4: the SAME key as the burst ("idem-burst-0001"), but a
+             DIFFERENT payload (amountMinor 999 instead of 500) - must be
+             rejected as a conflict (409), never silently replayed or
+             silently re-executed. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /transfers (reused key, changed payload)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"from":"ACC-000001","to":"ACC-000002","amountMinor":999}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Idempotency-Key: idem-burst-0001 (reused)" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Idempotency-Key</stringProp>
+                <stringProp name="Header.value">idem-burst-0001</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-conflict-observed" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("conflict_observed", String.valueOf(prev.getResponseCode() == "409"))
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- 4. I6: the SUT's own declared key TTL vs. declared client max
+             retry window - read from configuration, never hard-coded here. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /transfers/idempotency/idem-burst-0001" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/transfers/idempotency/idem-burst-0001</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="capture-ttl-info" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+vars.put("ttl_info", prev.getResponseDataAsString())
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+
+        </hashTree>
+
+        <!-- 5. I7 (CORRECTED mechanic - see README.md and this plan's own
+             TestPlan-level comment for why the task brief's original
+             ledger_entry-count mechanic was unimplementable):
+             DeliveryService's own dedup gate (seenJobIds, added by Task 26)
+             is what this exercises, via POST /messaging/work, NOT
+             ledger_entry, which has no relationship to messaging at all.
+
+             5a. Submit job-idem-0001 once. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/work (first delivery)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/work?jobId=job-idem-0001&amp;poison=false</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <!-- 5b. Bounded poll (5s, ~200ms interval): the AMQP delivery is
+             asynchronous relative to the HTTP POST above, so this must wait
+             for stateChanges to actually reach 1 rather than reading
+             immediately. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Await First Delivery Settled" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.Instant
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+Instant deadline = Instant.now().plusSeconds(5)
+boolean reached = false
+def state = null
+while (Instant.now().isBefore(deadline)) {
+    HttpRequest request = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/delivery/state"))
+        .timeout(Duration.ofSeconds(5)).GET().build()
+    HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    state = new JsonSlurper().parseText(response.body())
+    if ((state.stateChanges as long) >= 1L) {
+        reached = true
+        break
+    }
+    Thread.sleep(200L)
+}
+
+SampleResult.setSuccessful(reached)
+SampleResult.setResponseData("firstDeliverySettled=${reached} stateChanges=${state?.stateChanges}", "UTF-8")
+SampleResult.setResponseCode(reached ? "200" : "500")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- 5c. Second, identical submission of the SAME jobId - standing
+             in for a broker redelivery, per this repo's own convention of
+             testing replay-style invariants via a repeated identical call
+             (see I1/I2/I5's own same-key burst above) rather than
+             orchestrating a real AMQP-level nack/requeue. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /messaging/work (redelivery)" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">localhost</stringProp>
+          <stringProp name="HTTPSampler.port">8080</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/messaging/work?jobId=job-idem-0001&amp;poison=false</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <!-- 5d. Fixed settling wait (3s - long enough for the second AMQP
+             delivery to have been processed locally; this environment's
+             other messaging modules use similarly small fixed waits for
+             async settling), then ONE read of /messaging/delivery/state.
+             redelivery_deduped is exactly (stateChanges == 1) from THIS
+             read - it must be exactly 1, not merely unchanged from some
+             other baseline: reset to 0 in setUp, and only this step's own
+             two POSTs above ever touch /messaging/work, so 1 is the only
+             correct value if DeliveryService's own dedup gate held. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Check Redelivery Deduped" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+Thread.sleep(3000L)
+
+String sutBaseUrl = System.getenv().getOrDefault("SUT_BASE_URL", "http://localhost:8080")
+HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+HttpRequest request = HttpRequest.newBuilder(URI.create(sutBaseUrl + "/messaging/delivery/state"))
+    .timeout(Duration.ofSeconds(5)).GET().build()
+HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString())
+def state = new JsonSlurper().parseText(response.body())
+long stateChanges = state.stateChanges as long
+
+boolean deduped = (stateChanges == 1L)
+vars.put("redelivery_deduped", String.valueOf(deduped))
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseData("redelivery_deduped=${deduped} stateChanges=${stateChanges}", "UTF-8")
+SampleResult.setResponseCode("200")
+]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- 6. assert-idempotency.groovy (this task's deliverable)
+             evaluates I1-I7 against the vars/props tallied above, then
+             calls the JVM EvidenceEmitter to write one fragment to
+             traceability/runs/. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="assert-idempotency" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename">${__groovy(System.getenv("ASSERT_SCRIPT_PATH"),)}</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+      </hashTree>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

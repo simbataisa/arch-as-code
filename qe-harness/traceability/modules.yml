@@ -2,6 +2,11 @@
 # tool MUST equal the archetype's declared best fit in TST-010.
 version: 1
 modules:
+  - archetype: TST-020
+    tool: jmeter
+    path: qe-harness/harness/jmeter/tst-020-idempotency
+    coverage: full
+    defect_flag: idempotency-key-ignored
   - archetype: TST-021
     tool: jmeter
     path: qe-harness/harness/jmeter/tst-021-ledger
