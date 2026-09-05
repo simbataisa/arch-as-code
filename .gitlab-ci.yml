@@ -395,7 +395,7 @@ harness:run:
     - echo "🚀 Running qe-harness smoke suite (run-all + run-defects)..."
     - cd qe-harness
     - export HARNESS_SMOKE_MODE=true
-    - make up PROFILES="core resilience"
+    - make up PROFILES="core resilience messaging"
     - make run-all
     - make run-defects
     # final-review N2: harness:verify and harness:run are same-stage with no
